@@ -1,0 +1,27 @@
+{
+	"folders": [
+		{
+			"name": "Aura",
+			"path": "."
+		},
+		{
+			"name": "UE5",
+			"path": "E:\\UE_5.2"
+		}
+	],
+	"settings": {
+		"typescript.tsc.autoDetect": "off",
+		"UEIntellisenseFixes.compiler.path": "D:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\bin\\Hostx64\\x64\\cl.exe",
+		"dotnet.defaultSolution": "UE5/Engine/Source/Programs/UnrealBuildTool/UnrealBuildTool.sln",
+		"UEIntellisenseFixes.fixes.warnIfMissingSourceInCC": false,
+		"files.associations": {
+			"*.rh": "cpp"
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"ms-dotnettools.csharp"
+		]
+	}
+}
