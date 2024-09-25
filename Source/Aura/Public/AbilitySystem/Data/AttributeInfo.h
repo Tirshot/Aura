@@ -30,5 +30,12 @@ UCLASS()
 class AURA_API UAttributeInfo : public UDataAsset
 {
 	GENERATED_BODY()
+
+public:
+	// 태그를 가져와 Array에서 찾기
+	FAuraAttributeInfo FindAttributeInfoForTag(const FGameplayTag& AttributeTag, bool bLogNotFound = false) const;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<FAuraAttributeInfo> AttributeInformation;
 	
 };
