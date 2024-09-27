@@ -3,7 +3,7 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "UI/WidgetController/UIWidgetController.h"
+#include "UI/WidgetController/OverlayWidgetController.h"
 #include "UI/HUD/AuraHUD.h"
 #include "Player/AuraPlayerState.h"
 
@@ -14,6 +14,7 @@ UOverlayWidgetController* UAuraAbilitySystemLibrary::GetOverlayWidgetController(
 	{
 		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
 		{
+			// 위젯 컨트롤러 파라미터 구조체 생성
 			AAuraPlayerState* PS = PC->GetPlayerState<AAuraPlayerState>();
 			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 			UAttributeSet* AS = PS->GetAttributeSet();
