@@ -20,7 +20,7 @@ UOverlayWidgetController *AAuraHUD::GetOverlayWidgetController(const FWidgetCont
     return OverlayWidgetController;
 }
 
-UAttributeMenuWidgetController* AAuraHUD::GeAttributeMenuWidgetController(const FWidgetControllerParams& WCParams)
+UAttributeMenuWidgetController* AAuraHUD::GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams)
 {
     if (AttributeMenuWidgetController == nullptr)
     {   // 없으면 생성
