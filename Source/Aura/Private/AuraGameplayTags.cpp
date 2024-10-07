@@ -34,7 +34,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	);
 
 	GameplayTags.Attributes_Secondary_ArmorPanetration = UGameplayTagsManager::Get().AddNativeGameplayTag(
-		FName("Attributes.Secondary.Armor"),
+		FName("Attributes.Secondary.ArmorPanetration"),
 		FString("방어 관통 증가")
 	);
 

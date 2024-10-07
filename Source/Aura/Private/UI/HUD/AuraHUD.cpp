@@ -24,7 +24,7 @@ UAttributeMenuWidgetController* AAuraHUD::GetAttributeMenuWidgetController(const
 {
     if (AttributeMenuWidgetController == nullptr)
     {   // 없으면 생성
-        AttributeMenuWidgetController = NewObject<UAttributeMenuWidgetController>(this, OverlayWidgetControllerClass);
+        AttributeMenuWidgetController = NewObject<UAttributeMenuWidgetController>(this, AttributeMenuWidgetControllerClass);
         AttributeMenuWidgetController->SetWidgetControllerParams(WCParams);
         AttributeMenuWidgetController->BindCallbacksToDependencies();
     }
