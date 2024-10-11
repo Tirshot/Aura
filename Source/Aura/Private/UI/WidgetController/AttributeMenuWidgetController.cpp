@@ -13,10 +13,15 @@ void UAttributeMenuWidgetController::BroadcastInitialValues()
 
 	check(AttributeInfo);
 
-	FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(FAuraGameplayTags::Get().Attributes_Primary_Strength);
-	Info.AttributeValue = AS->GetStrength();
+	for (auto& Pair : AS->TagsToAttributes)
+	{
+		// 키를 이용하여 캐릭터의 속성 정보를 꺼내기
+		FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(Pair.Key);
+		Info.AttributeValue = Pair.Value.Execute().GetNumericValue(AS);
 
-	AttributeInfoDelegate.Broadcast(Info);
+		// 속성 정보 브로드캐스트
+		AttributeInfoDelegate.Broadcast(Info);
+	}
 }
 
 void UAttributeMenuWidgetController::BindCallbacksToDependencies()

@@ -6,11 +6,22 @@
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AuraGameplayTags.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
 {
+    const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+    
+    auto StrengthTag = GameplayTags.Attributes_Primary_Strength;
+    FAttributeSignature StrengthDelegate;
+    StrengthDelegate.BindStatic(GetStrengthAttribute);
+    TagsToAttributes.Add(StrengthTag, StrengthDelegate);
 
+    auto IntelligenceTag = GameplayTags.Attributes_Primary_Intelligence;
+    FAttributeSignature IntelligenceDelegate;
+    StrengthDelegate.BindStatic(GetIntelligenceAttribute);
+    TagsToAttributes.Add(IntelligenceTag, IntelligenceDelegate);
 }
 
 
