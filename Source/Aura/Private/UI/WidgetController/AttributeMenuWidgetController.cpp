@@ -4,27 +4,42 @@
 #include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AttributeInfo.h"
-#include "AuraGameplayTags.h"
-
+#include "AttributeSet.h"
 
 void UAttributeMenuWidgetController::BroadcastInitialValues()
 {
 	UAuraAttributeSet* AS = CastChecked<UAuraAttributeSet>(AttributeSet);
-
 	check(AttributeInfo);
 
 	for (auto& Pair : AS->TagsToAttributes)
 	{
-		// 키를 이용하여 캐릭터의 속성 정보를 꺼내기
-		FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(Pair.Key);
-		Info.AttributeValue = Pair.Value.Execute().GetNumericValue(AS);
-
-		// 속성 정보 브로드캐스트
-		AttributeInfoDelegate.Broadcast(Info);
+		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
 }
 
 void UAttributeMenuWidgetController::BindCallbacksToDependencies()
 {
+	// 속성 세트 가져오기
+	UAuraAttributeSet* AS = CastChecked<UAuraAttributeSet>(AttributeSet);
+	check(AttributeInfo);
 
+	for (auto& Pair : AS->TagsToAttributes)
+	{
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Pair.Value()).AddLambda(
+			[this, Pair](const FOnAttributeChangeData& Data)
+			{
+				BroadcastAttributeInfo(Pair.Key, Pair.Value());
+			}
+		);
+	}
+}
+
+void UAttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& GameplayTag, const FGameplayAttribute& Attribute) const
+{
+	// 키를 이용하여 캐릭터의 속성 정보를 꺼내기
+	FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(GameplayTag);
+	Info.AttributeValue = Attribute.GetNumericValue(AttributeSet);
+
+	// 속성 정보 브로드캐스트
+	AttributeInfoDelegate.Broadcast(Info);
 }
