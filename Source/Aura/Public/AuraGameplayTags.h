@@ -34,9 +34,15 @@ public:
 	FGameplayTag Attributes_Secondary_MaxHealth;
 	FGameplayTag Attributes_Secondary_MaxMana;
 
+	// 마우스 클릭
+	FGameplayTag InputTag_LMB;
+	FGameplayTag InputTag_RMB;
 
-protected:
-
+	// 숫자 입력
+	FGameplayTag InputTag_1;
+	FGameplayTag InputTag_2;
+	FGameplayTag InputTag_3;
+	FGameplayTag InputTag_4;
 
 private:
 	static FAuraGameplayTags GameplayTags;

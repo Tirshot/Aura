@@ -8,6 +8,9 @@ FAuraGameplayTags FAuraGameplayTags::GameplayTags;
 
 void FAuraGameplayTags::InitailizeNativeGameplayTags()
 {
+	/*
+	*  1차 주요 속성
+	*/
 	GameplayTags.Attributes_Primary_Strength = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Attributes.Primary.Strength"),
 		FString("물리 데미지 증가")
@@ -28,6 +31,9 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("체력, 마나 회복력 증가")
 	);
 
+	/*
+	*  2차 속성
+	*/
 	GameplayTags.Attributes_Secondary_Armor = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.Armor"),
 		FString("방어력 증가")
@@ -77,4 +83,39 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FName("Attributes.Secondary.MaxMana"),
 		FString("최대 마나 증가")
 	);
+
+	/*
+	*  입력 태그
+	*/
+
+	GameplayTags.InputTag_LMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.LMB"),
+		FString("Left Mouse Click")
+	);
+	
+	GameplayTags.InputTag_RMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.RMB"),
+		FString("Right Mouse Click")
+	);
+
+	GameplayTags.InputTag_1 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.1"),
+		FString("Number 1 Button")
+	);
+
+	GameplayTags.InputTag_2 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.2"),
+		FString("Number 2 Button")
+	);
+
+	GameplayTags.InputTag_3 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.3"),
+		FString("Number 3 Button")
+	);
+
+	GameplayTags.InputTag_4 = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.4"),
+		FString("Number 4 Button")
+	);
+
 }
