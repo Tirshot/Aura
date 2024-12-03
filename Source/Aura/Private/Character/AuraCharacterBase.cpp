@@ -1,5 +1,6 @@
 #include "Character/AuraCharacterBase.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
 
 AAuraCharacterBase::AAuraCharacterBase()
 {
@@ -44,4 +45,15 @@ void AAuraCharacterBase::InitializeDefaultAttributes() const
 	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);
 	ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);
 	ApplyEffectToSelf(InitializeVitalAttributes, 1.f);
+}
+
+void AAuraCharacterBase::AddCharacterAbilites()
+{
+	UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+
+	// 이 함수를 실행하는 주체가 서버인지 확인
+	if (!HasAuthority())
+		return;
+
+	AuraASC->AddCharacterAbilities(StartupAbilities);
 }
