@@ -6,20 +6,56 @@
 #include "EnhancedInputSubsystems.h"
 #include "Input/AuraInputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Components/SplineComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AuraGameplayTags.h"
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
     // 서버에서 발생한 변경 사항을 복제하여 모든 클라이언트로 전송(브로드 캐스팅)
     bReplicates = true;
+
+    // 길 찾기 스플라인
+    Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 }
 
 void AAuraPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-    //
+    // 커서 추적
     CursorTrace();
+
+    // 클릭으로 이동
+    AutoRun();
+}
+
+void AAuraPlayerController::AutoRun()
+{
+    if (!bAutoRunning)
+        return;
+
+    // 길 찾기 이용하여 움직임
+    if (APawn* ControlledPawn = GetPawn())
+    {
+        // 폰에 가장 가까운 스플라인의 벡터
+        const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
+
+        // 스플라인의 방향 벡터
+        const FVector Direction = Spline->FindDirectionClosestToWorldLocation(LocationOnSpline, ESplineCoordinateSpace::World);
+        ControlledPawn->AddMovementInput(Direction);
+
+        // 스플라인에서 목적지까지의 벡터
+        const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
+
+        // 자동 이동 허용 범위에 도달 시 자동 이동 중단
+        if (DistanceToDestination <= AutoRunAcceptanceRadius)
+        {
+            bAutoRunning = false;
+        }
+    }
 }
 
 void AAuraPlayerController::BeginPlay()
@@ -84,7 +120,6 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AAuraPlayerController::CursorTrace()
 {
-    FHitResult CursorHit;
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
     GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, false, CursorHit);
     
@@ -92,84 +127,103 @@ void AAuraPlayerController::CursorTrace()
         return;
 
     LastActor = ThisActor;
-
     // 마우스 커서와 충돌한 액터 꺼내오기
     ThisActor = CursorHit.GetActor();
 
-    /* 커서에서 라인트레이스
-    (1) LastActor가 nullptr, ThisActor가 nullptr
-        - 적이 아닌 액터
-        - 아무일도 일어나지 않음
-    (2) LastActor가 nullptr, ThisActor가 유효
-        - 적에게 처음으로 마우스를 가져다 댐
-        - ThisActor->HighlightActor();
-    (3) LastActor가 유효, ThisActor가 nullptr
-        - 적을 가리키다가 더 이상 마우스가 위치하지 않음
-        - LastActor->UnHighlightActor();
-    (4) LastActor와 ThisActor 모두 유효, LastActor != ThisActor
-        - 적을 가리키다가 다른 적을 가리키게 됨
-        - LastActor->UnHighlightActor();
-        - ThisActor->HighlightActor();
-    (5) LastActor와 ThisActor 모두 유효, LastActor == ThisActor
-        - 이미 Highlight 함수가 발동
-        - 아무 일도 일어나지 않음*/
-
-    if (LastActor == nullptr)
+    if (LastActor != ThisActor)
     {
-        if (ThisActor != nullptr)
-        {
-            // 2번 케이스
-            ThisActor->HighlightActor();
-        }
-        else
-        {
-            // 1번 케이스
-
-        }
-    }
-    else // LastActor가 유효
-    {
-        if (ThisActor == nullptr)
-        {
-            // 3번 케이스
+        if (LastActor)
             LastActor->UnHighlightActor();
-        }
-        else
-        {
-            if (LastActor == ThisActor)
-            {
-                // 5번 케이스
 
-            }
-            else
-            {
-                // 4번 케이스
-                LastActor->UnHighlightActor();
-                ThisActor->HighlightActor();
-            }
-        }
+        if (ThisActor)
+            ThisActor->HighlightActor();
     }
 }
 
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-
+    if (InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
+    {
+        // ThisActor가 nullptr이 아니면 true
+        bTargeting = ThisActor ? true : false;
+        bAutoRunning = false;
+    }
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-    if (GetASC() == nullptr)
-        return;
+    // 더 이상 왼쪽 클릭 태그가 아닐 경우
+    if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
+    {
+        if (GetASC())
+            GetASC()->AbilityInputTagReleased(InputTag);
 
-    GetASC()->AbilityInputTagReleased(InputTag);
+        return;
+    }
+
+    // 타겟
+    if (bTargeting)
+    {
+        if (GetASC())
+            GetASC()->AbilityInputTagReleased(InputTag);
+    }
+    else
+    {
+        // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
+        const APawn* ControlledPawn = GetPawn();
+        if (FollowTime <= ShortPressThresold && ControlledPawn)
+        {
+            if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
+            {
+                // 각 경로 점을 스플라인에 추가
+                Spline->ClearSplinePoints();
+                for (const FVector& PointLoc : NavPath->PathPoints)
+                {
+                    Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+                }
+                CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
+                bAutoRunning = true;
+            }
+        }
+        FollowTime = 0.f;
+        bTargeting = false;
+    }
 }
 
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-    if (GetASC() == nullptr)
-        return;
+    // 더 이상 왼쪽 클릭 태그가 아닐 경우
+    if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
+    {
+        if (GetASC())
+            GetASC()->AbilityInputTagHeld(InputTag);
 
-    GetASC()->AbilityInputTagHeld(InputTag);
+        return;
+    }
+
+    // 타겟
+    if (bTargeting)
+    {
+        if (GetASC())
+            GetASC()->AbilityInputTagHeld(InputTag);
+    }
+    else // 이동
+    {
+        FollowTime += GetWorld()->GetDeltaSeconds();
+
+        if (CursorHit.bBlockingHit)
+        {
+            // Hit.Location도 사용 가능
+            CachedDestination = CursorHit.ImpactPoint;
+        }
+
+        if (APawn* ControlledPawn = GetPawn())
+        {
+            // 방향 벡터 구하기
+            const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+            ControlledPawn->AddMovementInput(WorldDirection);
+        }
+    }
 }
 
 UAuraAbilitySystemComponent* AAuraPlayerController::GetASC()

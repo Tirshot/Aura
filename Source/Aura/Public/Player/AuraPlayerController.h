@@ -12,6 +12,7 @@ class UInputAction;
 class IEnemyInterface;
 class UAuraInputConfig;
 class UAuraAbilitySystemComponent;
+class USplineComponent;
 
 /**
  * 
@@ -41,7 +42,8 @@ private:
 	void Move(const struct FInputActionValue& InputActionValue);
 
 	void CursorTrace();
-	
+
+	FHitResult CursorHit;
 	TScriptInterface<IEnemyInterface> LastActor;
 	TScriptInterface<IEnemyInterface> ThisActor;
 
@@ -57,4 +59,27 @@ private:
 	TObjectPtr<UAuraAbilitySystemComponent> AuraAbilitySystemComponent;
 
 	UAuraAbilitySystemComponent* GetASC();
+
+	// 이동 관련
+	FVector CachedDestination = FVector::ZeroVector;
+	float FollowTime = 0.f;
+	
+	// 짧게 누름 경계값
+	float ShortPressThresold = 0.5f;
+	
+	// 자동 이동
+	bool bAutoRunning = false;
+	
+	// 타겟
+	bool bTargeting = false;
+
+	// 자동 이동 허용 반경
+	UPROPERTY(EditDefaultsOnly)
+	float AutoRunAcceptanceRadius = 50.f;
+
+	// 길찾기 스플라인
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USplineComponent> Spline;
+
+	void AutoRun();
 };
