@@ -94,6 +94,8 @@ void AAuraPlayerController::SetupInputComponent()
     UAuraInputComponent* AuraInputComponent = CastChecked<UAuraInputComponent>(InputComponent);
 
     AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
+    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
+    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
     
     // 어빌리티와 입력 액션 바인딩
     AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
@@ -161,13 +163,11 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
         return;
     }
 
-    // 타겟
-    if (bTargeting)
-    {
-        if (GetASC())
-            GetASC()->AbilityInputTagReleased(InputTag);
-    }
-    else
+    if (GetASC())
+        GetASC()->AbilityInputTagReleased(InputTag);
+
+    // 타겟이 없고 쉬프트키가 눌리지 않았다면
+    if (!bTargeting && !bShiftKeyDown)
     {
         // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
         const APawn* ControlledPawn = GetPawn();
@@ -202,7 +202,7 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     }
 
     // 타겟
-    if (bTargeting)
+    if (bTargeting || bShiftKeyDown)
     {
         if (GetASC())
             GetASC()->AbilityInputTagHeld(InputTag);

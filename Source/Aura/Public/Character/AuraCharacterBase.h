@@ -53,7 +53,7 @@ protected:
 	TSubclassOf<UGameplayEffect> InitializeVitalAttributes;
 
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
-	void InitializeDefaultAttributes() const;
+	virtual void InitializeDefaultAttributes() const;
 
 protected:
 	// 캐릭터에 어빌리티 부여
