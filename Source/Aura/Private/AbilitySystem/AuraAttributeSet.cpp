@@ -7,6 +7,7 @@
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AuraGameplayTags.h"
+#include "Interaction/CombatInterface.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -96,6 +97,36 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     if (Data.EvaluatedData.Attribute == GetManaAttribute())
     {
         SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+    }
+    // 데미지 판단
+    if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+    {
+        const float LocalIncomingDamage = GetIncomingDamage();
+        SetIncomingDamage(0);
+
+        if (LocalIncomingDamage > 0.f)
+        {
+            const float NewHealth = GetHealth() - LocalIncomingDamage;
+            SetHealth(FMath::Clamp(NewHealth, 0, GetMaxHealth()));
+
+            const bool bFatal = NewHealth <= 0.f;
+            if (bFatal)
+            {
+                ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
+                if (CombatInterface)
+                {
+                    CombatInterface->Die();
+                }
+            }
+            else
+            {
+                FGameplayTagContainer TagContainer;
+                TagContainer.AddTag(FAuraGameplayTags::Get().Effects_HitReact);
+
+                // 부여된 어빌리티를 찾아서 활성화
+                Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
+            }
+        }
     }
 }
 

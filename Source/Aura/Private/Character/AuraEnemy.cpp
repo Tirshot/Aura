@@ -6,7 +6,9 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "UI/Widget/AuraUserWidget.h"
+#include "AuraGameplayTags.h"
 #include "Aura/Aura.h"
 
 
@@ -45,11 +47,21 @@ int32 AAuraEnemy::GetPlayerLevel()
     return Level;
 }
 
+void AAuraEnemy::Die()
+{
+    // 수명 설정
+    SetLifeSpan(LifeSpan);
+
+    // 랙돌 효과와 무기 드랍
+    Super::Die();
+}
+
 void AAuraEnemy::BeginPlay()
 {
     Super::BeginPlay();
-
+    GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
     InitAbilityActorInfo();
+    UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
     
     if (UAuraUserWidget* AuraUserWidget = Cast<UAuraUserWidget>(HealthBar->GetUserWidgetObject()))
     {
@@ -71,9 +83,23 @@ void AAuraEnemy::BeginPlay()
                 OnMaxHealthChanged.Broadcast(Data.NewValue);
             }
         );
+        // 델리게이트 - 태그, 태그 갯수
+        AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::Get().Effects_HitReact, EGameplayTagEventType::NewOrRemoved).AddUObject(
+            this,
+            &AAuraEnemy::HitReactTagChanged
+        );
+
         OnHealthChanged.Broadcast(AuraAS->GetHealth());
         OnMaxHealthChanged.Broadcast(AuraAS->GetMaxHealth());
     }
+}
+
+void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+    // 태그가 있을 때만 작동
+    bHitReacting = NewCount > 0;
+    GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
+
 }
 
 void AAuraEnemy::InitAbilityActorInfo()

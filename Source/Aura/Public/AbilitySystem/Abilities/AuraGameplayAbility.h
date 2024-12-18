@@ -15,4 +15,8 @@ public:
 	// 시작 어빌리티 일 경우 부여할 때 한 번만 확인하기
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	FGameplayTag StartupInputTag;
+
+	// 커브 테이블
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="Damage")
+	FScalableFloat Damage;
 };

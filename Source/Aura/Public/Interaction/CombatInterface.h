@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "CombatInterface.generated.h"
 
+class UAnimMontage;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI, BlueprintType)
 class UCombatInterface : public UInterface
@@ -26,4 +28,10 @@ public:
 	virtual FVector GetCombatSocketLocation();
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void UpdateFacingTarget(const FVector& Target);
+
+	// 피격 몽타주, C++에서 오버라이드 가능
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	UAnimMontage* GetHitReactMontage();
+
+	virtual void Die() = 0;
 };

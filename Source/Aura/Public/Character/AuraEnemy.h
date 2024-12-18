@@ -25,15 +25,27 @@ public:
 	virtual void HighlightActor() override;
 	virtual void UnHighlightActor() override;
 
-	// 전투 인터페이스
+	// 전투 인터페이스 오버라이드
 	virtual int32 GetPlayerLevel() override;
+	virtual void Die() override;
 	// 전투 인터페이스 끝
-
+	
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnHealthChanged;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnMaxHealthChanged;
+
+	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UPROPERTY(BlueprintReadOnly, category="Combat")
+	bool bHitReacting = false;
+
+	UPROPERTY(BlueprintReadOnly, category = "Combat")
+	float BaseWalkSpeed = 250.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
+	float LifeSpan = 5.f;
 
 protected:
 	virtual void BeginPlay() override;

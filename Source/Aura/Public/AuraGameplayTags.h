@@ -44,6 +44,12 @@ public:
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
 
+	// 데미지
+	FGameplayTag Damage;
+
+	// 피격
+	FGameplayTag Effects_HitReact;
+
 private:
 	static FAuraGameplayTags GameplayTags;
 };

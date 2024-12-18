@@ -90,19 +90,6 @@ public:
 	FGameplayAttributeData Vigor;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, Vigor);
 
-
-	/*
-	* Vital 속성
-	*/
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Health, Category = "Vital Attributes")
-	FGameplayAttributeData Health;
-	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, Health);
-	
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Mana, Category = "Vital Attributes")
-	FGameplayAttributeData Mana;
-	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, Mana);
-
 	/*
 	* Secondary 속성
 	*/
@@ -122,7 +109,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ArmorPenetration, Category = "Secondary Attributes")
 	FGameplayAttributeData ArmorPenetration;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, ArmorPenetration);
-	
+
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_BlockChance, Category = "Secondary Attributes")
 	FGameplayAttributeData BlockChance;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, BlockChance);
@@ -146,6 +133,29 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ManaRegeneration, Category = "Secondary Attributes")
 	FGameplayAttributeData ManaRegeneration;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, ManaRegeneration);
+
+
+	/*
+	* Vital 속성
+	*/
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Health, Category = "Vital Attributes")
+	FGameplayAttributeData Health;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, Health);
+	
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Mana, Category = "Vital Attributes")
+	FGameplayAttributeData Mana;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, Mana);
+
+
+	/*
+	* 메타 속성
+	*/
+
+	UPROPERTY(BlueprintReadOnly, category="Meta Attributes")
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingDamage);
+
 
 
 	/*

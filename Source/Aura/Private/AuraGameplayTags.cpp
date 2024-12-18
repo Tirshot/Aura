@@ -118,4 +118,15 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Number 4 Button")
 	);
 
+	// 데미지
+	GameplayTags.Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Damage"),
+		FString("Damage")
+	);
+
+	// 피격
+	GameplayTags.Effects_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Effects.HitReact"),
+		FString("HitReact")
+	);
 }
