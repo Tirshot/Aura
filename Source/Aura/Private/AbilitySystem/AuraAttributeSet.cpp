@@ -8,6 +8,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AuraGameplayTags.h"
 #include "Interaction/CombatInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/AuraPlayerController.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -120,12 +122,27 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
             }
             else
             {
+                // HitReact 태그 부여
                 FGameplayTagContainer TagContainer;
                 TagContainer.AddTag(FAuraGameplayTags::Get().Effects_HitReact);
 
                 // 부여된 어빌리티를 찾아서 활성화
                 Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
             }
+            ShowFloatingText(Props, LocalIncomingDamage);
+        }
+    }
+}
+
+void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage) const
+{
+    // 데미지 플로팅 위젯
+    // 자해 불가
+    if (Props.SourceCharacter != Props.TargetCharacter)
+    {
+        if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
+        {
+            PC->ShowDamageNumber(Damage, Props.TargetCharacter);
         }
     }
 }

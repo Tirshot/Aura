@@ -11,6 +11,8 @@
 #include "AuraGameplayTags.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
+#include "GameFramework/Character.h"
+#include "UI/Widget/DamageTextComponent.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
@@ -30,6 +32,21 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 
     // 클릭으로 이동
     AutoRun();
+}
+
+void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter)
+{
+    // 위젯
+    // IsValid - 사망이 보류 중일 경우를 포함
+    if (IsValid(TargetCharacter) && DamageTextComponentClass)
+    {
+        // NewObject로 생성했을 때는 수동으로 RegisterComponent 해야함
+        UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageTextComponentClass);
+        DamageText->RegisterComponent();
+        DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+        DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+        DamageText->SetDamageText(DamageAmount);
+    }
 }
 
 void AAuraPlayerController::AutoRun()
