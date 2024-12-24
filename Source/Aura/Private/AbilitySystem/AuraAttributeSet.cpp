@@ -10,6 +10,7 @@
 #include "Interaction/CombatInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -129,12 +130,15 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
                 // 부여된 어빌리티를 찾아서 활성화
                 Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
             }
-            ShowFloatingText(Props, LocalIncomingDamage);
+
+            const bool bBlock = UAuraAbilitySystemLibrary::IsBlockedHit(Props.EffectContextHandle);
+            const bool bCriticalHit = UAuraAbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
+            ShowFloatingText(Props, LocalIncomingDamage, bBlock, bCriticalHit);
         }
     }
 }
 
-void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage) const
+void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit) const
 {
     // 데미지 플로팅 위젯
     // 자해 불가
