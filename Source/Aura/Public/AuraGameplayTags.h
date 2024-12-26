@@ -24,7 +24,7 @@ public:
 	FGameplayTag Attributes_Primary_Vigor;
 
 	FGameplayTag Attributes_Secondary_Armor;
-	FGameplayTag Attributes_Secondary_ArmorPanetration;
+	FGameplayTag Attributes_Secondary_ArmorPenetration;
 	FGameplayTag Attributes_Secondary_BlockChance;
 	FGameplayTag Attributes_Secondary_CriticalHitChance;
 	FGameplayTag Attributes_Secondary_CriticalHitDamage;
@@ -33,6 +33,11 @@ public:
 	FGameplayTag Attributes_Secondary_ManaRegeneration;
 	FGameplayTag Attributes_Secondary_MaxHealth;
 	FGameplayTag Attributes_Secondary_MaxMana;
+
+	FGameplayTag Attributes_Resistance_Fire;
+	FGameplayTag Attributes_Resistance_Arcane;
+	FGameplayTag Attributes_Resistance_Lightning;
+	FGameplayTag Attributes_Resistance_Physical;
 
 	// 마우스 클릭
 	FGameplayTag InputTag_LMB;
@@ -46,6 +51,12 @@ public:
 
 	// 데미지
 	FGameplayTag Damage;
+	FGameplayTag Damage_Fire;
+	FGameplayTag Damage_Lightning;
+	FGameplayTag Damage_Arcane;
+	FGameplayTag Damage_Physical;
+
+	TMap<FGameplayTag, FGameplayTag> DamageTypesToResistances;
 
 	// 피격
 	FGameplayTag Effects_HitReact;

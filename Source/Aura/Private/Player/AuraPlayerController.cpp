@@ -34,7 +34,7 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
     AutoRun();
 }
 
-void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter)
+void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit)
 {
     // 위젯
     // IsValid - 사망이 보류 중일 경우를 포함
@@ -45,7 +45,7 @@ void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, 
         DamageText->RegisterComponent();
         DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
         DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-        DamageText->SetDamageText(DamageAmount);
+        DamageText->SetDamageText(DamageAmount, bBlockedHit, bCriticalHit);
     }
 }
 
