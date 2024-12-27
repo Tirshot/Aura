@@ -10,6 +10,10 @@
 #include "UI/Widget/AuraUserWidget.h"
 #include "AuraGameplayTags.h"
 #include "Aura/Aura.h"
+#include "AI/AuraAIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 AAuraEnemy::AAuraEnemy()
@@ -22,10 +26,38 @@ AAuraEnemy::AAuraEnemy()
     AbilitySystemComponent->SetIsReplicated(true);
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationRoll = false;
+    bUseControllerRotationYaw = false;
+    GetCharacterMovement()->bUseControllerDesiredRotation = true;
+
     AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
     HealthBar->SetupAttachment(GetRootComponent());
+}
+
+void AAuraEnemy::PossessedBy(AController* NewController)
+{
+    Super::PossessedBy(NewController);
+
+    // 클라이언트는 복제로 제공받음
+    if (!HasAuthority())
+        return;
+
+    AuraAIController = Cast<AAuraAIController>(NewController);
+
+    // 블랙보드 초기화
+    AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+    
+    // 비헤이비어 트리 작동
+    AuraAIController->RunBehaviorTree(BehaviorTree);
+
+    // 블랙보드 키 기본값 설정
+    AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
+
+    // 근거리, 원거리 판정
+    AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Warrior);
 }
 
 void AAuraEnemy::HighlightActor()
@@ -61,7 +93,10 @@ void AAuraEnemy::BeginPlay()
     Super::BeginPlay();
     GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
     InitAbilityActorInfo();
-    UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
+    if (HasAuthority())
+    {
+        UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
+    }
     
     if (UAuraUserWidget* AuraUserWidget = Cast<UAuraUserWidget>(HealthBar->GetUserWidgetObject()))
     {
@@ -99,7 +134,9 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
     // 태그가 있을 때만 작동
     bHitReacting = NewCount > 0;
     GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
-
+    
+    // 블랙보드 키 설정
+    AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
 }
 
 void AAuraEnemy::InitAbilityActorInfo()
@@ -107,7 +144,10 @@ void AAuraEnemy::InitAbilityActorInfo()
     AbilitySystemComponent->InitAbilityActorInfo(this, this);
     Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
 
-    InitializeDefaultAttributes();
+    if (HasAuthority())
+    {
+        InitializeDefaultAttributes();
+    }
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

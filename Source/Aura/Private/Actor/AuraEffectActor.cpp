@@ -23,6 +23,10 @@ void AAuraEffectActor::BeginPlay()
 
 void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {
+	// 몬스터인지 확인
+	if (TargetActor->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemy)
+		return;
+
 	// 타겟의 어빌리티 시스템 인터페이스 가져옴
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (TargetASC == nullptr)
@@ -47,10 +51,17 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGam
 	{
 		ActiveEffectHandles.Add(ActiveEffectHandle, TargetASC);
 	}
+
+	if (bDestroyOnEffectApplication && EffectSpecHandle.Data.Get()->Def.Get()->DurationPolicy != EGameplayEffectDurationType::Infinite)
+		Destroy();
 }
 
 void AAuraEffectActor::OnOverlap(AActor *TargetActor)
 {
+	// 몬스터인지 확인
+	if (TargetActor->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemy)
+		return;
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
@@ -67,6 +78,10 @@ void AAuraEffectActor::OnOverlap(AActor *TargetActor)
 
 void AAuraEffectActor::OnEndOverlap(AActor *TargetActor)
 {
+	// 몬스터인지 확인
+	if (TargetActor->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemy)
+		return;
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);

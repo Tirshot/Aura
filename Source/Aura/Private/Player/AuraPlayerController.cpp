@@ -38,7 +38,7 @@ void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, 
 {
     // 위젯
     // IsValid - 사망이 보류 중일 경우를 포함
-    if (IsValid(TargetCharacter) && DamageTextComponentClass)
+    if (IsValid(TargetCharacter) && DamageTextComponentClass && IsLocalController())
     {
         // NewObject로 생성했을 때는 수동으로 RegisterComponent 해야함
         UDamageTextComponent* DamageText = NewObject<UDamageTextComponent>(TargetCharacter, DamageTextComponentClass);
@@ -198,8 +198,12 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                 {
                     Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
                 }
-                CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
-                bAutoRunning = true;
+
+                if (NavPath->PathPoints.Num() > 0)
+                {
+                    CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
+                    bAutoRunning = true;
+                }
             }
         }
         FollowTime = 0.f;

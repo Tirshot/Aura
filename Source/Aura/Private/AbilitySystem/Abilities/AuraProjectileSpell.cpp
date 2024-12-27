@@ -25,9 +25,6 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 		// 소켓에서 타겟까지의 벡터의 각도만 가져옴
 		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
 		
-		// 지면과 평행하게 진행, 중력을 적용하려면 값을 올리면 됨
-		Rotation.Pitch = 0.f;
-
 		FTransform SpawnTransform;
 		SpawnTransform.SetLocation(SocketLocation);
 		SpawnTransform.SetRotation(Rotation.Quaternion());
