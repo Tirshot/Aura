@@ -4,11 +4,13 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
+#include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "UI/HUD/AuraHUD.h"
 #include "Game/AuraGameModeBase.h"
 #include "AbilitySystemComponent.h"
 #include "Player/AuraPlayerState.h"
 #include "AuraAbilityTypes.h"
+#include "Interaction/CombatInterface.h"
 
 UOverlayWidgetController* UAuraAbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -83,7 +85,7 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* World
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 }
 
-void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC)
+void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
 {
 	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
 	if (CharacterClassInfo == nullptr)
@@ -93,6 +95,18 @@ void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContext
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
 		ASC->GiveAbility(AbilitySpec);
+	}
+
+	// 캐릭터 특성에 따른 어빌리티 부여
+	const FCharacterClassDefaultInfo& DefaultInfo = CharacterClassInfo->GetClassDefaultInfo(CharacterClass);
+	for (auto& AbilityClass : DefaultInfo.StartupAbilities)
+	{
+		ICombatInterface* CombatInterface = Cast<ICombatInterface>(ASC->GetAvatarActor());
+		if (CombatInterface)
+		{
+			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, CombatInterface->GetPlayerLevel());
+			ASC->GiveAbility(AbilitySpec);
+		}
 	}
 }
 
@@ -123,6 +137,31 @@ bool UAuraAbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle
 		return AuraEffectContext->IsCriticalHit();
 	}
 	return false;
+}
+
+void UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(const UObject* WorldContextObject,
+	TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius,
+	const FVector& SphereOrigin)
+{
+	// 구형 충돌 쿼리
+	FCollisionQueryParams SphereParams;
+	SphereParams.AddIgnoredActors(ActorsToIgnore);
+
+	// 겹침 판단
+	TArray<FOverlapResult> Overlaps;
+	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		// SphereParams에 따른 구형 콜리전 테스트 후 Overlaps 구조체로 내보냄
+		World->OverlapMultiByObjectType(Overlaps, SphereOrigin, FQuat::Identity, FCollisionObjectQueryParams(FCollisionObjectQueryParams::InitType::AllDynamicObjects), FCollisionShape::MakeSphere(Radius), SphereParams);
+		for (auto& Overlap : Overlaps)
+		{
+			// 겹친 액터가 전투 인터페이스를 구현했는지 확인
+			if (Overlap.GetActor()->Implements<UCombatInterface>() && !ICombatInterface::Execute_IsDead(Overlap.GetActor()))
+			{
+				OutOverlappingActors.AddUnique(ICombatInterface::Execute_GetAvatar(Overlap.GetActor()));
+			}
+		}
+	}
 }
 
 void UAuraAbilitySystemLibrary::SetIsBlockedHit(FGameplayEffectContextHandle& EffectContextHandle, bool bInIsBlockedHit)

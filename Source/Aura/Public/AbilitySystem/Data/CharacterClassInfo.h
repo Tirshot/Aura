@@ -25,6 +25,10 @@ struct FCharacterClassDefaultInfo
 	// 1차 속성의 기본값을 적용하는 게임플레이 이펙트 - 공통
 	UPROPERTY(EditDefaultsOnly, Category="Class Defaults")
 	TSubclassOf<UGameplayEffect> PrimaryAttributes;
+
+	// 기본 어빌리티
+	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 };
 
 UCLASS()

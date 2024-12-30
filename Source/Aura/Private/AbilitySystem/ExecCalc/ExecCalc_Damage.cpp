@@ -113,6 +113,8 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		const FGameplayEffectAttributeCaptureDefinition CaptureDef = AuraDamageStatics().TagsToCaptureDefs[ResistanceTag];
 
 		float DamageTypeValue = Spec.GetSetByCallerMagnitude(DamageTypeTag);
+		if (DamageTypeValue <= 0.f)
+			continue;
 
 		float Resistance = 0.f;
 		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(CaptureDef, EvalParams, Resistance);

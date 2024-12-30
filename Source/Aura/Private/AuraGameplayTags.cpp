@@ -172,9 +172,31 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Arcane, GameplayTags.Attributes_Resistance_Arcane);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Physical, GameplayTags.Attributes_Resistance_Physical);
 
+	// ¾îºô¸®Æ¼
+	GameplayTags.Abilities_Attack = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Attack"),
+		FString("°ø°Ý ¾îºô¸®Æ¼")
+	);
+
 	// ÇÇ°Ý
 	GameplayTags.Effects_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Effects.HitReact"),
 		FString("HitReact")
+	);
+
+	// ¸ùÅ¸ÁÖ
+	GameplayTags.Montage_Attack_LeftHand = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Montage.Attack.LeftHand"),
+		FString("LeftHand")
+	);
+
+	GameplayTags.Montage_Attack_RightHand = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Montage.Attack.RightHand"),
+		FString("RightHand")
+	);
+
+	GameplayTags.Montage_Attack_Weapon = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Montage.Attack.Weapon"),
+		FString("Weapon")
 	);
 }

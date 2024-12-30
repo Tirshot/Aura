@@ -160,6 +160,13 @@ void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float D
         if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
         {
             PC->ShowDamageNumber(Damage, Props.TargetCharacter, bBlockedHit, bCriticalHit);
+            return;
+        }
+        
+        // 맞는 사람이 플레이어 캐릭터일 때
+        if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.TargetCharacter->Controller))
+        {
+            PC->ShowDamageNumber(Damage, Props.TargetCharacter, bBlockedHit, bCriticalHit);
         }
     }
 }

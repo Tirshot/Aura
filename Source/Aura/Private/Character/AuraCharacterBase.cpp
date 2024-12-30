@@ -3,6 +3,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
+#include "AuraGameplayTags.h"
 
 AAuraCharacterBase::AAuraCharacterBase()
 {
@@ -50,6 +51,7 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 	// 캐릭터 충돌 비활성화
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Dissolve();
+	bDead = true;
 }
 
 void AAuraCharacterBase::BeginPlay()
@@ -63,10 +65,38 @@ void AAuraCharacterBase::InitAbilityActorInfo()
 	
 }
 
-FVector AAuraCharacterBase::GetCombatSocketLocation()
+FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
-	check(Weapon);
-	return Weapon->GetSocketLocation(WeaponTipSocketName);
+	// TO-DO : MontageTag에 따라서 알맞은 소켓 반환하기
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	if (MontageTag.MatchesTagExact(GameplayTags.Montage_Attack_Weapon) && IsValid(Weapon))
+	{
+		return Weapon->GetSocketLocation(WeaponTipSocketName);
+	}
+	if (MontageTag.MatchesTagExact(GameplayTags.Montage_Attack_LeftHand))
+	{
+		return GetMesh()->GetSocketLocation(LeftHandSocketName);
+	}
+	if (MontageTag.MatchesTagExact(GameplayTags.Montage_Attack_RightHand))
+	{
+		return GetMesh()->GetSocketLocation(RightHandSocketName);
+	}
+	return FVector();
+}
+
+bool AAuraCharacterBase::IsDead_Implementation() const
+{
+	return bDead;
+}
+
+AActor* AAuraCharacterBase::GetAvatar_Implementation()
+{
+	return this;
+}
+
+TArray<FTaggedMontage> AAuraCharacterBase::GetAttackMontages_Implementation()
+{
+	return AttackMontages;
 }
 
 void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const

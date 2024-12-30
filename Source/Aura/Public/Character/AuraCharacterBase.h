@@ -24,12 +24,22 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
+	/** 전투 인터페이스 **/
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
 	virtual void Die() override;
+	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
+	virtual bool IsDead_Implementation() const override;
+	virtual AActor* GetAvatar_Implementation() override;
+	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
+	/**여기까지 전투 인터페이스**/
 
 	// 랙돌 멀티캐스트 RPC
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath();
+
+	// 몽타주와 태그
+	UPROPERTY(EditAnywhere, category="Combat")
+	TArray<FTaggedMontage> AttackMontages;
 
 protected:
 	virtual void BeginPlay() override;
@@ -42,8 +52,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName WeaponTipSocketName;
 
-	virtual FVector GetCombatSocketLocation() override;
+	// 공격 소켓
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName LeftHandSocketName;
 
+	// 공격 소켓
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName RightHandSocketName;
+
+	bool bDead = false;
+		
 	// GAS
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
