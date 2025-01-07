@@ -12,6 +12,7 @@ class UAttributeSet;
 class UGameplayEffect;
 class UGameplayAbility;
 class UAnimMontage;
+class UNiagaraSystem;
 
 UCLASS(Abstract)
 class AURA_API AAuraCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICombatInterface
@@ -31,6 +32,8 @@ public:
 	virtual bool IsDead_Implementation() const override;
 	virtual AActor* GetAvatar_Implementation() override;
 	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
+	virtual UNiagaraSystem* GetBloodEffect_Implementation() override;
+	virtual FTaggedMontage GetTaggedMontageByTag_Implementation(const FGameplayTag& MontageTag) override;
 	/**여기까지 전투 인터페이스**/
 
 	// 랙돌 멀티캐스트 RPC
@@ -95,6 +98,14 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UMaterialInstance> WeaponDissolveMaterialInstance;
+
+	// 혈흔 효과
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UNiagaraSystem* BloodEffect;
+
+	// 사망 사운드
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	USoundBase* DeathSound;
 
 protected:
 	// 캐릭터에 어빌리티 부여
