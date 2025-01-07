@@ -84,6 +84,12 @@ void AAuraEnemy::Die()
     // 수명 설정
     SetLifeSpan(LifeSpan);
 
+    if (AuraAIController)
+    {
+        // 블랙보드 키 기본값 설정
+        AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
+    }
+
     // 랙돌 효과와 무기 드랍
     Super::Die();
 }
