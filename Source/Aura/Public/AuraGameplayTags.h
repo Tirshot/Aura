@@ -58,11 +58,13 @@ public:
 
 	// ¾îºô¸®Æ¼
 	FGameplayTag Abilities_Attack;
+	FGameplayTag Abilities_Summon;
 
 	// TaggedMontage Struct
 	FGameplayTag CombatSocket_Weapon;
 	FGameplayTag CombatSocket_RightHand;
 	FGameplayTag CombatSocket_LeftHand;
+	FGameplayTag CombatSocket_Tail;
 
 	FGameplayTag Montage_Attack_1;
 	FGameplayTag Montage_Attack_2;

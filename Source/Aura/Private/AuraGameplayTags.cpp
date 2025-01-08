@@ -175,7 +175,12 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	// 어빌리티
 	GameplayTags.Abilities_Attack = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Attack"),
-		FString("공격 어빌리티")
+		FString("Attack Ability")
+	);
+
+	GameplayTags.Abilities_Summon = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Summon"),
+		FString("Summon Ability")
 	);
 
 	// 피격
@@ -198,6 +203,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.CombatSocket_Weapon = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("CombatSocket.Weapon"),
 		FString("Weapon")
+	);
+
+	GameplayTags.CombatSocket_Tail = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("CombatSocket.Tail"),
+		FString("Tail")
 	);
 
 	// 몽타주 태그

@@ -119,7 +119,7 @@ void AAuraEnemy::BeginPlay()
         AuraUserWidget->SetWidgetController(this);
     }
 
-    if (UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+    if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
     {
         AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AuraAS->GetHealthAttribute()).AddLambda(
             [this](const FOnAttributeChangeData& Data) 

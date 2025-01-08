@@ -34,6 +34,8 @@ public:
 	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
 	virtual UNiagaraSystem* GetBloodEffect_Implementation() override;
 	virtual FTaggedMontage GetTaggedMontageByTag_Implementation(const FGameplayTag& MontageTag) override;
+	virtual int32 GetMinionCount_Implementation() override;
+	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	/**여기까지 전투 인터페이스**/
 
 	// 랙돌 멀티캐스트 RPC
@@ -62,6 +64,10 @@ protected:
 	// 공격 소켓
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName RightHandSocketName;
+
+	// 공격 소켓
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName TailSocketName;
 
 	bool bDead = false;
 		
@@ -106,6 +112,10 @@ protected:
 	// 사망 사운드
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	USoundBase* DeathSound;
+
+	// 소환수
+
+	int32 MinionCount = 0;
 
 protected:
 	// 캐릭터에 어빌리티 부여

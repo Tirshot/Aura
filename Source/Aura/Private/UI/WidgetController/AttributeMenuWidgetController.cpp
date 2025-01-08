@@ -2,9 +2,10 @@
 
 
 #include "UI/WidgetController/AttributeMenuWidgetController.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AttributeInfo.h"
-#include "AttributeSet.h"
+#include "Player/AuraPlayerState.h"
 
 void UAttributeMenuWidgetController::BroadcastInitialValues()
 {
@@ -34,12 +35,10 @@ void UAttributeMenuWidgetController::BindCallbacksToDependencies()
 	}
 }
 
-void UAttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& GameplayTag, const FGameplayAttribute& Attribute) const
+void UAttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& AttributeTag, const FGameplayAttribute& Attribute)
 {
-	// 키를 이용하여 캐릭터의 속성 정보를 꺼내기
-	FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(GameplayTag);
+	FAuraAttributeInfo Info = AttributeInfo->FindAttributeInfoForTag(AttributeTag);
 	Info.AttributeValue = Attribute.GetNumericValue(AttributeSet);
 
-	// 속성 정보 브로드캐스트
 	AttributeInfoDelegate.Broadcast(Info);
 }
