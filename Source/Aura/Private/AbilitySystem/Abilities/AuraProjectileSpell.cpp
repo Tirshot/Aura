@@ -14,7 +14,7 @@ void UAuraProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
-void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag)
+void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride)
 {
 	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
 	if (!bIsServer)
@@ -26,6 +26,12 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 
 	// 소켓에서 타겟까지의 벡터의 각도만 가져옴
 	FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
+
+	// 높이 보정
+	if (bOverridePitch)
+	{
+		Rotation.Pitch = PitchOverride;
+	}
 
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(SocketLocation);
