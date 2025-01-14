@@ -183,6 +183,19 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Summon Ability")
 	);
 
+	GameplayTags.Abilities_Fire_FireBolt = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Fire.FireBolt"),
+		FString("FireBolt Ability")
+	);
+
+	/* 
+	/  Äð´Ù¿î
+	*/
+	GameplayTags.Cooldown_Fire_FireBolt = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Cooldown.Fire.FireBolt"),
+		FString("FireBolt Ability Cooldown")
+	);
+
 	// ÇÇ°Ý
 	GameplayTags.Effects_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Effects.HitReact"),

@@ -4,6 +4,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
+#include "AuraLogChannels.h"
 
 void UAuraAbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -23,6 +24,8 @@ void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf
             GiveAbility(AbilitySpec);
         }
     }
+    bStartupAbilitiesGiven = true;
+    AbilitiesGivenDelegate.Broadcast(this);
 }
 
 void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
@@ -65,6 +68,59 @@ void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
             AbilitySpecInputReleased(AbilitySpec);
         }
     }
+}
+
+void UAuraAbilitySystemComponent::ForEachAbility(const FForEachAbility& Delegate)
+{
+    // 어빌리티가 차단되거나 변경되었을 수 있음, 어빌리티 잠금
+    FScopedAbilityListLock ActiveScopeLock(*this);
+
+    for (const FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+    {
+        if (Delegate.ExecuteIfBound(AbilitySpec) == false)
+        {
+            UE_LOG(LogAura, Error, TEXT("Failed to execute delegate in %hs"), __FUNCTION__);
+        }
+    }
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromSpec(const FGameplayAbilitySpec& AbilitySpec)
+{
+    for (FGameplayTag Tag : AbilitySpec.DynamicAbilityTags)
+    {
+        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("InputTag"))))
+        {
+            return Tag;
+        }
+    }
+    return FGameplayTag();
+}
+
+void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
+{
+    Super::OnRep_ActivateAbilities();
+
+    // 어빌리티가 처음 부여될 때만 발동
+    if (bStartupAbilitiesGiven == false)
+    {
+        bStartupAbilitiesGiven = true;
+        AbilitiesGivenDelegate.Broadcast(this);
+    }
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbilitySpec& AbilitySpec)
+{
+    if (AbilitySpec.Ability)
+    {
+        for (FGameplayTag Tag : AbilitySpec.Ability.Get()->AbilityTags)
+        {
+            if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities"))))
+            {
+                return Tag;
+            }
+        }
+    }
+    return FGameplayTag();
 }
 
 void UAuraAbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent *AbilitySystemComponent, const FGameplayEffectSpec &EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)
