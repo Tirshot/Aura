@@ -16,6 +16,10 @@ void UAttributeMenuWidgetController::BroadcastInitialValues()
 	{
 		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
+
+	// 플레이어 상태 가져옴
+	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+	AuraPlayerState->OnAttributePointChangedDelegate.Broadcast(AuraPlayerState->GetAttributePoints());
 }
 
 void UAttributeMenuWidgetController::BindCallbacksToDependencies()
@@ -23,6 +27,20 @@ void UAttributeMenuWidgetController::BindCallbacksToDependencies()
 	// 속성 세트 가져오기
 	UAuraAttributeSet* AS = CastChecked<UAuraAttributeSet>(AttributeSet);
 	check(AttributeInfo);
+
+	// 플레이어 상태 가져옴
+	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+	AuraPlayerState->OnAttributePointChangedDelegate.AddLambda([this](int32 NewValue)
+		{
+			// 블루프린트 델리게이트 호출
+			OnAttributePointChangedDelegate.Broadcast(NewValue);
+		});
+
+	AuraPlayerState->OnSpellPointChangedDelegate.AddLambda([this](int32 NewValue)
+		{
+			// 블루프린트 델리게이트 호출
+			OnSpellPointChangedDelegate.Broadcast(NewValue);
+		});
 
 	for (auto& Pair : AS->TagsToAttributes)
 	{
@@ -33,6 +51,12 @@ void UAttributeMenuWidgetController::BindCallbacksToDependencies()
 			}
 		);
 	}
+}
+
+void UAttributeMenuWidgetController::UpgradeAttribute(const FGameplayTag& AttributeTag)
+{
+	UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+	AuraASC->UpgradeAttribute(AttributeTag);
 }
 
 void UAttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& AttributeTag, const FGameplayAttribute& Attribute)

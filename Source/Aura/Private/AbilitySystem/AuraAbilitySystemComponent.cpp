@@ -5,6 +5,8 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
 #include "AuraLogChannels.h"
+#include "Interaction/PlayerInterface.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 void UAuraAbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -105,6 +107,33 @@ FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromSpec(const FGameplayAbi
         }
     }
     return FGameplayTag();
+}
+
+void UAuraAbilitySystemComponent::UpgradeAttribute(const FGameplayTag& AttributeTag)
+{
+    if (GetAvatarActor()->Implements<UPlayerInterface>())
+    {
+        if (IPlayerInterface::Execute_GetAttributePoints(GetAvatarActor()) > 0)
+        {
+            ServerUpgradeAttribute(AttributeTag);
+        }
+    }
+}
+
+void UAuraAbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGameplayTag& AttributeTag)
+{
+    // 액터에게 게임플레이 이벤트 전송 -> 이벤트 수신 어빌리티 작동
+    FGameplayEventData Payload;
+    Payload.EventTag = AttributeTag;
+    Payload.EventMagnitude = 1.f;
+
+    UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetAvatarActor(), AttributeTag, Payload);
+
+    // 속성 포인트 감소
+    if (GetAvatarActor()->Implements<UPlayerInterface>())
+    {        
+        IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
+    }
 }
 
 void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
