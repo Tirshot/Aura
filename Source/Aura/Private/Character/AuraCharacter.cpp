@@ -10,9 +10,15 @@
 #include "Player/AuraPlayerState.h"
 #include "Player/AuraPlayerController.h"
 #include "UI/HUD/AuraHUD.h"
+#include "AbilitySystem/Data/LevelUpInfo.h"
+#include "NiagaraComponent.h"
 
 AAuraCharacter::AAuraCharacter()
 {
+    LevelUpNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>("LevelUpNiagaraComponent");
+    LevelUpNiagaraComponent->SetupAttachment(GetRootComponent());
+    LevelUpNiagaraComponent->bAutoActivate = false;
+
     GetCharacterMovement()->bOrientRotationToMovement = true;
     GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
     GetCharacterMovement()->bConstrainToPlane = true;
@@ -23,16 +29,15 @@ AAuraCharacter::AAuraCharacter()
     bUseControllerRotationYaw = false;
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
-    SpringArm->SetRelativeRotation(FRotator(-45.0f, 0.0f, 0.0f));
-    SpringArm->TargetArmLength = 750.f;
-    SpringArm->bUsePawnControlRotation = false;
-    SpringArm->bInheritPitch = false;
-    SpringArm->bInheritYaw = false;
-    SpringArm->bInheritRoll = false;
+    SpringArm->SetUsingAbsoluteRotation(true);
+    SpringArm->bDoCollisionTest = false;
     SpringArm->SetupAttachment(RootComponent);
 
     Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-    Camera->SetupAttachment(SpringArm);
+    Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+    Camera->bUsePawnControlRotation = false;
+
+    CharacterClass = ECharacterClass::Elementalist;
 }
 
 
@@ -55,12 +60,87 @@ void AAuraCharacter::OnRep_PlayerState()
     InitAbilityActorInfo();
 }
 
-int32 AAuraCharacter::GetPlayerLevel()
+void AAuraCharacter::AddToXP_Implementation(int32 InXP)
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    AuraPlayerState->AddToXP(InXP);
+}
+
+void AAuraCharacter::LevelUp_Implementation()
+{
+    MulticastLevelUpParticles();
+}
+
+void AAuraCharacter::MulticastLevelUpParticles_Implementation() const
+{
+    if (IsValid(LevelUpNiagaraComponent))
+    {
+        // 나이아가라 시스템을 카메라 방향으로 정렬
+        const FVector CameraLocation = Camera->GetComponentLocation();
+        const FVector NiagaraSystemLocation = LevelUpNiagaraComponent->GetComponentLocation();
+        const FRotator ToCameraRotation = (CameraLocation - NiagaraSystemLocation).Rotation();
+        LevelUpNiagaraComponent->SetWorldRotation(ToCameraRotation);
+
+        LevelUpNiagaraComponent->Activate(true);
+    }
+}
+
+int32 AAuraCharacter::GetXP_Implementation() const
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->GetXP();
+}
+
+int32 AAuraCharacter::FindLevelForXP_Implementation(int32 InXP) const
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->LevelUpInfo->FindLevelForXP(InXP);
+}
+
+int32 AAuraCharacter::GetAttributePointsReward_Implementation(int32 Level) const
+{
+    const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].AttributePointAward;
+}
+
+int32 AAuraCharacter::GetSpellPointsReward_Implementation(int32 Level) const
+{
+    const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].SpellPointAward;
+}
+
+void AAuraCharacter::AddToPlayerLevel_Implementation(int32 InLevel)
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    AuraPlayerState->AddToLevel(InLevel);
+}
+
+void AAuraCharacter::AddToAttributePoints_Implementation(int32 InAttributePoints)
+{
+    // TODO : 속성 포인트 PlayerState에 구현
+
+
+}
+
+void AAuraCharacter::AddToSpellPoints_Implementation(int32 InSpellPoints)
+{
+    // TODO : 속성 포인트 PlayerState에 구현
+
+
+}
+
+int32 AAuraCharacter::GetCharacterLevel_Implementation()
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
     check(AuraPlayerState);
 
-    return AuraPlayerState->GetPlayerLevel();
+    return AuraPlayerState->GetCharacterLevel();
 }
 
 void AAuraCharacter::InitAbilityActorInfo()

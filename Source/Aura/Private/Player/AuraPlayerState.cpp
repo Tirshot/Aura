@@ -5,6 +5,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/Data/LevelUpInfo.h"
 
 
 AAuraPlayerState::AAuraPlayerState()
@@ -27,9 +28,41 @@ void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(AAuraPlayerState, Level);
+    DOREPLIFETIME(AAuraPlayerState, XP);
+}
+
+void AAuraPlayerState::SetXP(int32 GainedXP)
+{
+    XP = GainedXP;
+    OnXPChangedDelegate.Broadcast(XP);
+}
+
+void AAuraPlayerState::AddToXP(int32 GainedXP)
+{
+    XP += GainedXP;
+    OnXPChangedDelegate.Broadcast(XP);
+}
+
+void AAuraPlayerState::SetLevel(int32 InLevel)
+{
+    Level = InLevel;
+    OnLevelChangedDelegate.Broadcast(Level);
+}
+
+void AAuraPlayerState::AddToLevel(int32 InLevel)
+{
+    Level += InLevel;
+    OnLevelChangedDelegate.Broadcast(Level);
 }
 
 void AAuraPlayerState::OnRep_Level(int32 OldLevel)
 {
+    // 블루프린트로 전달
+    OnLevelChangedDelegate.Broadcast(Level);
+}
 
+void AAuraPlayerState::OnRep_XP(int32 OldXP)
+{
+    // 블루프린트로 전달
+    OnXPChangedDelegate.Broadcast(XP);
 }

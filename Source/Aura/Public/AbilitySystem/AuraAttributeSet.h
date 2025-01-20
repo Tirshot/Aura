@@ -174,7 +174,9 @@ public:
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingDamage);
 
-
+	UPROPERTY(BlueprintReadOnly, category = "Meta Attributes")
+	FGameplayAttributeData IncomingXP;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingXP);
 
 	/*
 	* Replication Notify
@@ -244,4 +246,5 @@ private:
 	// 콜백 데이터에서 꺼내와 구조체에 저장
 	void SetEffectProperties(const FGameplayEffectModCallbackData & Data, FEffectProperties& Props) const;
 	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit) const;
+	void SendXPEvent(const FEffectProperties& Props);
 };

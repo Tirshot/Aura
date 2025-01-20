@@ -39,6 +39,8 @@ public:
 	FGameplayTag Attributes_Resistance_Lightning;
 	FGameplayTag Attributes_Resistance_Physical;
 
+	FGameplayTag Attributes_Meta_IncomingXP;
+
 	// 마우스 클릭
 	FGameplayTag InputTag_LMB;
 	FGameplayTag InputTag_RMB;

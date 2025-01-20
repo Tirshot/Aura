@@ -85,6 +85,15 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	);
 
 	/*
+	*  메타 속성
+	*/
+	GameplayTags.Attributes_Meta_IncomingXP = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Attributes.Meta.IncomingXP"),
+		FString("IncomingXP meta Attribute")
+	);
+
+
+	/*
 	*  입력 태그
 	*/
 

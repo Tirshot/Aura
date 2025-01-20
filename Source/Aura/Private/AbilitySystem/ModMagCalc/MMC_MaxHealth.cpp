@@ -40,8 +40,12 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 	Vigor = FMath::Max<float>(Vigor, 0.f);
 
 	// 레벨에 따라 증가
-	ICombatInterface* CombatInterface = Cast<ICombatInterface>(Spec.GetContext().GetSourceObject());
-	const int32 PlayerLevel = CombatInterface->GetPlayerLevel();
+	int32 PlayerLevel = 1;
+
+	if ((Spec.GetContext().Get()->GetSourceObject()->Implements<UCombatInterface>()))
+	{
+		PlayerLevel = ICombatInterface::Execute_GetCharacterLevel(Spec.GetContext().Get()->GetSourceObject());
+	}
 
 	// 공식
 	return 80.f + Vigor * 2.5f + 10.f * PlayerLevel;

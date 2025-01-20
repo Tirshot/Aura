@@ -18,6 +18,7 @@ void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf
         // 게임플레이 어빌리티 스펙 생성
         FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
 
+        // 어빌리티에 입력 태그를 부여
         if (const UAuraGameplayAbility* AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability))
         {
             AbilitySpec.DynamicAbilityTags.AddTag(AuraAbility->StartupInputTag);
@@ -26,6 +27,16 @@ void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf
     }
     bStartupAbilitiesGiven = true;
     AbilitiesGivenDelegate.Broadcast(this);
+}
+
+void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities)
+{
+    for (TSubclassOf<UGameplayAbility> AbilityClass : StartupPassiveAbilities)
+    {
+        // 게임플레이 어빌리티 스펙 생성
+        FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+        GiveAbilityAndActivateOnce(AbilitySpec);
+    }
 }
 
 void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)

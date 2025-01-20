@@ -5,6 +5,8 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
+#include "AbilitySystem/Data/LevelUpInfo.h"
+#include "Player/AuraPlayerState.h"
 
 void UOverlayWidgetController::BroadcastInitialValues()
 {
@@ -20,6 +22,13 @@ void UOverlayWidgetController::BroadcastInitialValues()
 
 void UOverlayWidgetController::BindCallbacksToDependencies()
 {
+    AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+    AuraPlayerState->OnXPChangedDelegate.AddUObject(this, &UOverlayWidgetController::OnXPChanged);
+    AuraPlayerState->OnLevelChangedDelegate.AddLambda([this](int32 NewLevel)
+        {
+            OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
+        });
+
     const UAuraAttributeSet* AuraAttributeSet = CastChecked<UAuraAttributeSet>(AttributeSet);
 
     AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
@@ -112,4 +121,36 @@ void UOverlayWidgetController::OnInitializeStartupAbilities(UAuraAbilitySystemCo
 
     // 델리게이트 실행
     AuraAbilitySystemComponent->ForEachAbility(BroadcastDelegate);
+}
+
+void UOverlayWidgetController::OnXPChanged(int32 NewXP) const
+{
+    // HUD의 XP Bar에 적용
+    const AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+    
+    // 레벨업 정보 가져옴
+    const ULevelUpInfo* LevelUpInfo = AuraPlayerState->LevelUpInfo;
+
+    checkf(LevelUpInfo, TEXT("Can't Found LevelUpInfo. Fill out AuraPlayerState Blueprint"));
+
+    // 경험치량 증가로 인해 달성한 레벨
+    const int32 Level = LevelUpInfo->FindLevelForXP(NewXP);
+    const int32 MaxLevel = LevelUpInfo->LevelUpInformation.Num();
+
+    // 증가량
+    if (Level <= MaxLevel && Level > 0)
+    {
+        const int32 LevelUpRequirement = LevelUpInfo->LevelUpInformation[Level].LevelUpRequirement;
+        const int32 PrevLevelUpRequirement = LevelUpInfo->LevelUpInformation[Level - 1].LevelUpRequirement;
+
+        // 현재 레벨의 끝 값 - 현재 레벨의 시작 값(==이전 레벨의 끝 값)
+        const int32 Delta = LevelUpRequirement - PrevLevelUpRequirement;
+
+        // 지금 레벨 안에서 경험치 진행값
+        const int32 XPForThisLevel = NewXP - PrevLevelUpRequirement;
+
+        const float XPBarPercent = static_cast<float>(XPForThisLevel) / Delta;
+
+        OnXPPercentChanged.Broadcast(XPBarPercent);
+    }
 }
