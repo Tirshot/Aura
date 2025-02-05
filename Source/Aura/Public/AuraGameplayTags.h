@@ -51,6 +51,10 @@ public:
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
 
+	// 패시브
+	FGameplayTag InputTag_Passive_1;
+	FGameplayTag InputTag_Passive_2;
+
 	// 데미지
 	FGameplayTag Damage;
 	FGameplayTag Damage_Fire;
@@ -62,6 +66,21 @@ public:
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Summon;
 	FGameplayTag Abilities_Fire_FireBolt;
+	FGameplayTag Abilities_Lightning_Electrocute;
+	FGameplayTag Abilities_HitReact;
+
+	// 어빌리티 상태
+	FGameplayTag Abilities_Status_Locked;
+	FGameplayTag Abilities_Status_Eligible;
+	FGameplayTag Abilities_Status_Unlocked;
+	FGameplayTag Abilities_Status_Equipped;
+
+	// 어빌리티 타입
+	FGameplayTag Abilities_Type_Offensive;
+	FGameplayTag Abilities_Type_Passive;
+	FGameplayTag Abilities_Type_None;
+
+	// 쿨타임
 	FGameplayTag Cooldown_Fire_FireBolt;
 
 	// TaggedMontage Struct
