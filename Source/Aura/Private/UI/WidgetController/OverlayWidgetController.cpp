@@ -7,6 +7,7 @@
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/LevelUpInfo.h"
 #include "Player/AuraPlayerState.h"
+#include "AuraGameplayTags.h"
 
 void UOverlayWidgetController::BroadcastInitialValues()
 {
@@ -59,6 +60,7 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 
     if (GetAuraASC())
     {
+        GetAuraASC()->AbilityEquipped.AddUObject(this, &UOverlayWidgetController::OnAbilityEquipped);
         if (GetAuraASC()->bStartupAbilitiesGiven)
         {
             // 콜백 함수 바인드 필요 없이 바로 호출
@@ -119,4 +121,23 @@ void UOverlayWidgetController::OnXPChanged(int32 NewXP)
 
         OnXPPercentChanged.Broadcast(XPBarPercent);
     }
+}
+
+void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)
+{
+    const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+
+    FAuraAbilityInfo LastSlotInfo;
+    LastSlotInfo.StatusTag = GameplayTags.Abilities_Status_Unlocked;
+    LastSlotInfo.InputTag = PrevSlot;
+    LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
+
+    // 변경할 슬롯에 이미 어빌리티가 있다면 빈 어빌리티 정보를 보냄
+    AbilityInfoDelegate.Broadcast(LastSlotInfo);
+
+    // 변경할 슬롯에 선택한 어빌리티의 정보를 채움
+    FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+    Info.StatusTag = Status;
+    Info.InputTag = Slot;
+    AbilityInfoDelegate.Broadcast(Info);
 }

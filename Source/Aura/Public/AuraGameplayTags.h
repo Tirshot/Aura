@@ -63,6 +63,8 @@ public:
 	FGameplayTag Damage_Physical;
 
 	// ¾îºô¸®Æ¼
+	FGameplayTag Abilities_None;
+
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Summon;
 	FGameplayTag Abilities_Fire_FireBolt;

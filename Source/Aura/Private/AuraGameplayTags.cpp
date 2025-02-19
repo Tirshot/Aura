@@ -194,6 +194,12 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	/*
 	 /  ¾îºô¸®Æ¼
 	 */
+
+	GameplayTags.Abilities_None = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.None"),
+		FString("like nullptr for Ability")
+	);
+
 	GameplayTags.Abilities_Attack = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Attack"),
 		FString("Attack Ability")

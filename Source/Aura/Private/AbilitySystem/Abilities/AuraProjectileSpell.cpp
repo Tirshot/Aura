@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilitySystem/Abilities/AuraProjectileSpell.h"
 
@@ -24,10 +23,10 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 		GetAvatarActorFromActorInfo(),
 		SocketTag);
 
-	// ¼ÒÄÏ¿¡¼­ Å¸°Ù±îÁöÀÇ º¤ÅÍÀÇ °¢µµ¸¸ °¡Á®¿È
+	// ì†Œì¼“ì—ì„œ íƒ€ê²Ÿê¹Œì§€ì˜ ë²¡í„°ì˜ ê°ë„ë§Œ ê°€ì ¸ì˜´
 	FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
 
-	// ³ôÀÌ º¸Á¤
+	// ë†’ì´ ë³´ì •
 	if (bOverridePitch)
 	{
 		Rotation.Pitch = PitchOverride;
@@ -44,11 +43,18 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 		Cast<APawn>(GetOwningActorFromActorInfo()),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	// Åõ»çÃ¼¿¡ °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ® ½ºÆå ºÙÀÌ±â - µ¥¹ÌÁö ºÎ¿©
+	// íˆ¬ì‚¬ì²´ì— ê²Œì„í”Œë ˆì´ ì´í™íŠ¸ ìŠ¤í™ ë¶™ì´ê¸° - ë°ë¯¸ì§€ ë¶€ì—¬
 	const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
 	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	EffectContextHandle.SetAbility(this);
 	EffectContextHandle.AddSourceObject(Projectile);
+
+	// ì´í™íŠ¸ ì»¨í…ìŠ¤íŠ¸ í•¸ë“¤ì— ì•¡í„° ì •ë³´ ì¶”ê°€
+	TArray<TWeakObjectPtr<AActor>> Actors;
+	Actors.Add(Projectile);
+	EffectContextHandle.AddActors(Actors);
+
+	// ì´í™íŠ¸ ì»¨í…ìŠ¤íŠ¸ í•¸ë“¤ì— ì ì¤‘ ê²°ê³¼ ì¶”ê°€
 	FHitResult HitResult;
 	EffectContextHandle.AddHitResult(HitResult);
 
@@ -56,14 +62,14 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 
 	FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
 
-	// µ¥¹ÌÁö Å¸ÀÔ¿¡ ´ëÇØ ·çÇÁ
+	// ë°ë¯¸ì§€ íƒ€ì…ì— ëŒ€í•´ ë£¨í”„
 	for (auto& Pair : DamageTypes)
 	{
 		const float ScaledDamage = Pair.Value.GetValueAtLevel(GetAbilityLevel());
 		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Pair.Key, ScaledDamage);
 
 	}
-	// µ¥¹ÌÁö Set by Caller, ½Ì±ÛÅæ, ÅÂ±×-µ¥¹ÌÁö ½Ö
+	// ë°ë¯¸ì§€ Set by Caller, ì‹±ê¸€í†¤, íƒœê·¸-ë°ë¯¸ì§€ ìŒ
 	Projectile->DamageEffectSpecHandle = SpecHandle;
 	Projectile->FinishSpawning(SpawnTransform);
 }

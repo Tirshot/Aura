@@ -124,6 +124,24 @@ FGameplayTag UAuraAbilitySystemComponent::GetStatusFromSpec(const FGameplayAbili
     return FGameplayTag();
 }
 
+FGameplayTag UAuraAbilitySystemComponent::GetStatusFromAbilityTag(const FGameplayTag& AbilityTag)
+{
+    if (const FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        return GetStatusFromSpec(*Spec);
+    }
+    return FGameplayTag();
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromAbilityTag(const FGameplayTag& AbilityTag)
+{
+    if (const FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        return GetInputTagFromSpec(*Spec);
+    }
+    return FGameplayTag();
+}
+
 FGameplayAbilitySpec* UAuraAbilitySystemComponent::GetSpecFromAbilityTag(const FGameplayTag& AbilityTag)
 {
     // 활성화된 어빌리티 잠금
@@ -207,9 +225,142 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
 
             // 즉시 복제
             MarkAbilitySpecDirty(AbilitySpec);
-            ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible);
+            ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible, 1);
         }
     }
+}
+
+void UAuraAbilitySystemComponent::ServerSpendSpellPoint_Implementation(const FGameplayTag& AbilityTag)
+{
+    // 활성화된 어빌리티
+    if (FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        // 스펠 포인트 소모
+        if (GetAvatarActor()->Implements<UPlayerInterface>())
+        {
+            IPlayerInterface::Execute_AddToSpellPoints(GetAvatarActor(), -1);
+        }
+        
+        FGameplayTag Status = GetStatusFromSpec(*AbilitySpec);
+        const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
+
+        // status = unlocked, eligible, equipped
+        if (Status.MatchesTagExact(GameplayTags.Abilities_Status_Eligible))
+        {
+            // 상태 태그 전환
+            AbilitySpec->DynamicAbilityTags.RemoveTag(GameplayTags.Abilities_Status_Eligible);
+            AbilitySpec->DynamicAbilityTags.AddTag(GameplayTags.Abilities_Status_Unlocked);
+            Status = GameplayTags.Abilities_Status_Unlocked;
+        }
+        else if (Status.MatchesTagExact(GameplayTags.Abilities_Status_Unlocked) || Status.MatchesTagExact(GameplayTags.Abilities_Status_Equipped))
+        {
+            // 어빌리티 레벨 상승
+            AbilitySpec->Level += 1;
+        }
+
+        // 클라이언트로 브로드캐스트
+        ClientUpdateAbilityStatus(AbilityTag, Status, AbilitySpec->Level);
+        MarkAbilitySpecDirty(*AbilitySpec);
+    }
+}
+
+void UAuraAbilitySystemComponent::ServerEquipAbility_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& Slot)
+{
+    //
+    if (FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        // 슬롯 바꾸기
+        const FGameplayTag& PrevSlot = GetInputTagFromSpec(*AbilitySpec);
+        const FGameplayTag& Status = GetStatusFromSpec(*AbilitySpec);
+
+        // 어빌리티가 장착되었거나 해금된 경우
+        const bool bStatusValid = Status == FAuraGameplayTags::Get().Abilities_Status_Equipped || Status == FAuraGameplayTags::Get().Abilities_Status_Unlocked;
+        if (bStatusValid)
+        {
+            // 해당 슬롯에 있는 어빌리티를 제거
+            ClearAbilitiesOfSlot(Slot);
+            // 이 어빌리티 슬롯을 초기화
+            ClearSlot(AbilitySpec);
+            // 슬롯 바꿔치기
+            AbilitySpec->DynamicAbilityTags.AddTag(Slot);
+
+            // 어빌리티가 해금된 경우
+            if (Status.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Unlocked))
+            {
+                // 장착 태그 부여
+                AbilitySpec->DynamicAbilityTags.RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
+                AbilitySpec->DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
+            }
+            // 복제
+            MarkAbilitySpecDirty(*AbilitySpec);
+        }
+        // 클라이언트 RPC
+        ClientEquipAbility(AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Equipped, Slot, PrevSlot);
+    }
+}
+
+void UAuraAbilitySystemComponent::ClientEquipAbility_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)
+{
+    AbilityEquipped.Broadcast(AbilityTag, Status, Slot, PrevSlot);
+}
+
+bool UAuraAbilitySystemComponent::GetDescriptionsByAbilityTag(const FGameplayTag& AbilityTag, FString& OutDescription, FString& OutNextLevelDescription)
+{
+    // 어빌리티 상태 - 해금 가능(Eligible), 해금(Unlocked), 장착(Equipped)
+    if (const FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        if (UAuraGameplayAbility* AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec->Ability))
+        {
+            OutDescription = AuraAbility->GetDescription(AbilitySpec->Level);
+            OutNextLevelDescription = AuraAbility->GetNextLevelDescription(AbilitySpec->Level + 1);
+            return true;
+        }
+    }
+
+    // 어빌리티 상태 - 잠김(Locked)
+    UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
+    if (AbilityTag.IsValid() == false || AbilityTag.MatchesTagExact(FAuraGameplayTags::Get().Abilities_None))
+    {
+        OutDescription = FString();
+    }
+    else
+    {
+        OutDescription = UAuraGameplayAbility::GetLockedDescription(AbilityInfo->FindAbilityInfoForTag(AbilityTag).LevelRequirement);
+    }
+    OutNextLevelDescription = FString();
+    return false;
+}
+
+void UAuraAbilitySystemComponent::ClearSlot(FGameplayAbilitySpec* Spec)
+{
+    //
+    const FGameplayTag Slot = GetInputTagFromSpec(*Spec);
+    Spec->DynamicAbilityTags.RemoveTag(Slot);
+    MarkAbilitySpecDirty(*Spec);
+}
+
+void UAuraAbilitySystemComponent::ClearAbilitiesOfSlot(const FGameplayTag& Slot)
+{
+    FScopedAbilityListLock ActiveScopLock(*this);
+    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+    {
+        if (AbilityHasSlot(&Spec, Slot))
+        {
+            ClearSlot(&Spec);
+        }
+    }
+}
+
+bool UAuraAbilitySystemComponent::AbilityHasSlot(FGameplayAbilitySpec* Spec, const FGameplayTag& Slot)
+{
+    for (FGameplayTag Tag : Spec->DynamicAbilityTags)
+    {
+        if (Tag.MatchesTagExact(Slot))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
@@ -224,9 +375,9 @@ void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
     }
 }
 
-void UAuraAbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag)
+void UAuraAbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 AbilityLevel)
 {
-    AbilityStatusChanged.Broadcast(AbilityTag, StatusTag);
+    AbilityStatusChanged.Broadcast(AbilityTag, StatusTag, AbilityLevel);
 }
 
 void UAuraAbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent *AbilitySystemComponent, const FGameplayEffectSpec &EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)

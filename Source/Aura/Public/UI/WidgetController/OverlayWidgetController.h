@@ -77,6 +77,9 @@ protected:
 
 	// 경험치 콜백 함수
 	void OnXPChanged(int32 NewXP);
+
+	// 어빌리티 장착 표시
+	void OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot);
 };
 
 template <typename T>
