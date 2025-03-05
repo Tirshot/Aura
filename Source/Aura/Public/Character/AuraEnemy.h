@@ -27,7 +27,7 @@ public:
 
 	// 전투 인터페이스 오버라이드
 	virtual int32 GetCharacterLevel_Implementation() override;
-	virtual void Die() override;
+	virtual void Die(const FVector& DeathImpulse) override;
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
 	// 전투 인터페이스 끝

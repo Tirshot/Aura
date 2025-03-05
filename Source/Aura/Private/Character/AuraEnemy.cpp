@@ -79,7 +79,7 @@ int32 AAuraEnemy::GetCharacterLevel_Implementation()
     return Level;
 }
 
-void AAuraEnemy::Die()
+void AAuraEnemy::Die(const FVector& DeathImpulse)
 {
     // 수명 설정
     SetLifeSpan(LifeSpan);
@@ -91,7 +91,7 @@ void AAuraEnemy::Die()
     }
 
     // 랙돌 효과와 무기 드랍
-    Super::Die();
+    Super::Die(DeathImpulse);
 }
 
 void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
@@ -167,6 +167,8 @@ void AAuraEnemy::InitAbilityActorInfo()
     {
         InitializeDefaultAttributes();
     }
+    // ASC가 초기화 되었음을 알리는 델리게이트 호출
+    OnASCRegistered.Broadcast(AbilitySystemComponent);
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

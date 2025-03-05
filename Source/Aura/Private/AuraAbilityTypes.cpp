@@ -43,10 +43,45 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 		{
 			RepBits |= 1 << 8;
 		}
+		if (bIsSuccessfulDebuff)
+		{
+			RepBits |= 1 << 9;
+		}
+
+		// 커스텀 변수
+		if (DebuffDamage > 0.f)
+		{
+			RepBits |= 1 << 10;
+		}
+		if (DebuffDuration > 0.f)
+		{
+			RepBits |= 1 << 11;
+		}
+		if (DebuffFrequency > 0.f)
+		{
+			RepBits |= 1 << 12;
+		}
+		if (DamageType.IsValid())
+		{
+			RepBits |= 1 << 13;
+		}
+
+		if (DeathImpulse.IsZero() == false)
+		{
+			RepBits |= 1 << 14;
+		}
+
+		// 넉백
+		if (KnockbackForce.IsZero() == false)
+		{
+			RepBits |= 1 << 15;
+		}
+
+
 	}
 
-	// 9개의 비트 직렬화
-	Ar.SerializeBits(&RepBits, 9);
+	// 16개의 비트 직렬화
+	Ar.SerializeBits(&RepBits, 16);
 
 	if (RepBits & (1 << 0))
 	{
@@ -97,6 +132,43 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 	if (RepBits & (1 << 8))
 	{
 		Ar << bIsCriticalHit;
+	}
+	if (RepBits & (1 << 9))
+	{
+		Ar << bIsSuccessfulDebuff;
+	}
+	if (RepBits & (1 << 10))
+	{
+		Ar << DebuffDamage;
+	}
+	if (RepBits & (1 << 11))
+	{
+		Ar << DebuffDuration;
+	}
+	if (RepBits & (1 << 12))
+	{
+		Ar << DebuffFrequency;
+	}
+	if (RepBits & (1 << 13))
+	{
+		if (Ar.IsLoading())
+		{
+			if (DamageType.IsValid() == false)
+			{
+				DamageType = TSharedPtr<FGameplayTag>(new FGameplayTag());
+			}
+		}
+		DamageType->NetSerialize(Ar, Map, bOutSuccess);
+	}
+
+	if (RepBits & (1 << 14))
+	{
+		DeathImpulse.NetSerialize(Ar, Map, bOutSuccess);
+	}
+
+	if (RepBits & (1 << 15))
+	{
+		KnockbackForce.NetSerialize(Ar, Map, bOutSuccess);
 	}
 
 	if (Ar.IsLoading())

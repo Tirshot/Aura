@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "AuraPlayerState.generated.h"
 
-class UAbilitySystemComponent;
 class UAttributeSet;
 class ULevelUpInfo;
 

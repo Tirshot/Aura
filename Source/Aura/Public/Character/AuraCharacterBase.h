@@ -13,6 +13,7 @@ class UGameplayEffect;
 class UGameplayAbility;
 class UAnimMontage;
 class UNiagaraSystem;
+class UDebuffNiagaraComponent;
 
 UCLASS(Abstract)
 class AURA_API AAuraCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICombatInterface
@@ -27,7 +28,7 @@ public:
 
 	/** 전투 인터페이스 **/
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
-	virtual void Die() override;
+	virtual void Die(const FVector& DeathImpulse) override;
 	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
 	virtual bool IsDead_Implementation() const override;
 	virtual AActor* GetAvatar_Implementation() override;
@@ -37,11 +38,16 @@ public:
 	virtual int32 GetMinionCount_Implementation() override;
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	virtual ECharacterClass GetCharacterClass_Implementation() override;
+	virtual FOnASCRegistered GetOnASCRegisteredDelegate() override;
+	virtual FOnDeath GetOnDeathDelegate() override;
 	/**여기까지 전투 인터페이스**/
+
+	FOnASCRegistered OnASCRegistered;
+	FOnDeath OnDeath;
 
 	// 랙돌 멀티캐스트 RPC
 	UFUNCTION(NetMulticast, Reliable)
-	virtual void MulticastHandleDeath();
+	virtual void MulticastHandleDeath(const FVector& DeathImpulse);
 
 	// 몽타주와 태그
 	UPROPERTY(EditAnywhere, category="Combat")
@@ -119,6 +125,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	ECharacterClass CharacterClass = ECharacterClass::Warrior;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UDebuffNiagaraComponent> BurnDebuffComponent;
 
 protected:
 	// 캐릭터에 어빌리티 부여

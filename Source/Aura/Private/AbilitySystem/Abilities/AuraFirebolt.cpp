@@ -1,10 +1,13 @@
 ﻿
 #include "AbilitySystem/Abilities/AuraFirebolt.h"
-#include "Aura/Public/AuraGameplayTags.h"
+
+#include "Interaction/CombatInterface.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "Actor/AuraProjectile.h"
 
 FString UAuraFirebolt::GetDescription(int32 Level)
 {
-	const int32 Damage = GetDamageByDamageType(Level, FAuraGameplayTags::Get().Damage_Fire);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
 	const float ManaCost = FMath::Abs(GetManaCost(Level));
 	const float Cooldown = GetCoolDown(Level);
 
@@ -15,7 +18,7 @@ FString UAuraFirebolt::GetDescription(int32 Level)
 			Level,
 			ManaCost,
 			Cooldown,
-			Damage
+			ScaledDamage
 			);
 	}
 	else
@@ -26,14 +29,14 @@ FString UAuraFirebolt::GetDescription(int32 Level)
 			ManaCost,
 			Cooldown,
 			FMath::Min(NumProjectiles, Level),
-			Damage
+			ScaledDamage
 		);
 	}
 }
 
 FString UAuraFirebolt::GetNextLevelDescription(int32 Level)
 {
-	const int32 Damage = DamageTypes[FAuraGameplayTags::Get().Damage_Fire].GetValueAtLevel(Level);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
 	const float ManaCost = FMath::Abs(GetManaCost(Level));
 	const float Cooldown = GetCoolDown(Level);
 
@@ -43,6 +46,50 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level)
 		ManaCost,
 		Cooldown,
 		FMath::Min(NumProjectiles, Level),
-		Damage
+		ScaledDamage
 	);
+}
+
+void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget)
+{
+	// 서버 상에 있는지 확인
+	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
+	if (!bIsServer)
+		return;
+
+	// 무기의 소켓 위치 가져오기
+	const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(
+		GetAvatarActorFromActorInfo(),
+		SocketTag);
+
+	// 피치 오버라이드
+	FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
+	if (bOverridePitch)
+		Rotation.Pitch = PitchOverride;
+
+	/* 
+	* 다수의 투사체 퍼트리기
+	*/
+
+	const FVector Forward = Rotation.Vector();
+
+	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Forward, FVector::UpVector, ProjectileSpread, NumProjectiles);
+
+	for (const FRotator& Rot : Rotators)
+	{
+		FTransform SpawnTransform;
+		SpawnTransform.SetLocation(SocketLocation);
+		SpawnTransform.SetRotation(Rot.Quaternion());
+
+		AAuraProjectile* Projectile = GetWorld()->SpawnActorDeferred<AAuraProjectile>(
+			ProjectileClass,
+			SpawnTransform,
+			GetOwningActorFromActorInfo(),
+			Cast<APawn>(GetOwningActorFromActorInfo()),
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+		Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
+
+		Projectile->FinishSpawning(SpawnTransform);
+	}
 }

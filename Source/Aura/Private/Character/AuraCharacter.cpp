@@ -179,6 +179,9 @@ void AAuraCharacter::InitAbilityActorInfo()
     AbilitySystemComponent = AuraPlayerState->GetAbilitySystemComponent();
     AttributeSet = AuraPlayerState->GetAttributeSet();
 
+    // ASC 생성 완료를 알리는 델리게이트 호출
+    OnASCRegistered.Broadcast(AbilitySystemComponent);
+
     // 이 클라이언트가 조작하는 컨트롤러가 아니면 null로 표시됨 -> null check 필요
     if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
     {

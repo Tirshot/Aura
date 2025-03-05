@@ -43,33 +43,8 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 		Cast<APawn>(GetOwningActorFromActorInfo()),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	// 투사체에 게임플레이 이펙트 스펙 붙이기 - 데미지 부여
-	const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
-	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
-	EffectContextHandle.SetAbility(this);
-	EffectContextHandle.AddSourceObject(Projectile);
+	// 타겟을 설정하지 않고 파라미터 생성
+	Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 
-	// 이펙트 컨텍스트 핸들에 액터 정보 추가
-	TArray<TWeakObjectPtr<AActor>> Actors;
-	Actors.Add(Projectile);
-	EffectContextHandle.AddActors(Actors);
-
-	// 이펙트 컨텍스트 핸들에 적중 결과 추가
-	FHitResult HitResult;
-	EffectContextHandle.AddHitResult(HitResult);
-
-	const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
-
-	FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
-
-	// 데미지 타입에 대해 루프
-	for (auto& Pair : DamageTypes)
-	{
-		const float ScaledDamage = Pair.Value.GetValueAtLevel(GetAbilityLevel());
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Pair.Key, ScaledDamage);
-
-	}
-	// 데미지 Set by Caller, 싱글톤, 태그-데미지 쌍
-	Projectile->DamageEffectSpecHandle = SpecHandle;
 	Projectile->FinishSpawning(SpawnTransform);
 }

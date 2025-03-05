@@ -244,6 +244,10 @@ public:
 	void OnRep_PhysicalResistance(const FGameplayAttributeData& OldPhysicalResistance) const;
 
 private:
+	void HandleIncomingDamage(const FEffectProperties& Props);
+	void HandleIncomingXP(const FEffectProperties& Props);
+	void Debuff(const FEffectProperties& Props);
+
 	// 콜백 데이터에서 꺼내와 구조체에 저장
 	void SetEffectProperties(const FGameplayEffectModCallbackData & Data, FEffectProperties& Props) const;
 	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit) const;
