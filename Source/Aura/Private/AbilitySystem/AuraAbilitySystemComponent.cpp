@@ -44,6 +44,29 @@ void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSub
     }
 }
 
+void UAuraAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+    // 입력 태그가 유효하지 않으면 종료
+    if (!InputTag.IsValid())
+        return;
+
+    for (auto& AbilitySpec : GetActivatableAbilities())
+    {
+        // 태그 컨테이너를 순회하여 입력 태그와 일치하는 어빌리티 스펙을 찾음
+        if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
+        {
+            // 입력 확인
+            AbilitySpecInputPressed(AbilitySpec);
+
+            // 활성화 되어 있지 않으면 활성화
+            if (!AbilitySpec.IsActive())
+            {
+                InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
+            }
+        }
+    }
+}
+
 void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {
     // 입력 태그가 유효하지 않으면 종료
@@ -78,10 +101,11 @@ void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
     for (auto& AbilitySpec : GetActivatableAbilities())
     {
         // 태그 컨테이너를 순회하여 입력 태그와 일치하는 어빌리티 스펙을 찾음
-        if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
+        if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag) && AbilitySpec.IsActive())
         {
             // 입력 확인
             AbilitySpecInputReleased(AbilitySpec);
+            InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
         }
     }
 }

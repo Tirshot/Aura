@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/AbilityTasks/TargetDataUnderMouse.h"
 #include "AbilitySystemComponent.h"
+#include "Aura/Aura.h"
 
 UTargetDataUnderMouse* UTargetDataUnderMouse::CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility)
 {
@@ -47,7 +48,7 @@ void UTargetDataUnderMouse::SendMouseCursorData()
 	
 	// 마우스 커서 데이터
 	FHitResult CursorHit;
-	PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	PC->GetHitResultUnderCursor(ECC_Target, false, CursorHit);
 
 	// ServerSetReplicatedTargetData의 매개 변수
 	FGameplayAbilityTargetDataHandle DataHandle;

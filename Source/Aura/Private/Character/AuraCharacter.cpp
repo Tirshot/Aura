@@ -12,6 +12,8 @@
 #include "UI/HUD/AuraHUD.h"
 #include "AbilitySystem/Data/LevelUpInfo.h"
 #include "NiagaraComponent.h"
+#include "AuraGameplayTags.h"
+#include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -164,6 +166,43 @@ int32 AAuraCharacter::GetCharacterLevel_Implementation()
     return AuraPlayerState->GetCharacterLevel();
 }
 
+void AAuraCharacter::OnRep_Stunned()
+{
+    if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
+    {
+        const auto& GameplayTags = FAuraGameplayTags::Get();
+
+        FGameplayTagContainer BlockedTags;
+        BlockedTags.AddTag(GameplayTags.Player_Block_CursorTrace);
+        BlockedTags.AddTag(GameplayTags.Player_Block_InputHeld);
+        BlockedTags.AddTag(GameplayTags.Player_Block_InputPressed);
+        BlockedTags.AddTag(GameplayTags.Player_Block_InputReleased);
+
+        if (bIsStunned)
+        {
+            AuraASC->AddLooseGameplayTags(BlockedTags);
+            StunDebuffComponent->Activate();
+        }
+        else
+        {
+            AuraASC->RemoveLooseGameplayTags(BlockedTags);
+            StunDebuffComponent->Deactivate();
+        }
+    }
+}
+
+void AAuraCharacter::OnRep_Burned()
+{
+    if (bIsBurned)
+    {
+        BurnDebuffComponent->Activate();
+    }
+    else
+    {
+        BurnDebuffComponent->Deactivate();
+    }
+}
+
 void AAuraCharacter::InitAbilityActorInfo()
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
@@ -181,6 +220,9 @@ void AAuraCharacter::InitAbilityActorInfo()
 
     // ASC 생성 완료를 알리는 델리게이트 호출
     OnASCRegistered.Broadcast(AbilitySystemComponent);
+
+    // 스턴 태그 대기
+    AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::Get().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraCharacter::StunTagChanged);
 
     // 이 클라이언트가 조작하는 컨트롤러가 아니면 null로 표시됨 -> null check 필요
     if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))

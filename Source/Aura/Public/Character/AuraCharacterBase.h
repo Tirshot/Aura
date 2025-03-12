@@ -22,7 +22,7 @@ class AURA_API AAuraCharacterBase : public ACharacter, public IAbilitySystemInte
 
 public:
 	AAuraCharacterBase();
-
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
@@ -38,8 +38,11 @@ public:
 	virtual int32 GetMinionCount_Implementation() override;
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	virtual ECharacterClass GetCharacterClass_Implementation() override;
-	virtual FOnASCRegistered GetOnASCRegisteredDelegate() override;
-	virtual FOnDeath GetOnDeathDelegate() override;
+	virtual FOnASCRegistered& GetOnASCRegisteredDelegate() override;
+	virtual FOnDeath& GetOnDeathDelegate() override;
+	virtual USkeletalMeshComponent* GetWeapon_Implementation() override;
+	virtual bool IsBeingShocked_Implementation() override;
+	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	/**여기까지 전투 인터페이스**/
 
 	FOnASCRegistered OnASCRegistered;
@@ -52,6 +55,30 @@ public:
 	// 몽타주와 태그
 	UPROPERTY(EditAnywhere, category="Combat")
 	TArray<FTaggedMontage> AttackMontages;
+
+	// 기본 이동속도
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
+	float BaseWalkSpeed = 600.f;
+
+	// 스턴
+	UPROPERTY(ReplicatedUsing=OnRep_Stunned, BlueprintReadOnly)
+	bool bIsStunned = false;
+
+	// 화상
+	UPROPERTY(ReplicatedUsing=OnRep_Burned, BlueprintReadOnly)
+	bool bIsBurned = false;
+
+	// 감전사 피격중
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool bIsBeingShock = false;
+
+	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UFUNCTION()
+	virtual void OnRep_Stunned();
+
+	UFUNCTION()
+	virtual void OnRep_Burned();
 
 protected:
 	virtual void BeginPlay() override;
@@ -128,6 +155,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UDebuffNiagaraComponent> BurnDebuffComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UDebuffNiagaraComponent> StunDebuffComponent;
 
 protected:
 	// 캐릭터에 어빌리티 부여

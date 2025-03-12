@@ -13,6 +13,8 @@
 #include "NavigationPath.h"
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
@@ -121,6 +123,12 @@ void AAuraPlayerController::SetupInputComponent()
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    {
+        return;
+    }
+
     const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
     const FRotator Rotation = GetControlRotation();
     const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -139,6 +147,22 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AAuraPlayerController::CursorTrace()
 {
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_CursorTrace))
+    {
+        // 하이라이트 해제
+        if (LastActor)
+            LastActor->UnHighlightActor();
+
+        if (ThisActor)
+            ThisActor->UnHighlightActor();
+
+        LastActor = nullptr;
+        ThisActor = nullptr;
+
+        return;
+    }
+
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
     GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, false, CursorHit);
     
@@ -161,16 +185,31 @@ void AAuraPlayerController::CursorTrace()
 
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    {
+        return;
+    }
+
     if (InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
         // ThisActor가 nullptr이 아니면 true
         bTargeting = ThisActor ? true : false;
         bAutoRunning = false;
     }
+
+    if (GetASC())
+        GetASC()->AbilityInputTagPressed(InputTag);
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
+    {
+        return;
+    }
+
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
@@ -205,6 +244,12 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                     bAutoRunning = true;
                 }
             }
+            // 입력 상태 태그 확인
+            if (GetASC() && !GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+            {
+                // 클릭 이펙트 출력
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
+            }
         }
         FollowTime = 0.f;
         bTargeting = false;
@@ -213,6 +258,12 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
+    {
+        return;
+    }
+
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {

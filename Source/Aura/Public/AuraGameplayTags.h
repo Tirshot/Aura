@@ -114,6 +114,12 @@ public:
 	// 피격
 	FGameplayTag Effects_HitReact;
 
+	// 입력 상태
+	FGameplayTag Player_Block_InputPressed;
+	FGameplayTag Player_Block_InputHeld;
+	FGameplayTag Player_Block_InputReleased;
+	FGameplayTag Player_Block_CursorTrace;
+
 private:
 	static FAuraGameplayTags GameplayTags;
 };

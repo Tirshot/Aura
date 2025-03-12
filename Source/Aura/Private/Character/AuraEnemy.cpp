@@ -31,6 +31,8 @@ AAuraEnemy::AAuraEnemy()
     bUseControllerRotationYaw = false;
     GetCharacterMovement()->bUseControllerDesiredRotation = true;
 
+    BaseWalkSpeed = 250.f;
+
     AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
@@ -158,6 +160,17 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
     }
 }
 
+void AAuraEnemy::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+    Super::StunTagChanged(CallbackTag, NewCount);
+
+    if (AuraAIController && AuraAIController->GetBlackboardComponent())
+    {
+        // 블랙보드 키 설정
+        AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("Stunned"), bIsStunned);
+    }
+}
+
 void AAuraEnemy::InitAbilityActorInfo()
 {
     AbilitySystemComponent->InitAbilityActorInfo(this, this);
@@ -169,6 +182,9 @@ void AAuraEnemy::InitAbilityActorInfo()
     }
     // ASC가 초기화 되었음을 알리는 델리게이트 호출
     OnASCRegistered.Broadcast(AbilitySystemComponent);
+
+    // 스턴 태그 대기
+    AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::Get().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraEnemy::StunTagChanged);
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

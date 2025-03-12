@@ -20,7 +20,7 @@ class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface
 public:
 	AAuraEnemy();
 	virtual void PossessedBy(AController* NewController) override;
-	
+
 public:
 	virtual void HighlightActor() override;
 	virtual void UnHighlightActor() override;
@@ -39,12 +39,10 @@ public:
 	FOnAttributeChangedSignature OnMaxHealthChanged;
 
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
 
 	UPROPERTY(BlueprintReadOnly, category="Combat")
 	bool bHitReacting = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
-	float BaseWalkSpeed = 250.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
 	float LifeSpan = 5.f;

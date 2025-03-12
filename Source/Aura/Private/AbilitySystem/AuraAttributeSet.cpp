@@ -159,12 +159,16 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
         }
         else
         {
-            // HitReact 태그 부여
-            FGameplayTagContainer TagContainer;
-            TagContainer.AddTag(FAuraGameplayTags::Get().Effects_HitReact);
+            // 캐릭터 대상으로 감전사 타격중이 아니라면
+            if (Props.TargetCharacter->Implements<UCombatInterface>() && !ICombatInterface::Execute_IsBeingShocked(Props.TargetCharacter))
+            {
+                // HitReact 태그 부여
+                FGameplayTagContainer TagContainer;
+                TagContainer.AddTag(FAuraGameplayTags::Get().Effects_HitReact);
 
-            // 부여된 어빌리티를 찾아서 활성화
-            Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
+                // 부여된 어빌리티를 찾아서 활성화
+                Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
+            }
 
             // 넉백 적용
             const FVector& KnockbackForce = UAuraAbilitySystemLibrary::GetKnockbackForce(Props.EffectContextHandle);
@@ -207,9 +211,19 @@ void UAuraAttributeSet::Debuff(const FEffectProperties& Props)
     Effect->DurationPolicy = EGameplayEffectDurationType::HasDuration;  // 지속형
     Effect->Period = DebuffFrequency;                                                   // 주기
     Effect->DurationMagnitude = FScalableFloat(DebuffDuration);             // 지속 시간
-    
+
     // 데미지 타입에 따른 디버프의 태그 가져오기
-    Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.DamageTypesToDebuff[DamageType]);
+    const FGameplayTag DebuffTag = GameplayTags.DamageTypesToDebuff[DamageType];
+    Effect->InheritableOwnedTagsContainer.AddTag(DebuffTag);
+    
+    // 스턴 상태
+    if (DebuffTag.MatchesTagExact(GameplayTags.Debuff_Stun))
+    {
+        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_CursorTrace);
+        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputHeld);
+        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputPressed);
+        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputReleased);
+    }
 
     // 디버프 스택 설정
     Effect->StackingType = EGameplayEffectStackingType::AggregateBySource;

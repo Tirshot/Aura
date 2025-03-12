@@ -14,6 +14,7 @@ class UAuraInputConfig;
 class UAuraAbilitySystemComponent;
 class USplineComponent;
 class UDamageTextComponent;
+class UNiagaraSystem;
 
 /**
  * 
@@ -89,6 +90,10 @@ private:
 	// 길찾기 스플라인
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USplineComponent> Spline;
+
+	// 클릭 이펙트
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UNiagaraSystem> ClickNiagaraSystem;
 
 	void AutoRun();
 

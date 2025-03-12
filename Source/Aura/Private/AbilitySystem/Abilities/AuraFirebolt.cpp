@@ -4,6 +4,7 @@
 #include "Interaction/CombatInterface.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraProjectile.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 FString UAuraFirebolt::GetDescription(int32 Level)
 {
@@ -72,8 +73,8 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 	*/
 
 	const FVector Forward = Rotation.Vector();
-
-	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Forward, FVector::UpVector, ProjectileSpread, NumProjectiles);
+	const int32 EffectiveNumProjectiles = FMath::Min(NumProjectiles, GetAbilityLevel());
+	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Forward, FVector::UpVector, ProjectileSpread, EffectiveNumProjectiles);
 
 	for (const FRotator& Rot : Rotators)
 	{
@@ -90,6 +91,25 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 
 		Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 
-		Projectile->FinishSpawning(SpawnTransform);
+		// 투사체 유도
+		// 대상이 몬스터인지 확인
+		if (HomingTarget && HomingTarget->Implements<UCombatInterface>())
+		{
+			Projectile->ProjectileMovement->HomingTargetComponent = HomingTarget->GetRootComponent();
+		}
+		else // 대상이 몬스터가 아닌 대상
+		{
+			// 마우스 클릭 위치의 컴포넌트 가져오기
+			// 새로운 씬 컴포넌트 생성 <- 가비지 컬렉터에 추가하기 위해 멤버 변수로 추가!!
+			Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
+			Projectile->HomingTargetSceneComponent->SetWorldLocation(ProjectileTargetLocation);
+
+			Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
+		}
+		// 유도 가속력
+		Projectile->ProjectileMovement->HomingAccelerationMagnitude = FMath::FRandRange(HomingAccMin, HomingAccMax);
+		Projectile->ProjectileMovement->bIsHomingProjectile = bLaunchHomingProjectile;
+
+		Projectile->FinishSpawning(SpawnTransform);  
 	}
 }
