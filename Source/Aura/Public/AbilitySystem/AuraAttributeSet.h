@@ -250,7 +250,7 @@ private:
 
 	// 콜백 데이터에서 꺼내와 구조체에 저장
 	void SetEffectProperties(const FGameplayEffectModCallbackData & Data, FEffectProperties& Props) const;
-	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit) const;
+	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit, bool bHealed = false) const;
 	void SendXPEvent(const FEffectProperties& Props);
 	
 	// 레벨업 체크

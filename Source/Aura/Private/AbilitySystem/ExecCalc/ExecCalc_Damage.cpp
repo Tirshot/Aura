@@ -183,6 +183,12 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// 방어 데미지 계산
 	Damage *= (100 - EffectiveArmor * EffectiveArmorCoefficient) / 100.f;
 
+	// Halo Of Protection 적용, 데미지 20퍼 차감 계산
+	if (TargetASC->HasMatchingGameplayTag(GameplayTags.Abilities_Passive_HaloOfProtection))
+	{
+		Damage = Damage - (Damage / 5.f);
+	}
+
 	// 크리티컬 확률, 크리티컬 데미지, 타겟 크리 저항
 	float SourceCriticalHitChance = 0.f;
 	float SourceCriticalHitDamage = 0.f;

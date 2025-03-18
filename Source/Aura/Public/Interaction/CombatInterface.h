@@ -11,6 +11,7 @@
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UNiagaraSystem;
+class UAttributeSet;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnASCRegistered, UAbilitySystemComponent*)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*, DeadActor);
@@ -102,4 +103,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void SetIsBeingShocked(bool bInShock);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	UAttributeSet* GetAttributeSet();
 };

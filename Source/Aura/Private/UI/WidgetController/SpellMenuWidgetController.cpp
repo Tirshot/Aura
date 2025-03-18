@@ -166,7 +166,7 @@ void USpellMenuWidgetController::EquipButtonPressed()
 	// 장착된 어빌리티에 대해 입력 태그 가져오기
 	if (SelectedStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
 	{
-		SelectedSlot = GetAuraASC()->GetInputTagFromAbilityTag(SelectedAbility.Ability);
+		SelectedSlot = GetAuraASC()->GetSlotFromAbilityTag(SelectedAbility.Ability);
 	}
 }
 

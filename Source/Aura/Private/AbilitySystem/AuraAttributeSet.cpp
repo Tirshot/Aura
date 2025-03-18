@@ -144,7 +144,45 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
     if (LocalIncomingDamage > 0.f)
     {
         const float NewHealth = GetHealth() - LocalIncomingDamage;
+
+        // Life Siphon 검증
+        if (Props.SourceASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon))
+        {
+            // 유저의 속성 세트를 가져와 체력 설정
+            if (Props.SourceCharacter->Implements<UCombatInterface>())
+            {
+                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
+                if (AuraAS)
+                {
+                    const float SourceHealth = AuraAS->GetHealth();
+                    const float SourceMaxHealth = AuraAS->GetMaxHealth();
+                    float HealAmount = 0.2f * LocalIncomingDamage;
+
+                    AuraAS->SetHealth(FMath::Clamp(SourceHealth + HealAmount, 0, SourceMaxHealth));
+                    ShowFloatingText(Props, HealAmount, false, false, true);
+                }
+            }
+        }
+
+        // 대상에 데미지 적용
         SetHealth(FMath::Clamp(NewHealth, 0, GetMaxHealth()));
+
+        // Mana Siphon 검증
+        if (Props.SourceASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Abilities_Passive_ManaSiphon))
+        {
+            // 유저의 속성 세트를 가져와 체력 설정
+            if (Props.SourceCharacter->Implements<UCombatInterface>())
+            {
+                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
+                if (AuraAS)
+                {
+                    const float SourceMana = AuraAS->GetMana();
+                    const float SourceMaxMana = AuraAS->GetMaxMana();
+                    float ManaHealAmount = 0.2f * LocalIncomingDamage;
+                    AuraAS->SetMana(FMath::Clamp(SourceMana + ManaHealAmount, 0, SourceMaxMana));
+                }
+            }
+        }
 
         const bool bFatal = NewHealth <= 0.f;
         if (bFatal)
@@ -180,7 +218,7 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 
         const bool bBlock = UAuraAbilitySystemLibrary::IsBlockedHit(Props.EffectContextHandle);
         const bool bCriticalHit = UAuraAbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
-        ShowFloatingText(Props, LocalIncomingDamage, bBlock, bCriticalHit);
+        ShowFloatingText(Props, LocalIncomingDamage, bBlock, bCriticalHit, false);
         if (UAuraAbilitySystemLibrary::IsSuccessfulDebuff(Props.EffectContextHandle))
         {
             // 디버프 적용
@@ -274,12 +312,19 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
         // 레벨업 숫자 체크
         if (NumLevelUps > 0)
         {
-            // 레벨업 보상
-            const int32 AttributePointsReward = IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, CurrentLevel);
-            const int32 SpellPointsReward = IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, CurrentLevel);
-
             // 레벨 더하기
             IPlayerInterface::Execute_AddToPlayerLevel(Props.SourceCharacter, NumLevelUps);
+
+            // 레벨업 보상
+            int32 AttributePointsReward = 0;
+            int32 SpellPointsReward = 0;
+
+            for (int32 i = 0; i < NumLevelUps; i++)
+            {
+                // 레벨+i 에 해당하는 리워드 탐색
+                AttributePointsReward += IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, CurrentLevel + i);
+                SpellPointsReward += IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, CurrentLevel + i);
+            }
             IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
             IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
 
@@ -313,7 +358,7 @@ void UAuraAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute,
 }
 
 
-void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit) const
+void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit, bool bHealed) const
 {
     // 데미지 플로팅 위젯
     // 자해 불가
@@ -321,7 +366,14 @@ void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float D
     {
         if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
         {
-            PC->ShowDamageNumber(Damage, Props.TargetCharacter, bBlockedHit, bCriticalHit);
+            if (bHealed)
+            {
+                PC->ShowDamageNumber(Damage, Props.SourceCharacter, bBlockedHit, bCriticalHit, true);
+            }
+            else
+            {
+                PC->ShowDamageNumber(Damage, Props.TargetCharacter, bBlockedHit, bCriticalHit);
+            }
             return;
         }
         
