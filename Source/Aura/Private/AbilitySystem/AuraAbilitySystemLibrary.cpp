@@ -27,10 +27,9 @@ bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldC
 			UAttributeSet* AS = PS->GetAttributeSet();
 
 			// 내보내는 파라미터
-			OutWCParams.AttributeSet = AS;
+			OutWCParams.PlayerState = PS;
 			OutWCParams.AbilitySystemComponent = ASC;
 			OutWCParams.AttributeSet = AS;
-			OutWCParams.PlayerState = PS;
 
 			return true;
 		}
@@ -148,6 +147,9 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 	UAuraAbilitySystemComponent* SourceASC = Cast<UAuraAbilitySystemComponent>(Params.SourceAbilitySystemComponent);
 	UAuraAbilitySystemComponent* TargetASC = Cast<UAuraAbilitySystemComponent>(Params.TargetAbilitySystemComponent);
 
+	if (SourceASC == TargetASC)
+		return FGameplayEffectContextHandle();
+
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 
 	const AActor* SourceActor = SourceASC->GetAvatarActor();
@@ -159,11 +161,15 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	EffectContextHandle.AddSourceObject(SourceActor);
 
-	// 사망 충격파 설정
+	// 사망 충격파 및 넉백 설정
 	SetDeathImpulse(EffectContextHandle, Params.DeathImpulse);
-
-	// 넉백 힘 설정
 	SetKnockbackForce(EffectContextHandle, Params.KnockbackForce);
+
+	// 범위 데미지 판단
+	SetIsRadialDamage(EffectContextHandle, Params.bIsRadialDamage);
+	SetRadialDamageInnerRadius(EffectContextHandle, Params.RadialDamageInnerRadius);
+	SetRadialDamageOuterRadius(EffectContextHandle, Params.RadialDamageOuterRadius);
+	SetRadialDamageOrigin(EffectContextHandle, Params.RadialDamageOrigin);
 
 	// 이펙트 스펙 핸들
 	const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(EffectClass, Params.AbilityLevel, EffectContextHandle);
@@ -338,6 +344,42 @@ FVector UAuraAbilitySystemLibrary::GetKnockbackForce(const FGameplayEffectContex
 	return FVector::ZeroVector;
 }
 
+bool UAuraAbilitySystemLibrary::IsRadialDamage(const FGameplayEffectContextHandle& EffectContextHandle)
+{
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->GetbIsRadialDamage();
+	}
+	return false;
+}
+
+float UAuraAbilitySystemLibrary::GetRadialDamageInnerRadius(const FGameplayEffectContextHandle& EffectContextHandle)
+{
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->GetRadialDamageInnerRadius();
+	}
+	return 0.f;
+}
+
+float UAuraAbilitySystemLibrary::GetRadialDamageOuterRadius(const FGameplayEffectContextHandle& EffectContextHandle)
+{
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->GetRadialDamageOuterRadius();
+	}
+	return 0.f;
+}
+
+FVector UAuraAbilitySystemLibrary::GetRadialDamageOrigin(const FGameplayEffectContextHandle& EffectContextHandle)
+{
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->GetRadialDamageOrigin();
+	}
+	return FVector::ZeroVector;
+}
+
 void UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(const UObject* WorldContextObject,
 	TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius,
 	const FVector& SphereOrigin)
@@ -490,3 +532,72 @@ void UAuraAbilitySystemLibrary::SetKnockbackForce(UPARAM(ref)FGameplayEffectCont
 		AuraEffectContext->SetKnockbackForce(InForce);
 	}
 }
+
+void UAuraAbilitySystemLibrary::SetIsRadialDamage(UPARAM(ref)FGameplayEffectContextHandle& EffectContextHandle, bool bInIsRadialDamage)
+{
+	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetIsRadialDamage(bInIsRadialDamage);
+	}
+}
+
+void UAuraAbilitySystemLibrary::SetRadialDamageInnerRadius(UPARAM(ref)FGameplayEffectContextHandle& EffectContextHandle, float InRadialDamageInnerRadius)
+{
+	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetRadialDamageInnerRadius(InRadialDamageInnerRadius);
+	}
+}
+
+void UAuraAbilitySystemLibrary::SetRadialDamageOuterRadius(UPARAM(ref)FGameplayEffectContextHandle& EffectContextHandle, float InRadialDamageOuterRadius)
+{
+	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetRadialDamageOuterRadius(InRadialDamageOuterRadius);
+	}
+}
+
+void UAuraAbilitySystemLibrary::SetRadialDamageOrigin(UPARAM(ref)FGameplayEffectContextHandle& EffectContextHandle, FVector InRadialDamageOrigin)
+{
+	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetRadialDamageOrigin(InRadialDamageOrigin);
+	}
+}
+
+void UAuraAbilitySystemLibrary::SetIsRadialDamageEffectParam(UPARAM(ref)FDamageEffectParams& DamageEffectParams, bool bIsRadial, FVector InOrigin, float InnerRadius, float OuterRadius)
+{
+	DamageEffectParams.bIsRadialDamage = bIsRadial;
+	DamageEffectParams.RadialDamageOrigin = InOrigin;
+	DamageEffectParams.RadialDamageInnerRadius = InnerRadius;
+	DamageEffectParams.RadialDamageOuterRadius = OuterRadius;
+}
+
+void UAuraAbilitySystemLibrary::SetKnockbackDirection(UPARAM(ref)FDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude)
+{
+	// 벡터 방향만 가져와 크기를 곱하기
+	KnockbackDirection.Normalize();
+
+	if (Magnitude == 0.f)
+		DamageEffectParams.KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
+	else
+		DamageEffectParams.KnockbackForce = KnockbackDirection * Magnitude;
+}
+
+void UAuraAbilitySystemLibrary::SetDeathImpulseDirection(UPARAM(ref)FDamageEffectParams& DamageEffectParams, FVector DeathImpulseDirection, float Magnitude)
+{
+	// 벡터 방향만 가져와 크기를 곱하기
+	DeathImpulseDirection.Normalize();
+
+	if (Magnitude == 0.f)
+		DamageEffectParams.DeathImpulse = DeathImpulseDirection * DamageEffectParams.DeathImpulseMagnitude;
+	else
+		DamageEffectParams.DeathImpulse = DeathImpulseDirection * Magnitude;
+}
+
+void UAuraAbilitySystemLibrary::SetEffectParamsTargetAbilitySystemComponent(UPARAM(ref)FDamageEffectParams& DamageEffectParams, UAbilitySystemComponent* TargetASC)
+{
+	DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
+}
+
+

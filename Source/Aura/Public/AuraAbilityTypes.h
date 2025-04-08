@@ -58,6 +58,18 @@ struct FDamageEffectParams
 
 	UPROPERTY(BlueprintReadWrite)
 	FVector KnockbackForce = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsRadialDamage = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	float RadialDamageInnerRadius = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float RadialDamageOuterRadius = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector RadialDamageOrigin = FVector::ZeroVector;
 };
 
 USTRUCT(BlueprintType)
@@ -67,7 +79,7 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 
 public:
 	// 구조체를 리플렉션 시스템에 사용하기 위해 반드시 오버라이드
-	virtual UScriptStruct* GetScriptStruct() const  { return StaticStruct(); }
+	virtual UScriptStruct* GetScriptStruct() const { return StaticStruct(); }
 
 	// 컨텍스트를 복제
 	virtual FAuraGameplayEffectContext* Duplicate() const
@@ -94,6 +106,11 @@ public:
 	TSharedPtr<FGameplayTag> GetDamagedType() const { return DamageType; }
 	FVector GetDeathImpulse() const { return DeathImpulse; }
 	FVector GetKnockbackForce() const { return KnockbackForce; }
+	bool GetbIsRadialDamage() const { return bIsRadialDamage; }
+	float GetRadialDamageInnerRadius() const { return RadialDamageInnerRadius; }
+	float GetRadialDamageOuterRadius() const { return RadialDamageOuterRadius; }
+	FVector GetRadialDamageOrigin() const { return RadialDamageOrigin; }
+
 
 	void SetIsCriticalHit(bool bInIsCriticalHit) { bIsCriticalHit = bInIsCriticalHit; }
 	void SetIsBlockedHit(bool bInIsBlockedHit) { bIsBlockedHit = bInIsBlockedHit; }
@@ -104,6 +121,10 @@ public:
 	void SetDamageType(TSharedPtr<FGameplayTag> InDamageType) { DamageType = InDamageType; }
 	void SetDeathImpulse(const FVector& InImpulse) { DeathImpulse = InImpulse; }
 	void SetKnockbackForce(const FVector& InForce) { KnockbackForce = InForce; }
+	void SetIsRadialDamage(bool bInIsRadialDamage) { bIsRadialDamage = bInIsRadialDamage; }
+	void SetRadialDamageInnerRadius(float InInnerRadius) { RadialDamageInnerRadius = InInnerRadius; }
+	void SetRadialDamageOuterRadius(float InOuterRadius) { RadialDamageOuterRadius = InOuterRadius; }
+	void SetRadialDamageOrigin(FVector InOrigin) { RadialDamageOrigin = InOrigin; }
 
 protected:
 	UPROPERTY()
@@ -131,6 +152,18 @@ protected:
 	FVector KnockbackForce = FVector::ZeroVector;
 
 	TSharedPtr<FGameplayTag> DamageType;
+
+	UPROPERTY()
+	bool bIsRadialDamage = false;
+
+	UPROPERTY()
+	float RadialDamageInnerRadius = 0.f;
+
+	UPROPERTY()
+	float RadialDamageOuterRadius = 0.f;
+
+	UPROPERTY()
+	FVector RadialDamageOrigin = FVector::ZeroVector;
 };
 
 template<>

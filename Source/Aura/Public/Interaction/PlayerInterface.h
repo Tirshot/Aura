@@ -22,6 +22,9 @@ class AURA_API IPlayerInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+	/*
+	/ 레벨 관련
+	*/
 	UFUNCTION(BlueprintNativeEvent)
 	int32 FindLevelForXP(int32 InXP) const;
 
@@ -54,4 +57,19 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();
+
+	/*
+	/ 범위 지정 데칼
+	*/
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr) const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void HideMagicCircle() const;
+
+	/*
+	/ 저장
+	*/
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SaveProgress(const FName& CheckpointTag);
 };

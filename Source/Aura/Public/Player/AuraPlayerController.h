@@ -15,10 +15,8 @@ class UAuraAbilitySystemComponent;
 class USplineComponent;
 class UDamageTextComponent;
 class UNiagaraSystem;
+class AMagicCircle;
 
-/**
- * 
- */
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
 {
@@ -31,6 +29,13 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed = false);
+
+	// 범위 지정 데칼
+	UFUNCTION(BlueprintCallable)
+	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr);
+
+	UFUNCTION(BlueprintCallable)
+	void HideMagicCircle();
 
 protected:
 	virtual void BeginPlay() override;
@@ -100,4 +105,14 @@ private:
 	// 위젯
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;
+
+	// 매직 서클
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AMagicCircle> MagicCircleClass;
+	
+	// C++ 포인터 - 매직서클
+	UPROPERTY()
+	TObjectPtr<AMagicCircle> MagicCircle;
+
+	void UpdateMagicCircleLocation();
 };

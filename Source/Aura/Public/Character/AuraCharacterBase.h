@@ -27,6 +27,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
@@ -48,10 +50,12 @@ public:
 	virtual bool IsBeingShocked_Implementation() override;
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	virtual UAttributeSet* GetAttributeSet_Implementation() override;
+	virtual FOnDamageSignature& GetOnDamageDelegate() override;
 	/**여기까지 전투 인터페이스**/
 
 	FOnASCRegistered OnASCRegistered;
 	FOnDeath OnDeath;
+	FOnDamageSignature OnDamageDelegate;
 
 	// 랙돌 멀티캐스트 RPC
 	UFUNCTION(NetMulticast, Reliable)

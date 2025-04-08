@@ -15,6 +15,10 @@
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Actor/MagicCircle.h"
+#include "Components/DecalComponent.h"
+#include "Aura/Aura.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
@@ -27,13 +31,16 @@ AAuraPlayerController::AAuraPlayerController()
 
 void AAuraPlayerController::PlayerTick(float DeltaTime)
 {
-	Super::PlayerTick(DeltaTime);
+    Super::PlayerTick(DeltaTime);
 
     // 커서 추적
     CursorTrace();
 
     // 클릭으로 이동
     AutoRun();
+
+    // 범위 지정 데칼
+    UpdateMagicCircleLocation();
 }
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed)
@@ -74,6 +81,44 @@ void AAuraPlayerController::AutoRun()
         {
             bAutoRunning = false;
         }
+    }
+}
+
+void AAuraPlayerController::UpdateMagicCircleLocation()
+{
+    if (IsValid(MagicCircle))
+    {
+        // 빈 공간에서 데칼 숨기기
+        if (CursorHit.bBlockingHit)
+        {
+            MagicCircle->SetActorHiddenInGame(false);
+            MagicCircle->SetActorLocation(CursorHit.ImpactPoint);
+        }
+        else
+        {
+            MagicCircle->SetActorHiddenInGame(true);
+        }
+    }
+}
+
+void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial)
+{
+    // 생성
+    if (IsValid(MagicCircle) == false)
+    {
+        MagicCircle = GetWorld()->SpawnActor<AMagicCircle>(MagicCircleClass);
+        if (DecalMaterial)
+        {
+            MagicCircle->MagicCircleDecal->SetMaterial(0, DecalMaterial);
+        }
+    }
+}
+
+void AAuraPlayerController::HideMagicCircle()
+{
+    if (IsValid(MagicCircle))
+    {
+        MagicCircle->Destroy();
     }
 }
 
@@ -152,10 +197,10 @@ void AAuraPlayerController::CursorTrace()
     {
         // 하이라이트 해제
         if (LastActor)
-            LastActor->UnHighlightActor();
+            LastActor->Execute_HighlightActor(LastActor->_getUObject());
 
         if (ThisActor)
-            ThisActor->UnHighlightActor();
+            ThisActor->Execute_UnHighlightActor(ThisActor->_getUObject());
 
         LastActor = nullptr;
         ThisActor = nullptr;
@@ -164,10 +209,21 @@ void AAuraPlayerController::CursorTrace()
     }
 
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
-    GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, false, CursorHit);
-    
+    ECollisionChannel TraceChannel = IsValid(MagicCircle) ? ECC_ExcludePlayers : ECollisionChannel::ECC_Visibility;
+
+    GetHitResultUnderCursor(TraceChannel, false, CursorHit);
+
     if (!CursorHit.bBlockingHit)
         return;
+
+    // 데칼 표시 중 리턴
+    if (IsValid(MagicCircle))
+    {
+        LastActor = nullptr;
+        ThisActor = nullptr;
+
+        return;
+    }
 
     LastActor = ThisActor;
     // 마우스 커서와 충돌한 액터 꺼내오기
@@ -176,10 +232,10 @@ void AAuraPlayerController::CursorTrace()
     if (LastActor != ThisActor)
     {
         if (LastActor)
-            LastActor->UnHighlightActor();
+            LastActor->Execute_UnHighlightActor(LastActor->_getUObject());
 
         if (ThisActor)
-            ThisActor->HighlightActor();
+            ThisActor->Execute_HighlightActor(ThisActor->_getUObject());
     }
 }
 

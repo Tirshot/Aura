@@ -14,6 +14,10 @@
 #include "NiagaraComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
+#include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Game/LoadScreenSaveGame.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -50,8 +54,34 @@ void AAuraCharacter::PossessedBy(AController* NewController)
     // 서버를 위해 어빌리티 액터 정보 초기화
     InitAbilityActorInfo();
 
+    // 저장 데이터 불러오기
+    LoadProgress();
+    
     // 캐릭터 별 초기 능력(Ability) 부여
+    // TODO: 저장된 세이브에서 어빌리티 불러오기
     AddCharacterAbilites();
+}
+
+void AAuraCharacter::LoadProgress()
+{
+    // 게임 모드에 접근
+    AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+
+    if (AuraGameMode)
+    {
+        // 저장 슬롯 찾기
+        ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+        if (SaveData == nullptr)
+            return;
+
+        if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+        {
+            AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+            AuraPlayerState->SetXP(SaveData->XP);
+            AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
+            AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+        }
+    }
 }
 
 void AAuraCharacter::OnRep_PlayerState()
@@ -158,6 +188,65 @@ int32 AAuraCharacter::GetSpellPoints_Implementation() const
     return AuraPlayerState->GetSpellPoints();
 }
 
+void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial) const
+{
+    if (IsLocallyControlled() == false)
+        return;
+
+    AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
+    if (AuraPC)
+    {
+        AuraPC->ShowMagicCircle(DecalMaterial);
+        AuraPC->bShowMouseCursor = false;
+    }
+}
+
+void AAuraCharacter::HideMagicCircle_Implementation() const
+{
+    if (IsLocallyControlled() == false)
+        return;
+
+    AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
+    if (AuraPC)
+    {
+        AuraPC->HideMagicCircle();
+        AuraPC->bShowMouseCursor = true;
+    }
+}
+
+void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
+{
+    // 게임 모드에 접근
+    AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+    
+    if (AuraGameMode)
+    {
+        // 저장 슬롯 찾기
+        ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+        if (SaveData == nullptr)
+            return;
+
+        // 데이터 저장
+        SaveData->PlayerStartTag = CheckpointTag;
+
+        if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+        {
+            SaveData->PlayerLevel = AuraPlayerState->GetCharacterLevel();
+            SaveData->XP = AuraPlayerState->GetXP();
+            SaveData->AttributePoints = AuraPlayerState->GetAttributePoints();
+            SaveData->SpellPoints = AuraPlayerState->GetSpellPoints();
+        }
+
+        // 1차 속성
+        SaveData->Strength = UAuraAttributeSet::GetStrengthAttribute().GetNumericValue(GetAttributeSet());
+        SaveData->Intelligence = UAuraAttributeSet::GetIntelligenceAttribute().GetNumericValue(GetAttributeSet());
+        SaveData->Resilience = UAuraAttributeSet::GetResilienceAttribute().GetNumericValue(GetAttributeSet());
+        SaveData->Vigor = UAuraAttributeSet::GetVigorAttribute().GetNumericValue(GetAttributeSet());
+
+        AuraGameMode->SaveInGameProgressData(SaveData);
+    }
+}
+
 int32 AAuraCharacter::GetCharacterLevel_Implementation()
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
@@ -232,5 +321,4 @@ void AAuraCharacter::InitAbilityActorInfo()
             AuraHUD->InitOverlay(AuraPlayerController, AuraPlayerState, AbilitySystemComponent, AttributeSet);
         }
     }
-    InitializeDefaultAttributes();
 }

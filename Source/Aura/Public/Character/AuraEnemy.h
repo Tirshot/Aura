@@ -22,8 +22,10 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 
 public:
-	virtual void HighlightActor() override;
-	virtual void UnHighlightActor() override;
+	// 적 인터페이스 오버라이드
+	virtual void HighlightActor_Implementation() override;
+	virtual void UnHighlightActor_Implementation() override;
+	// 적 인터페이스 끝
 
 	// 전투 인터페이스 오버라이드
 	virtual int32 GetCharacterLevel_Implementation() override;

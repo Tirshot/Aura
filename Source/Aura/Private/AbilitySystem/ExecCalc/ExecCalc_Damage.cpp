@@ -9,6 +9,7 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Interaction/CombatInterface.h"
 #include "AuraAbilityTypes.h"
+#include "Kismet/GameplayStatics.h"
 
 // 단일 인스턴스 - 정적 구조체
 struct AuraDamageStatics
@@ -102,7 +103,9 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		TargetPlayerLevel = ICombatInterface::Execute_GetCharacterLevel(TargetAvatar);
 	}
 
+	// 게임플레이 이펙트 스펙, 컨텍스트 핸들 가져오기
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
+	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 
 	// 이펙트 스펙에서 소스와 대상에 대한 태그 가져오기
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
@@ -118,6 +121,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// Set by Caller Magnitude 가져오기
 	float Damage = 0.f;
 
+	// 저항 계산
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 	for (auto& Pair : GameplayTags.DamageTypesToResistances)
 	{
@@ -138,6 +142,36 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		// 저항이 데미지를 퍼센트로 깎음
 		DamageTypeValue *= (100.f - Resistance) / 100.f;
 
+		// 방사형 데미지 검사 - 저항 계산 이후
+		if (UAuraAbilitySystemLibrary::IsRadialDamage(EffectContextHandle))
+		{
+			if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(TargetAvatar))
+			{
+				CombatInterface->GetOnDamageDelegate().AddLambda([&](float DamageAmount)
+					{
+						DamageTypeValue = DamageAmount;
+						if (CombatInterface)
+							CombatInterface->GetOnDamageDelegate().Clear();
+					});
+			}
+
+			FVector DamageOrigin = UAuraAbilitySystemLibrary::GetRadialDamageOrigin(EffectContextHandle);
+			DamageOrigin.Z += 100.f;
+			
+			UGameplayStatics::ApplyRadialDamageWithFalloff(
+				TargetAvatar,
+				DamageTypeValue,
+				0.f, //최소 데미지
+				DamageOrigin,
+				UAuraAbilitySystemLibrary::GetRadialDamageInnerRadius(EffectContextHandle),
+				UAuraAbilitySystemLibrary::GetRadialDamageOuterRadius(EffectContextHandle),
+				1.f, // 감쇠 지수
+				UDamageType::StaticClass(), // 데미지 타입
+				TArray<AActor*>(), // IgnoreActor
+				SourceAvatar, // DamageCauser
+				nullptr); // Controller Instigator
+		}
+
 		Damage += DamageTypeValue;
 	}
 
@@ -149,7 +183,6 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	const bool bBlocked = FMath::RandRange(1, 100) < TargetBlockChance;
 	
 	// 불리언 설정
-	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 	UAuraAbilitySystemLibrary::SetIsBlockedHit(EffectContextHandle, bBlocked);
 
 	// 발생 시 데미지는 절반

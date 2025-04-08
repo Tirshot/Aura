@@ -139,5 +139,6 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
     FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
     Info.StatusTag = Status;
     Info.InputTag = Slot;
+    Info.AbilityTag = AbilityTag;
     AbilityInfoDelegate.Broadcast(Info);
 }

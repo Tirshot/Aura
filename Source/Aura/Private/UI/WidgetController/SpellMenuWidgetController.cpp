@@ -203,6 +203,7 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
 	Info.StatusTag = Status;
 	Info.InputTag = Slot;
+	Info.AbilityTag = AbilityTag;
 	AbilityInfoDelegate.Broadcast(Info);
 
 	// 장착 행 강조 애니메이션 중단

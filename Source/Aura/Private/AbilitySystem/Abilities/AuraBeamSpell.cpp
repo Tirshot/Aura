@@ -16,6 +16,9 @@ void UAuraBeamSpell::StoreMouseDataInfo(const FHitResult& HitResult)
 	}
 	else
 	{
+		MouseHitLocation = FVector::ZeroVector;
+		MouseHitActor = nullptr;
+
 		// 어빌리티 취소
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 	}
@@ -34,6 +37,9 @@ void UAuraBeamSpell::StoreOwnerVariables()
 void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 {
 	check(OwnerCharacter);
+
+	if (MouseHitActor == OwnerCharacter)
+		return;
 
 	// 무기 가져오기
 	if (OwnerCharacter->Implements<UCombatInterface>())

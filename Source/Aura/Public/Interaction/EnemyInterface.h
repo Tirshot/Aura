@@ -17,9 +17,11 @@ class AURA_API IEnemyInterface
 	GENERATED_BODY()
 	
 public:
-	// 순수 추상화
-	virtual void HighlightActor() = 0;
-	virtual void UnHighlightActor() = 0;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void HighlightActor();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void UnHighlightActor();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void SetCombatTarget(AActor* InCombatTarget);

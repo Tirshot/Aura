@@ -21,11 +21,14 @@ void UTargetDataUnderMouse::Activate()
 	}
 	else
 	{
+		// 콜백 함수 바인딩
+		if (AbilitySystemComponent.IsValid() == false)
+			return;
+
 		// 서버
 		FGameplayAbilitySpecHandle SpecHandle = GetAbilitySpecHandle();
 		FPredictionKey ActivationPredictionKey = GetActivationPredictionKey();
 		
-		// 콜백 함수 바인딩
 		AbilitySystemComponent.Get()->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &UTargetDataUnderMouse::OnTargetDataReplicatedCallback);
 		
 		// 클라이언트로부터 타겟 데이터를 획득했는가

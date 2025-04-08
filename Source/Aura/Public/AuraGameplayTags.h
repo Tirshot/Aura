@@ -80,7 +80,9 @@ public:
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Summon;
 	FGameplayTag Abilities_Fire_FireBolt;
+	FGameplayTag Abilities_Fire_FireBlast;
 	FGameplayTag Abilities_Lightning_Electrocute;
+	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_HitReact;
 	
 	// 패시브 어빌리티
@@ -124,6 +126,9 @@ public:
 	FGameplayTag Player_Block_InputHeld;
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_CursorTrace;
+	FGameplayTag Player_Abilities_WaitForExecute;
+
+	FGameplayTag GameplayCue_FireBlast;
 
 private:
 	static FAuraGameplayTags GameplayTags;

@@ -46,24 +46,51 @@ void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSub
 
 void UAuraAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
-    // 입력 태그가 유효하지 않으면 종료
-    if (!InputTag.IsValid())
+    if (InputTag.IsValid() == false)
         return;
 
-    // 어빌리티 스코프 잠금
-    FScopedAbilityListLock ActiveScopeLock(*this);
-    for (auto& AbilitySpec : GetActivatableAbilities())
-    {
-        // 태그 컨테이너를 순회하여 입력 태그와 일치하는 어빌리티 스펙을 찾음
-        if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
-        {
-            // 입력 확인
-            AbilitySpecInputPressed(AbilitySpec);
+    FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
 
-            // 활성화 되어 있지 않으면 활성화
-            if (!AbilitySpec.IsActive())
+    FScopedAbilityListLock ActiveScopeLoc(*this);
+    for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+    {
+        /*
+        1. Player.Abilities.WaitForExecute 태그가 부여된 ASC에 대해
+        2. Player.Abilities.WaitForExecute 태그를 가진 어빌리티의
+        3. 입력태그를 체크
+        - 어빌리티의 입력태그가 LMB인 경우?
+        - 어빌리티의 입력태그가 LMB가 아닌 경우?
+        - 다른 키를 누르면 입력을 취소?
+        */
+        if (HasMatchingGameplayTag(GameplayTags.Player_Abilities_WaitForExecute))
+        {
+            if (AbilitySpec.IsActive())
+            {
+                // 왼쪽 버튼 클릭 혹은 어빌리티 버튼 입력
+                if (InputTag.MatchesTagExact(GameplayTags.InputTag_LMB)
+                    || AbilitySpec.DynamicAbilityTags.HasTag(InputTag))
+                {
+                    // 해당 어빌리티에 대해 누르기 발동
+                    AbilitySpecInputPressed(AbilitySpec);
+                    InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
+                    return;
+                }
+                else
+                {
+                    // 다른 키 입력 시 어빌리티 취소
+                    CancelAbilityHandle(AbilitySpec.Handle);
+                }
+            }
+        }
+        // 어빌리티에 할당된 입력태그가 입력으로 받은 입력태그와 일치
+        else if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
+        {
+            // 해당 어빌리티에 대해 누르기 발동
+            AbilitySpecInputPressed(AbilitySpec);
+            if (AbilitySpec.IsActive() == false)
             {
                 InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
+                return;
             }
         }
     }
@@ -86,7 +113,7 @@ void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputT
             AbilitySpecInputPressed(AbilitySpec);
 
             // 활성화 되어 있지 않으면 활성화
-            if (!AbilitySpec.IsActive())
+            if (AbilitySpec.IsActive() == false)
             {
                 TryActivateAbility(AbilitySpec.Handle);
             }
@@ -342,10 +369,10 @@ void UAuraAbilitySystemComponent::ServerEquipAbility_Implementation(const FGamep
                         MulticastActivatePassiveEffect(GetAbilityTagFromSpec(*SpecWithSlot), false);
                         // 비활성화
                         DeactivePassiveAbility.Broadcast(GetAbilityTagFromSpec(*SpecWithSlot));
-
-                        // 슬롯 정리
-                        ClearSlot(SpecWithSlot);
                     }
+
+                    // 슬롯 정리
+                    ClearSlot(SpecWithSlot);
                 }
             }
             // 아직 장착 및 활성화 되지 않은 어빌리티
