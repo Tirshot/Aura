@@ -9,7 +9,6 @@
 #include "AuraGameplayTags.h"
 #include "Interaction/CombatInterface.h"
 #include "Interaction/PlayerInterface.h"
-#include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraAbilityTypes.h"
@@ -108,6 +107,9 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     SetEffectProperties(Data, Props);
 
     // 캐릭터 사망 이후 이펙트 실행 방지
+    if (IsValid(Props.TargetCharacter) == false)
+        return;
+    
     if (Props.TargetCharacter->Implements<UCombatInterface>())
     {
         if (ICombatInterface::Execute_IsDead(Props.TargetCharacter))

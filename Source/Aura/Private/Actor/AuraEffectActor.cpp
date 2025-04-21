@@ -3,22 +3,70 @@
 #include "Actor/AuraEffectActor.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 AAuraEffectActor::AAuraEffectActor()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	// 메시와 형태는 블루프린트에서 지정 - 기능은 C++에서 지정
 	
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>("SceneRoot"));
-
 }
 
 void AAuraEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	InitialLocation = GetActorLocation();
+}
+
+void AAuraEffectActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	RunningTime += DeltaTime;
+	const float SinPeriod = 2 * PI / SinPeriodConstant;
+	// 사인파 진행 시간이 주기를 넘으면 초기화
+	if (RunningTime > SinPeriod)
+		RunningTime = 0.f;
+
+	ItemMovement(DeltaTime);
+}
+
+void AAuraEffectActor::StartSinusoidalMovement()
+{
+	bSinusoidalMovement = true;
+	InitialLocation = GetActorLocation();
+	CalculatedLocation = InitialLocation;
+	CalculatedRotation = GetActorRotation();
+}
+
+void AAuraEffectActor::StartRotation()
+{
+	bRotates = true;
+	CalculatedRotation = GetActorRotation();
+	CalculatedLocation = InitialLocation;
+}
+
+void AAuraEffectActor::ItemMovement(float DeltaTime)
+{
+	// 회전
+	if (bRotates)
+	{
+		const FRotator DeltaRotation(0.f, DeltaTime * RotationRate, 0.f);
+
+		// 쿼터니언으로 변경 후 더하기
+		CalculatedRotation = UKismetMathLibrary::ComposeRotators(CalculatedRotation, DeltaRotation);
+	}
+
+	// 사인파 움직임
+	if (bSinusoidalMovement)
+	{
+		const float Sine = SinAmplitude * FMath::Sin(RunningTime * SinPeriodConstant);
+		CalculatedLocation = InitialLocation + FVector(0.f, 0.f, Sine);
+	}
 }
 
 void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
@@ -51,7 +99,7 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGam
 	{
 		ActiveEffectHandles.Add(ActiveEffectHandle, TargetASC);
 	}
-
+	
 	if (bDestroyOnEffectApplication && EffectSpecHandle.Data.Get()->Def.Get()->DurationPolicy != EGameplayEffectDurationType::Infinite)
 		Destroy();
 }

@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+class ULootTiers;
 class ULoadScreenSaveGame;
 class UCharacterClassInfo;
 class UAbilityInfo;
@@ -29,6 +30,10 @@ public:
 	ULoadScreenSaveGame* RetrieveInGameSaveData();
 	void SaveInGameProgressData(ULoadScreenSaveGame* SaveObject);
 
+	// ì›”ë“œ ì €ì¥ ë° ë¶ˆëŸ¬ì˜¤ê¸°
+	void SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
+	void LoadWorldState(UWorld* World);
+	
 	void TravelToMap(UMVVM_LoadSlot* Slot);
 
 	ULoadScreenSaveGame* GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const;
@@ -43,12 +48,15 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Ability Info")
 	TObjectPtr<UAbilityInfo> AbilityInfo;
-
-	// ¸Ê ÀÌ¸§ °ü¸®
+	
+	UPROPERTY(EditDefaultsOnly, Category="Item")
+	TObjectPtr<ULootTiers> LootTiers;
+	
+	// ê¸°ë³¸ ë§µ ì´ë¦„
 	UPROPERTY(EditDefaultsOnly)
 	FString DefaultMapName;
 
-	// Soft Object Ptr : ·ÎµåµÇ±â Àü±îÁö ¸Ş¸ğ¸®¿¡ ÀûÀçµÇÁö ¾ÊÀ½
+	// Soft Object Ptr : ì¡´ì¬í•˜ê¸° ì „ê¹Œì§€ ë©”ëª¨ë¦¬ì— ì ì¬í•˜ì§€ ì•ŠìŒ
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UWorld> DefaultMap;
 
@@ -57,4 +65,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
+
+	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
+
+	void PlayerDied(ACharacter* DeadCharacter);
 };

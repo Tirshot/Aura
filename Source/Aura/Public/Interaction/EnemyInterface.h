@@ -17,12 +17,6 @@ class AURA_API IEnemyInterface
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void HighlightActor();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void UnHighlightActor();
-
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void SetCombatTarget(AActor* InCombatTarget);
 

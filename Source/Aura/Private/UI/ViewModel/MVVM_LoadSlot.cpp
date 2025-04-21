@@ -11,8 +11,13 @@ void UMVVM_LoadSlot::InitializeSlot()
 
 void UMVVM_LoadSlot::SetPlayerName(FString InPlayerName)
 {
-	// MVVM ¸ÅÅ©·Î - °ªÀ» ¹Ù²Ù°í °ªÀÌ ¹Ù²î¾ú´Ù´Â µ¨¸®°ÔÀÌÆ®¸¦ È£Ãâ
+	// MVVM í•„ë“œ ë…¸í‹°íŒŒì´ ë§¤í¬ë¡œ
 	UE_MVVM_SET_PROPERTY_VALUE(PlayerName, InPlayerName);
+}
+
+void UMVVM_LoadSlot::SetLevel(int32 InLevel)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(Level, InLevel);
 }
 
 void UMVVM_LoadSlot::SetMapName(FString InMapName)

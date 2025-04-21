@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/AuraCharacterBase.h"
 #include "Interaction/EnemyInterface.h"
+#include "Interaction/HighlightInterface.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 #include "AuraEnemy.generated.h"
 
@@ -13,7 +14,7 @@ class UBehaviorTree;
 class AAuraAIController;
 
 UCLASS()
-class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface
+class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface, public IHighlightInterface
 {
 	GENERATED_BODY()
 	
@@ -22,10 +23,11 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 
 public:
-	// 적 인터페이스 오버라이드
+	// 하이라이트 인터페이스 오버라이드
 	virtual void HighlightActor_Implementation() override;
 	virtual void UnHighlightActor_Implementation() override;
-	// 적 인터페이스 끝
+	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
+	// 하이라이트 인터페이스 끝
 
 	// 전투 인터페이스 오버라이드
 	virtual int32 GetCharacterLevel_Implementation() override;
@@ -43,6 +45,8 @@ public:
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
 
+	void SetLevel(int32 InLevel) {Level = InLevel;}
+	
 	UPROPERTY(BlueprintReadOnly, category="Combat")
 	bool bHitReacting = false;
 
@@ -68,4 +72,7 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<AAuraAIController> AuraAIController;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void SpawnLoot();
 };

@@ -2,8 +2,12 @@
 
 
 #include "CheckPoint/CheckPoint.h"
+
+#include "Aura/Aura.h"
 #include "Components/SphereComponent.h"
+#include "Game/AuraGameModeBase.h"
 #include "Interaction/PlayerInterface.h"
+#include "Kismet/GameplayStatics.h"
 
 ACheckPoint::ACheckPoint(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -13,18 +17,61 @@ ACheckPoint::ACheckPoint(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CheckpointMesh->SetupAttachment(GetRootComponent());
 	CheckpointMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CheckpointMesh->SetCollisionResponseToAllChannels(ECR_Block);
+	CheckpointMesh->SetCustomDepthStencilValue(CustomDepthStencilOverride);
+	CheckpointMesh->MarkRenderStateDirty();
 
 	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
 	Sphere->SetupAttachment(CheckpointMesh);
 	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	// MoveToLocationì˜ ëª©ì ì§€
+	MoveToComponent = CreateDefaultSubobject<USceneComponent>(TEXT("MoveToComponent"));
+	MoveToComponent->SetupAttachment(GetRootComponent());
+}
+
+void ACheckPoint::HighlightActor_Implementation()
+{
+	if (bReached == false)
+		CheckpointMesh->SetRenderCustomDepth(true);
+}
+
+void ACheckPoint::UnHighlightActor_Implementation()
+{
+	CheckpointMesh->SetRenderCustomDepth(false);
+}
+
+void ACheckPoint::SetMoveToLocation_Implementation(FVector& OutDestination)
+{
+	OutDestination = MoveToComponent->GetComponentLocation();
+}
+
+void ACheckPoint::LoadActor_Implementation()
+{
+	// ì´ë¯¸ ë„ë‹¬í•œ ì  ìˆìœ¼ë©´ ì´í™íŠ¸ í™œì„±í™”
+	if (bReached)
+	{
+		HandleGlowEffects();
+	}
 }
 
 void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor->Implements<UPlayerInterface>())
 	{
+		bReached = true;
+
+		// ì›”ë“œ ìƒíƒœ ì €ì¥
+		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+		{
+			const UWorld* World = GetWorld();
+			FString MapName = World->GetMapName();
+			MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+			
+			AuraGM->SaveWorldState(GetWorld(), MapName);
+		}
+		
 		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
 		HandleGlowEffects();
 	}
@@ -34,20 +81,21 @@ void ACheckPoint::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACheckPoint::OnSphereOverlap);
+	if (bBindOverlapCallback)
+		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACheckPoint::OnSphereOverlap);
 }
 
 void ACheckPoint::HandleGlowEffects()
 {
-	// Äİ¸®Àü ²ô±â
+	// ì½œë¦¬ì „ ë„ê¸°
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// µ¿Àû ¸ÓÆ¼¸®¾ó ÀÎ½ºÅÏ½º »ı¼º
+	// ë™ì  ë¨¸í‹°ë¦¬ì–¼ ìƒì„±
 	UMaterialInstanceDynamic* DynamicMI = UMaterialInstanceDynamic::Create(CheckpointMesh->GetMaterial(0), this);
 
-	// ¸ÓÆ¼¸®¾óÀ» µ¿Àû ¸ÓÆ¼¸®¾ó ÀÎ½ºÅÏ½º·Î ¼³Á¤
+	// ë©”ì‹œì˜ ë¨¸í‹°ë¦¬ì–¼ì„ ë™ì  ë¨¸í‹°ë¦¬ì–¼ë¡œ ì§€ì •
 	CheckpointMesh->SetMaterial(0, DynamicMI);
 
-	// ºí·çÇÁ¸°Æ® ÇÔ¼ö È£Ãâ
+	// ë¸”ë£¨í”„ë¦°íŠ¸ë¡œ ì „ë‹¬
 	CheckPointReached(DynamicMI);
 }

@@ -39,7 +39,13 @@ public:
 
 	// 전투 인터페이스
 	virtual int32 GetCharacterLevel_Implementation() override;
+	virtual void Die(const FVector& DeathImpulse) override;
 	// 전투 인터페이스 끝
+	
+	UPROPERTY(EditDefaultsOnly)
+	float DeathTime = 5.f;
+	
+	FTimerHandle DeathTimer;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UNiagaraComponent> LevelUpNiagaraComponent;

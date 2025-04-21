@@ -33,20 +33,26 @@ UMVVM_LoadSlot* UMVVM_LoadScreen::GetLoadSlotViewModelByIndex(int32 Index)
 
 void UMVVM_LoadScreen::NewSlotButtonPressed(int32 Slot, const FString& EnteredName)
 {
-	// ∞‘¿”∏µÂ ∞°¡Æø¿±‚
 	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-
-	// ∏  ¿Ã∏ß¿ª ±‚∫ª ∏ ¿∏∑Œ, ΩΩ∑‘ «√∑π¿ÃæÓ ¿Ã∏ß¿ª ¿‘∑¬«— ¿Ã∏ß¿∏∑Œ ¡ˆ¡§
+	if (IsValid(AuraGameMode) == false)
+	{
+		GEngine->AddOnScreenDebugMessage(1, 15.f, FColor::Magenta, FString("Please switch to Single Player"));
+		return;
+	}
+	
+	// ÏÉàÎ°úÏö¥ Ïä¨Î°Ø ÏÉùÏÑ±
 	LoadSlots[Slot]->SetMapName(AuraGameMode->DefaultMapName);
+	LoadSlots[Slot]->SetLevel(1);
 	LoadSlots[Slot]->SetPlayerName(EnteredName);
 	LoadSlots[Slot]->SlotStatus = Taken;
 	LoadSlots[Slot]->PlayerStartTag = AuraGameMode->DefaultPlayerStartTag;
+	LoadSlots[Slot]->MapAssetName = AuraGameMode->DefaultMap.ToSoftObjectPath().GetAssetName();
 
-	// ΩΩ∑‘ø° ∞‘¿” ¿˙¿Â
+	// Îç∞Ïù¥ÌÑ∞ Ï†ÄÏû•
 	AuraGameMode->SaveSlotData(LoadSlots[Slot], Slot);
 	LoadSlots[Slot]->InitializeSlot();
 
-	// ∞‘¿” ¿ŒΩ∫≈œΩ∫∑Œ ¡§∫∏ ≥—∞‹¡÷±‚
+	// Í≤åÏûÑ Ïù∏Ïä§ÌÑ¥Ïä§Î°ú Í∞í ÎÑòÍ∏∞Í∏∞
 	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGameMode->GetGameInstance());
 	AuraGameInstance->LoadSlotName = LoadSlots[Slot]->LoadSlotName;
 	AuraGameInstance->LoadSlotIndex = LoadSlots[Slot]->SlotIndex;
@@ -55,19 +61,18 @@ void UMVVM_LoadScreen::NewSlotButtonPressed(int32 Slot, const FString& EnteredNa
 
 void UMVVM_LoadScreen::NewGameButtonPressed(int32 Slot)
 {
-	// ¿Ã∏ß ¿‘∑¬ ¿ß¡¨¿∏∑Œ ∫Ø∞Ê
+	// ÏúÑÏ†Ø Ïä§ÏúÑÏ≤ò Ï†ÑÌôò
 	LoadSlots[Slot]->SetWidgetSwitcherIndex.Broadcast(1);
 }
 
 void UMVVM_LoadScreen::SelectSlotButtonPressed(int32 Slot)
 {
-	// ∞‘¿” Ω√¿€, ΩΩ∑‘ ªË¡¶ µ®∏Æ∞‘¿Ã∆Æ
+	// Ïä¨Î°Ø ÏÑ†ÌÉù
 	SlotSelected.Broadcast();
 
-	// ΩΩ∑‘ø° ¡¢±Ÿ«ÿº≠ ∑Á«¡
 	for (const TPair<int32, UMVVM_LoadSlot*> LoadSlot : LoadSlots)
 	{
-		// πˆ∆∞ »∞º∫»≠ µ®∏Æ∞‘¿Ã∆Æ »£√‚, º±≈√«— ΩΩ∑‘¿∫ ¡¶ø‹
+		// Îã§Î•∏ Ïä¨Î°Ø ÏÑ†ÌÉù ÎπÑÌôúÏÑ±Ìôî
 		if (LoadSlot.Key == Slot)
 		{
 			LoadSlot.Value->EnableSelectSlotButton.Broadcast(false);
@@ -77,7 +82,6 @@ void UMVVM_LoadScreen::SelectSlotButtonPressed(int32 Slot)
 			LoadSlot.Value->EnableSelectSlotButton.Broadcast(true);
 		}
 	}
-	// º±≈√«— ΩΩ∑‘¿ª ∫Øºˆ∑Œ ¿˙¿Â
 	SelectedSlot = LoadSlots[Slot];
 }
 
@@ -87,7 +91,7 @@ void UMVVM_LoadScreen::ConfirmButtonPressed()
 	{
 		AAuraGameModeBase::DeleteSlot(SelectedSlot->LoadSlotName, SelectedSlot->SlotIndex);
 
-		// ΩΩ∑‘ ªÛ≈¬ √ ±‚»≠
+		// Ïä¨Î°Ø Ï¥àÍ∏∞Ìôî
 		SelectedSlot->SlotStatus = Vacant;
 		SelectedSlot->InitializeSlot();
 		SelectedSlot->EnableSelectSlotButton.Broadcast(true);
@@ -109,19 +113,22 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 void UMVVM_LoadScreen::LoadData()
 {
 	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-
+	if (IsValid(AuraGameMode) == false)
+		return;
+	
 	for (const TPair<int32, UMVVM_LoadSlot*> LoadSlot : LoadSlots)
 	{
-		// ∞¢ ΩΩ∑‘¿« ≈∞(ΩΩ∑‘ ¿Œµ¶Ω∫)-∆‰æÓ(ΩΩ∑‘)∏¶ ªÁøÎ«ÿ ºº¿Ã∫Í µ•¿Ã≈Õ∏¶ ∞°¡Æø¿±‚
+		// Ï†ÄÏû•Îêú Í≤åÏûÑ Ï∞æÏïÑÏò§Í∏∞
 		ULoadScreenSaveGame* SaveObject = AuraGameMode->GetSaveSlotData(LoadSlot.Value->LoadSlotName, LoadSlot.Key);
 
-		// µ•¿Ã≈Õø°º≠ ∫“∑Øø¿±‚
+		// ÌîåÎ†àÏù¥Ïñ¥ Ïù¥Î¶Ñ Í∞ÄÏ†∏Ïò§Í∏∞
 		const FString PlayerName = SaveObject->PlayerName;
 
 		TEnumAsByte<ESaveSlotStatus> SaveSlotStatus = SaveObject->SaveSlotStatus;
 
 		LoadSlot.Value->SlotStatus = SaveSlotStatus;
 		LoadSlot.Value->SetPlayerName(PlayerName);
+		LoadSlot.Value->SetLevel(SaveObject->PlayerLevel);
 		LoadSlot.Value->SetMapName(SaveObject->MapName);
 		LoadSlot.Value->PlayerStartTag = SaveObject->PlayerStartTag;
 		LoadSlot.Value->InitializeSlot();
