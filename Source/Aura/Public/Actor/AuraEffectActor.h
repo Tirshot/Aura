@@ -26,6 +26,13 @@ enum class EEffectRemovalPolicy
 	DoNotRemove
 };
 
+UENUM()
+enum class EEffectType
+{
+	Heal,
+	Damage
+};
+
 UCLASS()
 class AURA_API AAuraEffectActor : public AActor
 {
@@ -36,7 +43,47 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
+protected:
+	/*
+	 * Movement Effect
+	 */
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector CalculatedLocation;
+
+	UPROPERTY(BlueprintReadWrite)
+	FRotator CalculatedRotation;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	bool bRotates = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	float RotationRate = 45.f;
+
+	// 상하 사인파 움직임
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	bool bSinusoidalMovement = false;
+
+	// 진폭
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	float SinAmplitude = 1.f;
+
+	// 주기
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	float SinPeriodConstant = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Movement")
+	FVector InitialLocation;
+	
+	UFUNCTION(BlueprintCallable)
+	void StartSinusoidalMovement();
+	
+	UFUNCTION(BlueprintCallable)
+	void StartRotation();
+
+protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass);
 
@@ -75,8 +122,17 @@ protected:
 
 	TMap<FActiveGameplayEffectHandle, UAbilitySystemComponent*> ActiveEffectHandles;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Applied Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Applied Effects")
 	float ActorLevel = 1.f;
 
+private:
+	// 사인파 움직임 시간
+	float RunningTime = 0.f;
+
+	void ItemMovement(float DeltaTime);
+
+protected:
+	UPROPERTY(EditDefaultsOnly)
+	EEffectType EffectType = EEffectType::Heal;
 
 };

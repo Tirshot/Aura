@@ -13,12 +13,12 @@
 #include "NavigationPath.h"
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
-#include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AbilitySystem/Abilities/AuraGameplayAbility.h"
 #include "Actor/MagicCircle.h"
 #include "Components/DecalComponent.h"
 #include "Aura/Aura.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "Interaction/HighlightInterface.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
@@ -84,6 +84,12 @@ void AAuraPlayerController::AutoRun()
     }
 }
 
+void AAuraPlayerController::StopAutoRun()
+{
+    bAutoRunning = false;
+    CachedDestination = FVector::ZeroVector;
+}
+
 void AAuraPlayerController::UpdateMagicCircleLocation()
 {
     if (IsValid(MagicCircle))
@@ -98,6 +104,22 @@ void AAuraPlayerController::UpdateMagicCircleLocation()
         {
             MagicCircle->SetActorHiddenInGame(true);
         }
+    }
+}
+
+void AAuraPlayerController::HighlightActor(AActor* InActor)
+{
+    if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
+    {
+        IHighlightInterface::Execute_HighlightActor(InActor);
+    }
+}
+
+void AAuraPlayerController::UnHighlightActor(AActor* InActor)
+{
+    if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
+    {
+        IHighlightInterface::Execute_UnHighlightActor(InActor);
     }
 }
 
@@ -120,6 +142,11 @@ void AAuraPlayerController::HideMagicCircle()
     {
         MagicCircle->Destroy();
     }
+}
+
+void AAuraPlayerController::SetTargetingStatus(ETargetingStatus InStatus)
+{
+    TargetingStatus = InStatus;
 }
 
 void AAuraPlayerController::BeginPlay()
@@ -195,17 +222,15 @@ void AAuraPlayerController::CursorTrace()
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_CursorTrace))
     {
-        // 하이라이트 해제
-        if (LastActor)
-            LastActor->Execute_HighlightActor(LastActor->_getUObject());
-
-        if (ThisActor)
-            ThisActor->Execute_UnHighlightActor(ThisActor->_getUObject());
-
-        LastActor = nullptr;
-        ThisActor = nullptr;
-
-        return;
+        UnHighlightActor(LastActor);
+        UnHighlightActor(ThisActor);
+        
+        if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
+        {
+            LastActor = nullptr;
+            ThisActor = nullptr;
+            return;
+        }
     }
 
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
@@ -221,21 +246,24 @@ void AAuraPlayerController::CursorTrace()
     {
         LastActor = nullptr;
         ThisActor = nullptr;
-
         return;
     }
 
     LastActor = ThisActor;
     // 마우스 커서와 충돌한 액터 꺼내오기
-    ThisActor = CursorHit.GetActor();
+    if (IsValid(CursorHit.GetActor()) && CursorHit.GetActor()->Implements<UHighlightInterface>())
+    {
+        ThisActor = CursorHit.GetActor();
+    }
+    else
+    {
+        ThisActor = nullptr;
+    }
 
     if (LastActor != ThisActor)
     {
-        if (LastActor)
-            LastActor->Execute_UnHighlightActor(LastActor->_getUObject());
-
-        if (ThisActor)
-            ThisActor->Execute_HighlightActor(ThisActor->_getUObject());
+        UnHighlightActor(LastActor);
+        HighlightActor(ThisActor);
     }
 }
 
@@ -244,18 +272,29 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
+        bAutoRunning = false;
         return;
     }
 
     if (InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
-        // ThisActor가 nullptr이 아니면 true
-        bTargeting = ThisActor ? true : false;
-        bAutoRunning = false;
+        if (IsValid(ThisActor))
+        {
+            // ThisActor에 따라 타겟팅 상태 전환
+            TargetingStatus = ThisActor->Implements<UEnemyInterface>() ? ETargetingStatus::TargetingEnemy : ETargetingStatus::TargetingNonEnemy;
+        }
+        else
+        {
+            TargetingStatus = ETargetingStatus::None;
+        }
     }
 
     if (GetASC())
+    {
         GetASC()->AbilityInputTagPressed(InputTag);
+    }
+    
+    bAutoRunning = false;
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
@@ -263,9 +302,10 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
     {
+        bAutoRunning = false;
         return;
     }
-
+    
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
@@ -276,15 +316,24 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     }
 
     if (GetASC())
-        GetASC()->AbilityInputTagReleased(InputTag);
+         GetASC()->AbilityInputTagReleased(InputTag);
 
     // 타겟이 없고 쉬프트키가 눌리지 않았다면
-    if (!bTargeting && !bShiftKeyDown)
+    if (TargetingStatus != ETargetingStatus::TargetingEnemy && !bShiftKeyDown)
     {
         // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
         const APawn* ControlledPawn = GetPawn();
         if (FollowTime <= ShortPressThresold && ControlledPawn)
         {
+            if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
+            {
+                IHighlightInterface::Execute_SetMoveToLocation(ThisActor, CachedDestination);    
+            }
+            else if (GetASC() && !GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+            {
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
+            }
+            
             if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
             {
                 // 각 경로 점을 스플라인에 추가
@@ -300,15 +349,10 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                     bAutoRunning = true;
                 }
             }
-            // 입력 상태 태그 확인
-            if (GetASC() && !GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
-            {
-                // 클릭 이펙트 출력
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
-            }
         }
+        
         FollowTime = 0.f;
-        bTargeting = false;
+        TargetingStatus = ETargetingStatus::None;
     }
 }
 
@@ -317,6 +361,7 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
     {
+        bAutoRunning = false;
         return;
     }
 
@@ -330,13 +375,15 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     }
 
     // 타겟
-    if (bTargeting || bShiftKeyDown)
+    if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
     {
         if (GetASC())
             GetASC()->AbilityInputTagHeld(InputTag);
     }
     else // 이동
     {
+        bAutoRunning = false;
+        
         FollowTime += GetWorld()->GetDeltaSeconds();
 
         if (CursorHit.bBlockingHit)

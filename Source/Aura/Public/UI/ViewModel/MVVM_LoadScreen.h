@@ -24,23 +24,23 @@ public:
 	UFUNCTION(BlueprintPure)
 	UMVVM_LoadSlot* GetLoadSlotViewModelByIndex(int32 Index);
 
-	// EnterName ½½·Ô
+	// EnterName ìŠ¬ë¡¯
 	UFUNCTION(BlueprintCallable)
 	void NewSlotButtonPressed(int32 Slot, const FString& EnteredName);
 
-	// Vacant ½½·Ô - »õ °ÔÀÓ ½½·Ô »ı¼º
+	// Vacant ìŠ¬ë¡¯ - ìƒˆ ê²Œì„ ìƒì„±
 	UFUNCTION(BlueprintCallable)
 	void NewGameButtonPressed(int32 Slot);
 
-	// Taken ½½·Ô - »ı¼ºµÈ °ÔÀÓ ¼±ÅÃ
+	// Taken ìŠ¬ë¡¯ - ì €ì¥ëœ ê²Œì„
 	UFUNCTION(BlueprintCallable)
 	void SelectSlotButtonPressed(int32 Slot);
 
-	// ÀçÈ®ÀÎ Ã¢ÀÇ È®ÀÎ ¹öÆ°ÀÌ Å¬¸¯µÊ
+	// ì¬í™•ì¸ì°½ í™•ì¸ ë²„íŠ¼
 	UFUNCTION(BlueprintCallable)
 	void ConfirmButtonPressed();
 
-	// °ÔÀÓ ½ÃÀÛ ¹öÆ° Å¬¸¯
+	// ê²Œì„ ì‹œì‘ ë²„íŠ¼
 	UFUNCTION(BlueprintCallable)
 	void PlayButtonPressed();
 

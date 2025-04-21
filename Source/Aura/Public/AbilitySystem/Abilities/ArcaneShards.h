@@ -12,6 +12,6 @@ class AURA_API UArcaneShards : public UAuraDamageGameplayAbility
 	GENERATED_BODY()
 	
 public:
-	virtual FString GetDescription(int32 Level) override;
-	virtual FString GetNextLevelDescription(int32 Level) override;
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 };

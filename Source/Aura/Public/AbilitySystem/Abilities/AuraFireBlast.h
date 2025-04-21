@@ -14,8 +14,10 @@ class AURA_API UAuraFireBlast : public UAuraDamageGameplayAbility
 	GENERATED_BODY()
 	
 public:
-	virtual FString GetDescription(int32 Level) override;
-	virtual FString GetNextLevelDescription(int32 Level) override;
+	UAuraFireBlast();
+	
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
 	UFUNCTION(BlueprintCallable)
 	TArray<AAuraFireBall*> SpawnFireBalls();

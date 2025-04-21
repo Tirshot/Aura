@@ -2,38 +2,49 @@
 
 
 #include "AbilitySystem/Abilities/AuraFireBlast.h"
+
+#include "AuraGameplayTags.h"
 #include "Actor/AuraFireBall.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
-FString UAuraFireBlast::GetDescription(int32 Level)
+UAuraFireBlast::UAuraFireBlast()
 {
-	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
-	const float ManaCost = FMath::Abs(GetManaCost(Level));
-	const float Cooldown = GetCoolDown(Level);
-
-	return FString::Printf(TEXT(
-		"<Title>화염 폭발</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 내에 %d의 화염구를 소환하여 </><Damage>%d</><Default>의 방사형 피해를 입히는 화염 폭풍을 소환합니다. 일정 확률로 적에게 화상을 입힙니다.</>"),
-		Level,
-		ManaCost,
-		Cooldown,
-		NumFireBalls,
-		ScaledDamage
-	);
+	SpellType = ESpellType::Projectile;
 }
 
-FString UAuraFireBlast::GetNextLevelDescription(int32 Level)
+FString UAuraFireBlast::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
 	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
 	const float ManaCost = FMath::Abs(GetManaCost(Level));
 	const float Cooldown = GetCoolDown(Level);
-
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+	
 	return FString::Printf(TEXT(
-		"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 내에 %d의 화염구를 소환하여</><Damage>%d</><Default>의 방사형 피해를 입히는 화염 폭풍을 소환합니다. 일정 확률로 적에게 화상을 입힙니다.</>"),
+		"<Title>화염 폭발</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 내에 </><ManaCost>%d</>개 화염구를 방출하여 <Damage>%d</>의 방사형 피해를 입히고 폭발시킵니다.\n일정 확률로 적에게 화상을 입힙니다."),
 		Level,
 		ManaCost,
 		Cooldown,
 		NumFireBalls,
-		ScaledDamage
+		ScaledDamage + MagicPowerDamage
+	);
+} 
+
+FString UAuraFireBlast::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
+{
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
+	const float ManaCost = FMath::Abs(GetManaCost(Level));
+	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+	
+	return FString::Printf(TEXT(
+		"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 내에 </><ManaCost>%d</>개 화염구를 방출하여 <Damage>%d</>의 방사형 피해를 입히고 폭발시킵니다.\n일정 확률로 적에게 화상을 입힙니다."),
+		Level,
+		ManaCost,
+		Cooldown,
+		NumFireBalls,
+		ScaledDamage + MagicPowerDamage
 	);
 }
 

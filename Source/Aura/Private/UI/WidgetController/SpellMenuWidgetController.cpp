@@ -8,19 +8,17 @@
 
 void USpellMenuWidgetController::BroadcastInitialValues()
 {
-	// ÀåÂøµÈ ¾îºô¸®Æ¼
 	BroadcastAbilityInfo();
 
-	// ½ºÆçÆ÷ÀÎÆ® ÃÊ±â°ª °¡Á®¿À±â
 	OnSpellPointsChanged.Broadcast(GetAuraPS()->GetSpellPoints());
 }
 
 void USpellMenuWidgetController::BindCallbacksToDependencies()
 {
-	// ¾îºô¸®Æ¼ »óÅÂ º¯È­ µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+	// ì–´ë¹Œë¦¬í‹° ìƒíƒœê°€ ë³€ê²½
 	GetAuraASC()->AbilityStatusChanged.AddLambda([this](const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 NewLevel) 
 		{
-			// µ¿ÀÏÇÑ ¾îºô¸®Æ¼¿¡ ´ëÇØ ¾îºô¸®Æ¼ »óÅÂ ¾÷µ¥ÀÌÆ® ¹× ºê·ÎµåÄ³½ºÆÃ
+			// ì–´ë¹Œë¦¬í‹°ë¥¼ ì°¾ì•„ UIì— ë°˜ì˜
 			if (SelectedAbility.Ability.MatchesTagExact(AbilityTag))
 			{
 				SelectedAbility.Status = StatusTag;
@@ -28,15 +26,14 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 				bool bEnableSpendPoints = false;
 				bool bEnableEquip = false;
 
-				// ¹öÆ° È°¼ºÈ­
+				// ë²„íŠ¼ í™œì„±í™” í™•ì¸
 				ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip);
 
-				// ¾îºô¸®Æ¼ ¼³¸í
 				FString Description;
 				FString NextLevelDescription;
 				GetAuraASC()->GetDescriptionsByAbilityTag(AbilityTag, Description, NextLevelDescription);
 
-				// ºí·çÇÁ¸°Æ®·Î ºê·ÎµåÄ³½ºÆÃ
+				// ê¸€ë¡œë¸Œ ì„ íƒ ìƒíƒœ ë³€ê²½
 				OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 			}
 
@@ -48,13 +45,13 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 			}
 		});
 
-	// ¾îºô¸®Æ¼ ÀåÂø µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+	// ì–´ë¹Œë¦¬í‹° ìž¥ì°©
 	GetAuraASC()->AbilityEquipped.AddUObject(this, &USpellMenuWidgetController::OnAbilityEquipped);
 
-	// ½ºÆç Æ÷ÀÎÆ® º¯È­ µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+	// ìŠ¤íŽ  í¬ì¸íŠ¸ ë³€ê²½
 	GetAuraPS()->OnSpellPointChangedDelegate.AddLambda([this](int32 SpellPoints)
 		{
-			// ºí·çÇÁ¸°Æ®·Î Àü¼Û
+			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 			OnSpellPointsChanged.Broadcast(SpellPoints);
 			CurrentSpellPoints = SpellPoints;
 
@@ -63,12 +60,12 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 
 			ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip);
 
-			// ¾îºô¸®Æ¼ ¼³¸í
+			// ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½
 			FString Description;
 			FString NextLevelDescription;
 			GetAuraASC()->GetDescriptionsByAbilityTag(SelectedAbility.Ability, Description, NextLevelDescription);
 
-			// ºí·çÇÁ¸°Æ®·Î ºê·ÎµåÄ³½ºÆÃ
+			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½Îµï¿½Ä³ï¿½ï¿½ï¿½ï¿½
 			OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 		});
 }
@@ -77,60 +74,59 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 {
 	if (bWaitForEquipSelection)
 	{
-		// ½ºÆç ÀåÂø Çà °­Á¶ ¾Ö´Ï¸ÞÀÌ¼Ç Áß´Ü
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ß´ï¿½
 		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
 
-	// ½ºÆç Æ÷ÀÎÆ®, ¾îºô¸®Æ¼ »óÅÂ
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®, ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½
 	const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
 	const int32 SpellPoints = GetAuraPS()->GetSpellPoints();
 	FGameplayTag AbilityStatus;
 
-	// (1) ¾îºô¸®Æ¼ ÅÂ±×°¡ À¯È¿ÇÑ°¡
+	// (1) ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½Â±×°ï¿½ ï¿½ï¿½È¿ï¿½Ñ°ï¿½
 	const bool bTagValid = AbilityTag.IsValid();
 	const bool bTagNone = AbilityTag.MatchesTag(GameplayTags.Abilities_None);
 
-	// (2) È°¼ºÈ­ °¡´ÉÇÑ ¾îºô¸®Æ¼ÀÎ°¡
+	// (2) È°ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½Î°ï¿½
 	const FGameplayAbilitySpec* Spec = GetAuraASC()->GetSpecFromAbilityTag(AbilityTag);
 	const bool bSpecValid = Spec != nullptr;
 	
-	// (3) ¾îºô¸®Æ¼ »óÅÂ ÆÇ´Ü
+	// (3) ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½
 	if (bTagValid == false || bTagNone == true || bSpecValid == false)
 	{
 		AbilityStatus = GameplayTags.Abilities_Status_Locked;
 	}
-	else // ÅÂ±×°¡ À¯È¿ÇÏ¸ç Abilities.NoneÀÌ ¾Æ´Ï°í ¾îºô¸®Æ¼ ½ºÆåÀÌ À¯È¿
+	else // ï¿½Â±×°ï¿½ ï¿½ï¿½È¿ï¿½Ï¸ï¿½ Abilities.Noneï¿½ï¿½ ï¿½Æ´Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¿
 	{
 		AbilityStatus = GetAuraASC()->GetStatusFromSpec(*Spec);
 	}
 
-	// ¾îºô¸®Æ¼ »óÅÂ ÃßÀû
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	SelectedAbility.Ability = AbilityTag;
 	SelectedAbility.Status = AbilityStatus;
 
-	// (4) ¹öÆ° È°¼ºÈ­
+	// (4) ï¿½ï¿½Æ° È°ï¿½ï¿½È­
 	bool bEnableSpendPoints = false;
 	bool bEnableEquip = false;
 
 	ShouldEnableButtons(AbilityStatus, SpellPoints, bEnableSpendPoints, bEnableEquip);
 
-	// ¾îºô¸®Æ¼ ¼³¸í
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½
 	FString Description;
 	FString NextLevelDescription;
 	GetAuraASC()->GetDescriptionsByAbilityTag(AbilityTag, Description, NextLevelDescription);
 
-	// ºí·çÇÁ¸°Æ®·Î ºê·ÎµåÄ³½ºÆÃ
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½Îµï¿½Ä³ï¿½ï¿½ï¿½ï¿½
 	OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 }
 
 void USpellMenuWidgetController::SpendPointButtonPressed()
 {
-	// ASC·Î Àü´Þ
-	if (GetAuraASC())
+	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
 	{
-		GetAuraASC()->ServerSpendSpellPoint(SelectedAbility.Ability);
+		AuraASC->ServerSpendSpellPoint(SelectedAbility.Ability);
 	}
 }
 
@@ -138,32 +134,32 @@ void USpellMenuWidgetController::GlobeDeselect()
 {
 	if (bWaitForEquipSelection)
 	{
-		// ½ºÆç ÀåÂø Çà °­Á¶ ¾Ö´Ï¸ÞÀÌ¼Ç Áß´Ü
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ß´ï¿½
 		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
 
-	// ¼±ÅÃµÈ ¾îºô¸®Æ¼ ÇØÁ¦
+	// ï¿½ï¿½ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½
 	SelectedAbility.Ability = FAuraGameplayTags::Get().Abilities_None;
 	SelectedAbility.Status = FAuraGameplayTags::Get().Abilities_Status_Locked;
 
-	// ±Û·Îºê ¼±ÅÃ ÇØÁ¦
+	// ï¿½Û·Îºï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	OnSpellGlobeSelected.Broadcast(false, false, FString(), FString());
 }
 
 void USpellMenuWidgetController::EquipButtonPressed()
 {
-	// (1) equip ¾Ö´Ï¸ÞÀÌ¼Ç Àç»ý
+	// (1) equip ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½ï¿½
 	const FGameplayTag& AbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
 
 	WaitForEquipDelegate.Broadcast(AbilityType);
 	bWaitForEquipSelection = true;
 
-	// ¾îºô¸®Æ¼ »óÅÂ °¡Á®¿À±â
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	const FGameplayTag SelectedStatus = GetAuraASC()->GetStatusFromAbilityTag(SelectedAbility.Ability);
 
-	// ÀåÂøµÈ ¾îºô¸®Æ¼¿¡ ´ëÇØ ÀÔ·Â ÅÂ±× °¡Á®¿À±â
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½Â±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	if (SelectedStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
 	{
 		SelectedSlot = GetAuraASC()->GetSlotFromAbilityTag(SelectedAbility.Ability);
@@ -175,18 +171,18 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 	if (bWaitForEquipSelection == false)
 		return;
 
-	// ¾×Æ¼ºê ¾îºô¸®Æ¼¸¦ ÆÐ½Ãºê Ä­¿¡ ÀåÂøÇÒ ¼ö ¾øÀ½, ¹Ý´ëµµ µ¿ÀÏ
+	// ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½Ð½Ãºï¿½ Ä­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ï¿½Ý´ëµµ ï¿½ï¿½ï¿½ï¿½
 	const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
 	if (SelectedAbilityType.MatchesTagExact(AbilityType) == false)
 		return;
 
-	// ¼­¹ö¿¡°Ô ¾Ë¸²
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë¸ï¿½
 	GetAuraASC()->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
 }
 
 void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)
 {
-	// ºÒ¸®¾ð ÇÃ·¡±×
+	// ï¿½Ò¸ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½
 	bWaitForEquipSelection = false;
 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
@@ -196,30 +192,30 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	LastSlotInfo.InputTag = PrevSlot;
 	LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
 
-	// º¯°æÇÒ ½½·Ô¿¡ ÀÌ¹Ì ¾îºô¸®Æ¼°¡ ÀÖ´Ù¸é ºó ¾îºô¸®Æ¼ Á¤º¸¸¦ º¸³¿
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ô¿ï¿½ ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½Ö´Ù¸ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
-	// º¯°æÇÒ ½½·Ô¿¡ ¼±ÅÃÇÑ ¾îºô¸®Æ¼ÀÇ Á¤º¸¸¦ Ã¤¿ò
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ô¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½
 	FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
 	Info.StatusTag = Status;
 	Info.InputTag = Slot;
 	Info.AbilityTag = AbilityTag;
 	AbilityInfoDelegate.Broadcast(Info);
 
-	// ÀåÂø Çà °­Á¶ ¾Ö´Ï¸ÞÀÌ¼Ç Áß´Ü
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ß´ï¿½
 	StopWaitForEquipDelegate.Broadcast(AbilityInfo->FindAbilityInfoForTag(AbilityTag).AbilityType);
 	
-	// ½ºÆç ±Û·Îºê ÀçÁöÁ¤ µ¨¸®°ÔÀÌÆ® È£Ãâ
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Û·Îºï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® È£ï¿½ï¿½
 	SpellGlobeReassignedDelegate.Broadcast(AbilityTag);
 	GlobeDeselect();
 }
 
 void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& AbilityStatus, int32 SpellPoints, bool& bEnableSpellPointsButton, bool& bEnableEquipButton)
 {
-	// ¹ÛÀÇ ºÒ¸®¾ðÀ» °¡Á®¿Í ¼öÁ¤ÇÒ °ÍÀÌ¹Ç·Î ºÒ¸®¾ðÀÇ ÂüÁ¶¸¦ »ç¿ëÇÑ´Ù.
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ò¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¹Ç·ï¿½ ï¿½Ò¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
 
-	// ±âº» ¼³Á¤
+	// ï¿½âº» ï¿½ï¿½ï¿½ï¿½
 	bEnableSpellPointsButton = false;
 	bEnableEquipButton = false;
 

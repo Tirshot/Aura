@@ -14,37 +14,36 @@ struct FAuraAbilityInfo
 {
 	GENERATED_BODY()
 
-	// ½ºÆç ÅÂ±×
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag AbilityTag = FGameplayTag();
 
-	// ÀÔ·Â ÅÂ±×
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTag InputTag = FGameplayTag();
 
-	// ¾îºô¸®Æ¼ »óÅÂ ÅÂ±×
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTag StatusTag = FGameplayTag();
 
-	// Äğ´Ù¿î ÅÂ±×
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag CooldownTag = FGameplayTag();
 
-	// ¾îºô¸®Æ¼ Å¸ÀÔ ÅÂ±×
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag AbilityType = FGameplayTag();
 
-	// ½ºÆç ¾ÆÀÌÄÜ ÀÌ¹ÌÁö
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<const UTexture2D> Icon = nullptr;
 
-	// ½ºÆç ¹è°æ
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<const UMaterialInterface> BackgroundMaterial = nullptr;
 
-	// ·¹º§ ¿ä±¸·®
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 LevelRequirement = 1;
+
+	// í•˜ìœ„ ì–´ë¹Œë¦¬í‹°ì˜ ë ˆë²¨ ìš”êµ¬ëŸ‰ ì²´í¬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag RequireInferiorAbilityTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 RequireInferiorAbilityLevel = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayAbility> Ability;

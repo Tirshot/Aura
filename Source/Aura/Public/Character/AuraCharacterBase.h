@@ -32,7 +32,7 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
-	/** ÀüÅõ ÀÎÅÍÆäÀÌ½º **/
+	/** Combat Interface ì‹œì‘ **/
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
 	virtual void Die(const FVector& DeathImpulse) override;
 	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
@@ -51,38 +51,36 @@ public:
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	virtual UAttributeSet* GetAttributeSet_Implementation() override;
 	virtual FOnDamageSignature& GetOnDamageDelegate() override;
-	/**¿©±â±îÁö ÀüÅõ ÀÎÅÍÆäÀÌ½º**/
+	/** Combat Interface ë **/
 
 	FOnASCRegistered OnASCRegistered;
 	FOnDeath OnDeath;
 	FOnDamageSignature OnDamageDelegate;
 
-	// ·¢µ¹ ¸ÖÆ¼Ä³½ºÆ® RPC
+	// RPC
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath(const FVector& DeathImpulse);
-
-	// ¸ùÅ¸ÁÖ¿Í ÅÂ±×
+	
 	UPROPERTY(EditAnywhere, category="Combat")
 	TArray<FTaggedMontage> AttackMontages;
 
-	// ±âº» ÀÌµ¿¼Óµµ
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
 	float BaseWalkSpeed = 600.f;
 
-	// ½ºÅÏ
+	// ìƒíƒœ ì´ìƒ
 	UPROPERTY(ReplicatedUsing=OnRep_Stunned, BlueprintReadOnly)
 	bool bIsStunned = false;
 
-	// È­»ó
 	UPROPERTY(ReplicatedUsing=OnRep_Burned, BlueprintReadOnly)
 	bool bIsBurned = false;
 
-	// °¨Àü»ç ÇÇ°İÁß
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bIsBeingShock = false;
 
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 
+	void SetCharacterClass(ECharacterClass InClass) {CharacterClass = InClass;}
+	
 	UFUNCTION()
 	virtual void OnRep_Stunned();
 
@@ -96,22 +94,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
 
-	// ÁÖ¹® ¹ßµ¿ Ã¼Å©¿ë ¼ÒÄÏ
+	// ë¬´ê¸° ì†Œì¼“
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName WeaponTipSocketName;
 
-	// °ø°İ ¼ÒÄÏ
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName LeftHandSocketName;
 
-	// °ø°İ ¼ÒÄÏ
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName RightHandSocketName;
 
-	// °ø°İ ¼ÒÄÏ
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName TailSocketName;
 
+	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
 		
 	// GAS
@@ -130,17 +126,20 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> InitializeVitalAttributes;
 
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
+	TSubclassOf<UGameplayEffect> InitializeRegenAttributes;
+
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	virtual void InitializeDefaultAttributes() const;
 
-	// µğÁ¹ºê ÀÌÆåÆ®
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®
 	void Dissolve();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartDissolveTimeline(UMaterialInstanceDynamic* DynamicMaterialInstance);
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void StartWeponDissolveTimeline(UMaterialInstanceDynamic* DynamicMaterialInstance);
+	void StartWeaponDissolveTimeline(UMaterialInstanceDynamic* DynamicMaterialInstance);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UMaterialInstance> DissolveMaterialInstance;
@@ -148,15 +147,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UMaterialInstance> WeaponDissolveMaterialInstance;
 
-	// Ç÷Èç È¿°ú
+	// í˜ˆí”
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UNiagaraSystem* BloodEffect;
 
-	// »ç¸Á »ç¿îµå
+	// ì‚¬ë§ ì‚¬ìš´ë“œ
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	USoundBase* DeathSound;
 
-	// ¼ÒÈ¯¼ö
+	// ë¯¸ë‹ˆì–¸ ì†Œí™˜ ì¹´ìš´íŠ¸
 	int32 MinionCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
@@ -169,22 +168,22 @@ protected:
 	TObjectPtr<UDebuffNiagaraComponent> StunDebuffComponent;
 
 protected:
-	// Ä³¸¯ÅÍ¿¡ ¾îºô¸®Æ¼ ºÎ¿©
+	// ì–´ë¹Œë¦¬í‹° ë¶€ì—¬
 	void AddCharacterAbilites();
 
 private:
-	// ½ÃÀÛ ½Ã È°¼ºÈ­µÇ´Â ¾îºô¸®Æ¼
+	// ì‹œì‘ ì‹œ ë¶€ì—¬í•˜ëŠ” ì•¡í‹°ë¸Œ ì–´ë¹Œë¦¬í‹°
 	UPROPERTY(EditAnywhere, Category="Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 
-	// ½ÃÀÛ ½Ã È°¼ºÈ­µÇ´Â ÆĞ½Ãºê ¾îºô¸®Æ¼
+	// ì‹œì‘ ì‹œ ë¶€ì—¬í•˜ëŠ” íŒ¨ì‹œë¸Œ ì–´ë¹Œë¦¬í‹°
 	UPROPERTY(EditAnywhere, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupPassiveAbilities;
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<UAnimMontage> HitReactMontage;
 
-	// ÆĞ½Ãºê ³ªÀÌ¾Æ°¡¶ó ÄÄÆ÷³ÍÆ®
+	// íŒ¨ì‹œë¸Œ ìŠ¤í  ì´í™íŠ¸
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UPassiveNiagaraComponent> HaloOfProtectionNiagaraComponent;
 

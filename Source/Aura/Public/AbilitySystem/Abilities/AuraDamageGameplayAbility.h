@@ -7,9 +7,16 @@
 #include "AuraAbilityTypes.h"
 #include "AuraDamageGameplayAbility.generated.h"
 
-/**
- * 
- */
+UENUM(BlueprintType)
+enum ESpellType : uint8
+{
+	NonTargeting,
+	Targeting,
+	Ranged,
+	Projectile
+};
+
+
 UCLASS()
 class AURA_API UAuraDamageGameplayAbility : public UAuraGameplayAbility
 {
@@ -18,6 +25,8 @@ class AURA_API UAuraDamageGameplayAbility : public UAuraGameplayAbility
 public:
 	UFUNCTION(BlueprintCallable)
 	void CauseDamage(AActor* TargetActor);
+
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	UFUNCTION(BlueprintPure)
 	FDamageEffectParams MakeDamageEffectParamsFromClassDefaults(
@@ -33,7 +42,7 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	float GetDamageAtLevel() const;
-
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
@@ -43,31 +52,32 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	FScalableFloat Damage;
-
-	// µπˆ«¡ ∏‚πˆ∫Øºˆ
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
+	FScalableFloat MagicPowerCoefficient;
+	
+	// ÌÖåÏù¥Î∏î ÎÇ¥ ÌäπÏ†ï Ïª§Î∏å ÏÑ†ÌÉù
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Scaling", meta = (GetOptions = "GetRowNames"))
+	FName CurveRowName;
+	
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DebuffChance = 20.f;
 
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DebuffDamage = 5.f;
 
-	// ∏Ó √ ∏∂¥Ÿ µπˆ«¡ µ•πÃ¡ˆ∏¶ ¿‘»˙ ∞Õ¿Œ∞°
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DebuffFrequency = 1.f;
 
-	// ∏Ó √ µøæ» µπˆ«¡∏¶ ¿Ø¡ˆ«“ ∞Õ¿Œ∞°
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DebuffDuration = 5.f;
 
-	// ∑¢µπø° ∞°«“ √Ê∞›∆ƒ ≈©±‚
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DeathImpulseMagnitude = 1000.f;
 
-	// ≥ÀπÈ ≈©±‚
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float KnockbackForceMagnitude = 1000.f;
 
-	// ≥ÀπÈ »Æ∑¸
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float KnockbackChance = 0.f;
 
@@ -83,4 +93,7 @@ protected:
 	UFUNCTION(BlueprintPure)
 	FTaggedMontage GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const;
 
+public:
+	UPROPERTY(EditDefaultsOnly)
+	TEnumAsByte<ESpellType> SpellType = ESpellType::NonTargeting;
 };

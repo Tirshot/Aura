@@ -37,6 +37,11 @@ AAuraEnemy::AAuraEnemy()
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
     HealthBar->SetupAttachment(GetRootComponent());
+    
+    GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+    GetMesh()->MarkRenderStateDirty();
+    Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+    Weapon->MarkRenderStateDirty();
 }
 
 void AAuraEnemy::PossessedBy(AController* NewController)
@@ -65,15 +70,18 @@ void AAuraEnemy::PossessedBy(AController* NewController)
 void AAuraEnemy::HighlightActor_Implementation()
 {
     GetMesh()->SetRenderCustomDepth(true);
-    GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
     Weapon->SetRenderCustomDepth(true);
-    Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
 }
 
 void AAuraEnemy::UnHighlightActor_Implementation()
 {
     GetMesh()->SetRenderCustomDepth(false);
     Weapon->SetRenderCustomDepth(false);
+}
+
+void AAuraEnemy::SetMoveToLocation_Implementation(FVector& OutDestination)
+{
+    // 절대 건드리지 마시오
 }
 
 int32 AAuraEnemy::GetCharacterLevel_Implementation()
@@ -91,6 +99,9 @@ void AAuraEnemy::Die(const FVector& DeathImpulse)
         // 블랙보드 키 기본값 설정
         AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
     }
+
+    // 아이템 드랍
+    SpawnLoot();
 
     // 랙돌 효과와 무기 드랍
     Super::Die(DeathImpulse);

@@ -94,7 +94,10 @@ public:
 	/*
 	* Secondary 속성
 	*/
-
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxHealth, Category = "Secondary Attributes")
+	FGameplayAttributeData MagicAttackPower;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, MagicAttackPower);
+	
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxHealth, Category = "Secondary Attributes")
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, MaxHealth);
@@ -207,6 +210,9 @@ public:
 	UFUNCTION()
 	void OnRep_Vigor(const FGameplayAttributeData& OldVigor) const;
 
+	UFUNCTION()
+	void OnRep_MagicAttackPower(const FGameplayAttributeData& OldMagicAttackPower) const;
+	
 	UFUNCTION()
 	void OnRep_Armor(const FGameplayAttributeData& OldArmor) const;
 

@@ -23,11 +23,11 @@ struct FCharacterClassDefaultInfo
 {
 	GENERATED_BODY()
 
-	// 1Â÷ ¼Ó¼ºÀÇ ±âº»°ªÀ» Àû¿ëÇÏ´Â °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ® - °øÅë
+	// 1ì°¨ ì†ì„±
 	UPROPERTY(EditDefaultsOnly, Category="Class Defaults")
 	TSubclassOf<UGameplayEffect> PrimaryAttributes;
 
-	// ±âº» ¾îºô¸®Æ¼
+	// ì‹œì‘ ì‹œ ë¶€ì—¬ë˜ëŠ” ì–´ë¹Œë¦¬í‹°
 	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 
@@ -44,12 +44,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Character Class Defaults")
 	TMap<ECharacterClass, FCharacterClassDefaultInfo> CharacterClassInformation;
 
-	// 2Â÷, ¹ÙÀÌÅ» ¼Ó¼ºÀÇ ±âº»°ªÀ» Àû¿ëÇÏ´Â °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ® - À¯Çüº°
+	// 1ì°¨ ì†ì„± ì„¤ì •ì„ ìœ„í•œ Set By Caller
+	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
+	TSubclassOf<UGameplayEffect> PrimaryAttributes_SetByCaller;
+	
+	// 2ì°¨ ì†ì„±, Auraì—ê²Œ ì ìš©, Type : Infinite
+	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
+	TSubclassOf<UGameplayEffect> SecondaryAttributes_Infinite;
+
+	// 2ì°¨ ì†ì„±, ëª¬ìŠ¤í„° ìƒì„± ì‹œ ì ìš©, 1ì°¨ ì†ì„±ì— ì˜í•´ ê²°ì •ë¨
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TSubclassOf<UGameplayEffect> SecondaryAttributes;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TSubclassOf<UGameplayEffect> VitalAttributes;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
+	TSubclassOf<UGameplayEffect> VitalAttributes_SetByCaller;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TArray<TSubclassOf<UGameplayAbility>> CommonAbilities;

@@ -34,7 +34,7 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 			RepBits |= 1 << 6;
 		}
 
-		// Ä¿½ºÅÒ ºÒ¸®¾ð º¯¼ö
+		// ì „íˆ¬ íŒë‹¨
 		if (bIsBlockedHit)
 		{
 			RepBits |= 1 << 7;
@@ -48,7 +48,7 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 			RepBits |= 1 << 9;
 		}
 
-		// Ä¿½ºÅÒ º¯¼ö
+		// ë””ë²„í”„
 		if (DebuffDamage > 0.f)
 		{
 			RepBits |= 1 << 10;
@@ -71,13 +71,13 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 			RepBits |= 1 << 14;
 		}
 
-		// ³Ë¹é
+		// ë„‰ë°±
 		if (KnockbackForce.IsZero() == false)
 		{
 			RepBits |= 1 << 15;
 		}
 
-		// ¹æ»çÇü µ¥¹ÌÁö
+		// ë°©ì‚¬í˜•
 		if (bIsRadialDamage)
 		{
 			RepBits |= 1 << 16;
@@ -94,10 +94,15 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 				RepBits |= 1 << 19;
 			}
 		}
+
+		if (MagicPowerCoefficient > 0.f)
+		{
+			RepBits |= 1 << 20;
+		}
 	}
 
-	// 20°³ÀÇ ºñÆ® Á÷·ÄÈ­
-	Ar.SerializeBits(&RepBits, 20);
+	// 21
+	Ar.SerializeBits(&RepBits, 21);
 
 	if (RepBits & (1 << 0))
 	{
@@ -140,7 +145,6 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 		bHasWorldOrigin = false;
 	}
 
-	// Ä¿½ºÅÒ ºÒ¸®¾ð º¯¼ö
 	if (RepBits & (1 << 7))
 	{
 		Ar << bIsBlockedHit;
@@ -203,6 +207,11 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 		{
 			RadialDamageOrigin.NetSerialize(Ar, Map, bOutSuccess);
 		}
+	}
+
+	if (RepBits & (1 << 20))
+	{
+		Ar << MagicPowerCoefficient;
 	}
 
 	if (Ar.IsLoading())

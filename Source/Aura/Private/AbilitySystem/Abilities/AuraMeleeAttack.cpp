@@ -3,3 +3,7 @@
 
 #include "AbilitySystem/Abilities/AuraMeleeAttack.h"
 
+UAuraMeleeAttack::UAuraMeleeAttack()
+{
+	SpellType = ESpellType::Targeting;
+}

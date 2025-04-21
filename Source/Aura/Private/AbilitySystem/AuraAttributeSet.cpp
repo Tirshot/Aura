@@ -9,7 +9,6 @@
 #include "AuraGameplayTags.h"
 #include "Interaction/CombatInterface.h"
 #include "Interaction/PlayerInterface.h"
-#include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraAbilityTypes.h"
@@ -26,6 +25,7 @@ UAuraAttributeSet::UAuraAttributeSet()
     TagsToAttributes.Add(GameplayTags.Attributes_Primary_Vigor, GetVigorAttribute);
 
     // 2차 속성
+    TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MagicAttackPower, GetMagicAttackPowerAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_Armor, GetArmorAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ArmorPenetration, GetArmorPenetrationAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_BlockChance, GetBlockChanceAttribute);
@@ -36,6 +36,10 @@ UAuraAttributeSet::UAuraAttributeSet()
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaRegeneration, GetManaRegenerationAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealth, GetMaxHealthAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxMana, GetMaxManaAttribute);
+
+    // 바이탈 속성
+    TagsToAttributes.Add(GameplayTags.Attributes_Vital_Health, GetHealthAttribute);
+    TagsToAttributes.Add(GameplayTags.Attributes_Vital_Mana, GetManaAttribute);
 
     // 속성 저항
     TagsToAttributes.Add(GameplayTags.Attributes_Resistance_Fire, GetFireResistanceAttribute);
@@ -65,6 +69,7 @@ void UAuraAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
     // Secondary 속성
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, MaxMana, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, MagicAttackPower, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, Armor, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, ArmorPenetration, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, BlockChance, COND_None, REPNOTIFY_Always);
@@ -108,6 +113,9 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     SetEffectProperties(Data, Props);
 
     // 캐릭터 사망 이후 이펙트 실행 방지
+    if (IsValid(Props.TargetCharacter) == false)
+        return;
+    
     if (Props.TargetCharacter->Implements<UCombatInterface>())
     {
         if (ICombatInterface::Execute_IsDead(Props.TargetCharacter))
@@ -117,6 +125,25 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     if (Data.EvaluatedData.Attribute == GetHealthAttribute())
     {
         SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+        const FGameplayTag NoFloatTextTag = FAuraGameplayTags::Get().Init_Attributes;
+        if (Data.EffectSpec.CapturedSourceTags.GetSpecTags().HasTag(NoFloatTextTag))
+        {
+            // 초기화용 효과이므로 데미지 텍스트 표시 생략
+            return;
+        }
+        
+        float Value = Data.EvaluatedData.Magnitude;
+
+        if (Value >= 0)
+        {
+            // 힐링
+            ShowFloatingText(Props,Value,false,false,true);
+        }
+        else
+        {
+            // 데미지-AuraEffectActor에 의한
+            ShowFloatingText(Props,FMath::Abs(Value),false,false,false);
+        }
     }
     if (Data.EvaluatedData.Attribute == GetManaAttribute())
     {
@@ -144,7 +171,14 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
     if (LocalIncomingDamage > 0.f)
     {
         const float NewHealth = GetHealth() - LocalIncomingDamage;
+        auto SourceASC = Props.SourceASC;
+        if (SourceASC == nullptr)
+            return;
 
+        auto SourceCharacter = Props.SourceCharacter;
+        if (SourceCharacter == nullptr)
+            return;
+        
         // Life Siphon 검증
         if (Props.SourceASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon))
         {
@@ -362,7 +396,7 @@ void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float D
 {
     // 데미지 플로팅 위젯
     // 자해 불가
-    if (Props.SourceCharacter != Props.TargetCharacter)
+    // if (Props.SourceCharacter != Props.TargetCharacter)
     {
         if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
         {
@@ -454,6 +488,12 @@ void UAuraAttributeSet::OnRep_Vigor(const FGameplayAttributeData& OldVigor) cons
 {
     // Notify 매크로
     GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, Vigor, OldVigor);
+}
+
+void UAuraAttributeSet::OnRep_MagicAttackPower(const FGameplayAttributeData& OldMagicAttackPower) const
+{
+    // Notify 매크로
+    GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, MagicAttackPower, OldMagicAttackPower);
 }
 
 void UAuraAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldArmor) const

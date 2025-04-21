@@ -33,6 +33,9 @@ struct FDamageEffectParams
 	FGameplayTag DamageType = FGameplayTag();
 
 	UPROPERTY(BlueprintReadWrite)
+	float MagicPowerCoefficient = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
 	float DebuffChance = 0.f;
 
 	UPROPERTY(BlueprintReadWrite)
@@ -78,23 +81,21 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 	GENERATED_BODY()
 
 public:
-	// ±∏¡∂√º∏¶ ∏Æ«√∑∫º« Ω√Ω∫≈€ø° ªÁøÎ«œ±‚ ¿ß«ÿ π›µÂΩ√ ø¿πˆ∂Û¿ÃµÂ
 	virtual UScriptStruct* GetScriptStruct() const { return StaticStruct(); }
 
-	// ƒ¡≈ÿΩ∫∆Æ∏¶ ∫π¡¶
 	virtual FAuraGameplayEffectContext* Duplicate() const
 	{
 		FAuraGameplayEffectContext* NewContext = new FAuraGameplayEffectContext();
 		*NewContext = *this;
 		if (GetHitResult())
 		{
-			// HitResult∞° ¡∏¿Á -> ±Ì¿∫ ∫πªÁ ºˆ«‡
+			// HitResultÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ -> ÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ
 			NewContext->AddHitResult(*GetHitResult(), true);
 		}
 		return NewContext;
 	}
 
-	// ¡˜∑ƒ»≠∏¶ ƒøΩ∫≈“«œ±‚ ¿ß«ÿ π›µÂΩ√ ø¿πˆ∂Û¿ÃµÂ
+	// Íµ¨Ï°∞Ï≤¥ ÏßÅÎ†¨Ìôî
 	virtual bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess) override;
 
 	bool IsCriticalHit() const { return bIsCriticalHit; }
@@ -104,6 +105,7 @@ public:
 	float GetDebuffDuration() const { return DebuffDuration; }
 	float GetDebuffFrequency() const { return DebuffFrequency; }
 	TSharedPtr<FGameplayTag> GetDamagedType() const { return DamageType; }
+	float GetMagicPowerCoefficient() const { return MagicPowerCoefficient;}
 	FVector GetDeathImpulse() const { return DeathImpulse; }
 	FVector GetKnockbackForce() const { return KnockbackForce; }
 	bool GetbIsRadialDamage() const { return bIsRadialDamage; }
@@ -119,6 +121,7 @@ public:
 	void SetDebuffDuration(float InDebuffDuration) { DebuffDuration = InDebuffDuration; }
 	void SetDebuffFrequency(float InDebuffFrequency) { DebuffFrequency = InDebuffFrequency; }
 	void SetDamageType(TSharedPtr<FGameplayTag> InDamageType) { DamageType = InDamageType; }
+	void SetMagicPowerCoefficient(float InValue) { MagicPowerCoefficient = InValue;}
 	void SetDeathImpulse(const FVector& InImpulse) { DeathImpulse = InImpulse; }
 	void SetKnockbackForce(const FVector& InForce) { KnockbackForce = InForce; }
 	void SetIsRadialDamage(bool bInIsRadialDamage) { bIsRadialDamage = bInIsRadialDamage; }
@@ -152,6 +155,9 @@ protected:
 	FVector KnockbackForce = FVector::ZeroVector;
 
 	TSharedPtr<FGameplayTag> DamageType;
+
+	UPROPERTY()
+	float MagicPowerCoefficient = 0.f;
 
 	UPROPERTY()
 	bool bIsRadialDamage = false;

@@ -2,33 +2,38 @@
 
 
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 
-FString UAuraGameplayAbility::GetDescription(int32 Level)
+FString UAuraGameplayAbility::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
     return FString::Printf(TEXT("<Default>%s, </><Level>%d</>"), L"Default Ability Name - LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum", Level);
 }
 
-FString UAuraGameplayAbility::GetNextLevelDescription(int32 Level)
+FString UAuraGameplayAbility::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
 {
-    return FString::Printf(TEXT("<Default>Next Level: </><Level>%d</> \n<Default>Causes More Damage</>"), Level);
+    return FString::Printf(TEXT("<Default>%s, </><Level>%d</>"), L"Default Ability Name - LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum", Level);
 }
 
-FString UAuraGameplayAbility::GetLockedDescription(int32 Level)
+FString UAuraGameplayAbility::GetLockedDescription(int32 Level, int32 InferiorAbilityLevel)
 {
-    return FString::Printf(TEXT("<Default>Spell Locked Until Level: %d</>"), Level);
+    if (InferiorAbilityLevel > 0)
+        return FString::Printf(TEXT("<Default>Ï∫êÎ¶≠ÌÑ∞ Î†àÎ≤® </><Level>%d</><Default>Î∂ÄÌÑ∞ ÏäµÎìù Í∞ÄÎä•.</>\n<Default>ÌïòÏúÑ Ïä§Ìé† Î†àÎ≤® </><Level>%d</><Default>Î∂ÄÌÑ∞ ÏäµÎìù Í∞ÄÎä•.</>"), Level, InferiorAbilityLevel);
+    
+    return FString::Printf(TEXT("<Default>Ï∫êÎ¶≠ÌÑ∞ Î†àÎ≤® </><Level>%d</><Default>Î∂ÄÌÑ∞ ÏäµÎìù Í∞ÄÎä•.</>"), Level);
 }
 
 float UAuraGameplayAbility::GetManaCost(float InLevel) const
 {
     float ManaCost = 0.f;
 
-    // ƒ⁄Ω∫∆Æ ∞‘¿”«√∑π¿Ã ¿Ã∆Â∆Æ
+    // ÔøΩ⁄ΩÔøΩ∆Æ ÔøΩÔøΩÔøΩÔøΩÔøΩ√∑ÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ∆Æ
     if (const UGameplayEffect* CostEffect = GetCostGameplayEffect())
     {
         for (FGameplayModifierInfo Mod : CostEffect->Modifiers)
         {
-            // ƒ⁄Ω∫∆Æ∞° ∏∂≥™
+            // ÔøΩ⁄ΩÔøΩ∆ÆÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ
             if (Mod.Attribute == UAuraAttributeSet::GetManaAttribute())
             {
                 Mod.ModifierMagnitude.GetStaticMagnitudeIfPossible(InLevel, ManaCost);
@@ -44,7 +49,7 @@ float UAuraGameplayAbility::GetCoolDown(float InLevel) const
     float Cooldown = 0.f;
     if (const UGameplayEffect* CooldownEffect = GetCooldownGameplayEffect())
     {
-        // ¡ˆº” ∞‘¿”«√∑π¿Ã ¿Ã∆Â∆Æ
+        // ÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩ√∑ÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ∆Æ
         CooldownEffect->DurationMagnitude.GetStaticMagnitudeIfPossible(InLevel, Cooldown);
     }
     return Cooldown;

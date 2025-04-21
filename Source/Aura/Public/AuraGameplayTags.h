@@ -10,9 +10,6 @@
  */
 struct FAuraGameplayTags
 {
-	/* ½Ì±ÛÅæ ¸Å´ÏÀú
-	* ¿¡µğÅÍ¿¡¼­ »ç¿ë °¡´ÉÇÑ ±âº» ÅÂ±×
-	*/
 
 public:
 	static const FAuraGameplayTags& Get() { return GameplayTags; }
@@ -23,6 +20,7 @@ public:
 	FGameplayTag Attributes_Primary_Resilience;
 	FGameplayTag Attributes_Primary_Vigor;
 
+	FGameplayTag Attributes_Secondary_MagicAttackPower;
 	FGameplayTag Attributes_Secondary_Armor;
 	FGameplayTag Attributes_Secondary_ArmorPenetration;
 	FGameplayTag Attributes_Secondary_BlockChance;
@@ -34,36 +32,39 @@ public:
 	FGameplayTag Attributes_Secondary_MaxHealth;
 	FGameplayTag Attributes_Secondary_MaxMana;
 
+	FGameplayTag Attributes_Vital_Health;
+	FGameplayTag Attributes_Vital_Mana;
+
 	FGameplayTag Attributes_Meta_IncomingXP;
 
-	// ¸¶¿ì½º Å¬¸¯
+	// ì…ë ¥ íƒœê·¸
 	FGameplayTag InputTag_LMB;
 	FGameplayTag InputTag_RMB;
 
-	// ¼ıÀÚ ÀÔ·Â
 	FGameplayTag InputTag_1;
 	FGameplayTag InputTag_2;
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
 
-	// ÆĞ½Ãºê
+	// íŒ¨ì‹œë¸Œ íƒœê·¸
 	FGameplayTag InputTag_Passive_1;
 	FGameplayTag InputTag_Passive_2;
 
-	// µ¥¹ÌÁö Å¸ÀÔ
+	// ë°ë¯¸ì§€ íƒœê·¸
 	FGameplayTag Damage;
 	FGameplayTag Damage_Fire;
 	FGameplayTag Damage_Lightning;
 	FGameplayTag Damage_Arcane;
 	FGameplayTag Damage_Physical;
+	FGameplayTag Damage_MagicAttackPowerCoefficient;
 
-	// ¼Ó¼º ÀúÇ×
+	// ì†ì„± ì €í•­
 	FGameplayTag Attributes_Resistance_Fire;
 	FGameplayTag Attributes_Resistance_Arcane;
 	FGameplayTag Attributes_Resistance_Lightning;
 	FGameplayTag Attributes_Resistance_Physical;
 
-	// µğ¹öÇÁ
+	// ë””ë²„í”„
 	FGameplayTag Debuff_Burn;
 	FGameplayTag Debuff_Stun;
 	FGameplayTag Debuff_Arcane;
@@ -74,7 +75,7 @@ public:
 	FGameplayTag Debuff_Duration;
 	FGameplayTag Debuff_Frequency;
 
-	// ¾îºô¸®Æ¼
+	// ê²Œì„í”Œë ˆì´ ì–´ë¹Œë¦¬í‹°
 	FGameplayTag Abilities_None;
 
 	FGameplayTag Abilities_Attack;
@@ -82,26 +83,27 @@ public:
 	FGameplayTag Abilities_Fire_FireBolt;
 	FGameplayTag Abilities_Fire_FireBlast;
 	FGameplayTag Abilities_Lightning_Electrocute;
+	FGameplayTag Abilities_Lightning_Teleport;
 	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_HitReact;
 	
-	// ÆĞ½Ãºê ¾îºô¸®Æ¼
+	// íŒ¨ì‹œë¸Œ ì–´ë¹Œë¦¬í‹°
 	FGameplayTag Abilities_Passive_HaloOfProtection;
 	FGameplayTag Abilities_Passive_LifeSiphon;
 	FGameplayTag Abilities_Passive_ManaSiphon;
 
-	// ¾îºô¸®Æ¼ »óÅÂ
+	// ì–´ë¹Œë¦¬í‹° ìƒíƒœ
 	FGameplayTag Abilities_Status_Locked;
 	FGameplayTag Abilities_Status_Eligible;
 	FGameplayTag Abilities_Status_Unlocked;
 	FGameplayTag Abilities_Status_Equipped;
 
-	// ¾îºô¸®Æ¼ Å¸ÀÔ
+	// ì–´ë¹Œë¦¬í‹° íƒœê·¸
 	FGameplayTag Abilities_Type_Offensive;
 	FGameplayTag Abilities_Type_Passive;
 	FGameplayTag Abilities_Type_None;
 
-	// ÄğÅ¸ÀÓ
+	// ì¿¨ë‹¤ìš´ íƒœê·¸
 	FGameplayTag Cooldown_Fire_FireBolt;
 
 	// TaggedMontage Struct
@@ -118,17 +120,21 @@ public:
 	TMap<FGameplayTag, FGameplayTag> DamageTypesToResistances;
 	TMap<FGameplayTag, FGameplayTag> DamageTypesToDebuff;
 
-	// ÇÇ°İ
+	// í”¼ê²© ë°˜ì‘
 	FGameplayTag Effects_HitReact;
 
-	// ÀÔ·Â »óÅÂ
+	// ì…ë ¥ ë°©ì§€
 	FGameplayTag Player_Block_InputPressed;
 	FGameplayTag Player_Block_InputHeld;
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_CursorTrace;
 	FGameplayTag Player_Abilities_WaitForExecute;
 
+	// ê²Œì„í”Œë ˆì´ í
 	FGameplayTag GameplayCue_FireBlast;
+
+	// ì´ˆê¸°í™” ê²Œì„í”Œë ˆì´ ì´í™íŠ¸
+	FGameplayTag Init_Attributes;
 
 private:
 	static FAuraGameplayTags GameplayTags;

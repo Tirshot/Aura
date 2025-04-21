@@ -13,6 +13,14 @@ class UAbilityInfo;
 class UAuraAbilitySystemComponent;
 struct FOnAttributeChangeData;
 
+UENUM(BlueprintType)
+enum class EMessageType : uint8
+{
+	Floating,
+	TextBox,
+	SpellDesc
+};
+
 USTRUCT(BlueprintType)
 struct FUIWidgetRow : public FTableRowBase
 {
@@ -29,12 +37,17 @@ struct FUIWidgetRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UTexture2D* Image = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	EMessageType MessageType = EMessageType::Floating;
 };
 
 // 동적 멀티캐스트 - dynamic multicast delegate
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChangedSignature, int32, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChangedSignature, int32, NewValue, bool, bLevelUp);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageWidgetRowSignature, FUIWidgetRow, Row);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMessageRemoveSignature, const FGameplayTag&, MessageTag);
 
 
 UCLASS(BlueprintType, Blueprintable)
@@ -65,8 +78,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|XP")
 	FOnAttributeChangedSignature OnXPPercentChanged;
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Level")
-	FOnPlayerStatChangedSignature OnPlayerLevelChangedDelegate;
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	FOnLevelChangedSignature OnPlayerLevelChangedDelegate;
+	
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	FOnMessageRemoveSignature OnMessageRemoved;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
@@ -75,11 +91,23 @@ protected:
 	template<typename T>
 	T* GetDataTableRowByTag(UDataTable* DataTable, const FGameplayTag& Tag);
 
+public:
+	template<typename T>
+	T* GetDataTableRowByTagFromMemberTable(const FGameplayTag& Tag)
+	{
+		return MessageWidgetDataTable->FindRow<T>(Tag.GetTagName(), TEXT(""));
+	}
+
+protected:
 	// 경험치 콜백 함수
 	void OnXPChanged(int32 NewXP);
 
 	// 어빌리티 장착 표시
 	void OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot);
+
+	// 메시지 제거
+	UFUNCTION()
+	void MessageRemove(const FGameplayTag& Tag);
 };
 
 template <typename T>

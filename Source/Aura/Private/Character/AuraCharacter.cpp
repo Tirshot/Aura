@@ -13,9 +13,10 @@
 #include "AbilitySystem/Data/LevelUpInfo.h"
 #include "NiagaraComponent.h"
 #include "AuraGameplayTags.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
 #include "Game/AuraGameModeBase.h"
-#include "Game/AuraGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
 
@@ -46,6 +47,12 @@ AAuraCharacter::AAuraCharacter()
     CharacterClass = ECharacterClass::Elementalist;
 }
 
+void AAuraCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    GetWorldTimerManager().ClearTimer(DeathTimer);
+}
 
 void AAuraCharacter::PossessedBy(AController* NewController)
 {
@@ -56,10 +63,12 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 
     // 저장 데이터 불러오기
     LoadProgress();
-    
-    // 캐릭터 별 초기 능력(Ability) 부여
-    // TODO: 저장된 세이브에서 어빌리티 불러오기
-    AddCharacterAbilites();
+
+    // 저장 월드 상태 불러오기
+    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+    {
+        AuraGameMode->LoadWorldState(GetWorld());
+    }
 }
 
 void AAuraCharacter::LoadProgress()
@@ -74,12 +83,35 @@ void AAuraCharacter::LoadProgress()
         if (SaveData == nullptr)
             return;
 
-        if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+        // 첫 로딩일 때
+        if (SaveData->bFirstTimeLoading)
         {
-            AuraPlayerState->SetLevel(SaveData->PlayerLevel);
-            AuraPlayerState->SetXP(SaveData->XP);
-            AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
-            AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+            // 기본 1차 속성 적용
+            InitializeDefaultAttributes();
+            AddCharacterAbilites();
+        }
+        else
+        {
+            UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+            
+            // 서버에서만 실행
+            if (HasAuthority() == false)
+                return;
+            
+            // 저장된 세이브에서 어빌리티 불러오기
+            AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
+            
+            // 저장된 데이터 불러오기
+            if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+            {
+                AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+                AuraPlayerState->SetXP(SaveData->XP);
+                AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
+                AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+            }
+            
+            // 1차 속성, 2차 속성 적용
+            UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
         }
     }
 }
@@ -243,6 +275,46 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         SaveData->Resilience = UAuraAttributeSet::GetResilienceAttribute().GetNumericValue(GetAttributeSet());
         SaveData->Vigor = UAuraAttributeSet::GetVigorAttribute().GetNumericValue(GetAttributeSet());
 
+        // 바이탈 속성
+        SaveData->Health = UAuraAttributeSet::GetHealthAttribute().GetNumericValue(GetAttributeSet());
+        SaveData->Mana = UAuraAttributeSet::GetHealthAttribute().GetNumericValue(GetAttributeSet());
+        
+        SaveData->bFirstTimeLoading = false;
+
+        if (HasAuthority() == false)
+            return;
+        
+        // 델리게이트 생성 및 바인딩
+        UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+        
+        FForEachAbility SaveAbilityDelegate;
+        SaveData->SavedAbilities.Empty();
+        SaveAbilityDelegate.BindLambda([this, AuraASC, SaveData](const FGameplayAbilitySpec& AbilitySpec)
+        {
+            // 어빌리티 스펙에서 태그 가져오기
+            const FGameplayTag AbilityTag = AuraASC->GetAbilityTagFromSpec(AbilitySpec);
+
+            // 어빌리티 정보 가져오기
+            UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this);
+
+            // 어빌리티 태그에 해당하는 어빌리티 정보 가져오기
+            FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+            
+            FSavedAbility SavedAbility;
+            SavedAbility.GameplayAbility = Info.Ability;
+            SavedAbility.AbilityTag = AbilityTag;
+            SavedAbility.AbilityLevel = AbilitySpec.Level;
+            SavedAbility.AbilitySlot = AuraASC->GetSlotFromAbilityTag(AbilityTag);
+            SavedAbility.AbilityStatus = AuraASC->GetStatusFromAbilityTag(AbilityTag);
+            SavedAbility.AbilityType = Info.AbilityType;
+
+            // 어빌리티 저장
+            SaveData->SavedAbilities.AddUnique(SavedAbility);
+        });
+        
+        // 활성화된 어빌리티에 대하여 델리게이트 호출
+        AuraASC->ForEachAbility(SaveAbilityDelegate);
+        
         AuraGameMode->SaveInGameProgressData(SaveData);
     }
 }
@@ -253,6 +325,36 @@ int32 AAuraCharacter::GetCharacterLevel_Implementation()
     check(AuraPlayerState);
 
     return AuraPlayerState->GetCharacterLevel();
+}
+
+void AAuraCharacter::Die(const FVector& DeathImpulse)
+{
+    // 랙돌 효과 발생
+    Super::Die(DeathImpulse);
+
+    FTimerDelegate DeathTimerDelegate;
+    DeathTimerDelegate.BindLambda([this]()
+    {
+        AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+        if (IsValid(AuraGM))
+        {
+            AuraGM->PlayerDied(this);
+        }
+    });
+    
+    // 타이머 설정
+    GetWorldTimerManager().SetTimer(DeathTimer, DeathTimerDelegate, DeathTime, false);
+
+    // 카메라 추락 방지
+    Camera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+}
+
+void AAuraCharacter::ShowDamageNumber_Implementation(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed)
+{
+    if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
+    {
+        AuraPlayerController->ShowDamageNumber(Damage, this, bBlocked, bCriticalHit, bHealed);
+    }
 }
 
 void AAuraCharacter::OnRep_Stunned()

@@ -6,19 +6,22 @@
 #include "Abilities/GameplayAbility.h"
 #include "AuraGameplayAbility.generated.h"
 
+class UAuraAbilitySystemComponent;
+
 UCLASS()
 class AURA_API UAuraGameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
 public:
-	// ½ÃÀÛ ¾îºô¸®Æ¼ ÀÏ °æ¿ì ºÎ¿©ÇÒ ¶§ ÇÑ ¹ø¸¸ È®ÀÎÇÏ±â
+	// ì‹œì‘ ì‹œ ë¶€ì—¬ë˜ëŠ” ì…ë ¥ íƒœê·¸
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	FGameplayTag StartupInputTag;
 
-	virtual FString GetDescription(int32 Level);
-	virtual FString GetNextLevelDescription(int32 Level);
-	static FString GetLockedDescription(int32 Level);
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
+
+	static FString GetLockedDescription(int32 Level, int32 InferiorAbilityLevel = 0);
 
 protected:
 

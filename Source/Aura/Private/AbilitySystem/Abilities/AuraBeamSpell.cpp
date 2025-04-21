@@ -7,6 +7,11 @@
 #include "Interaction/CombatInterface.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
+UAuraBeamSpell::UAuraBeamSpell()
+{
+	SpellType = ESpellType::Targeting;
+}
+
 void UAuraBeamSpell::StoreMouseDataInfo(const FHitResult& HitResult)
 {
 	if (HitResult.bBlockingHit)
@@ -19,14 +24,13 @@ void UAuraBeamSpell::StoreMouseDataInfo(const FHitResult& HitResult)
 		MouseHitLocation = FVector::ZeroVector;
 		MouseHitActor = nullptr;
 
-		// ¾îºô¸®Æ¼ Ãë¼Ò
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 	}
 }
 
 void UAuraBeamSpell::StoreOwnerVariables()
 {
-	// ¾àÇÑ ÂüÁ¶
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	if (CurrentActorInfo)
 	{
 		OwnerPlayerController = CurrentActorInfo->PlayerController.Get();
@@ -41,12 +45,12 @@ void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 	if (MouseHitActor == OwnerCharacter)
 		return;
 
-	// ¹«±â °¡Á®¿À±â
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	if (OwnerCharacter->Implements<UCombatInterface>())
 	{
 		if (auto* Weapon = ICombatInterface::Execute_GetWeapon(OwnerCharacter))
 		{
-			// ±¸Ã¼ Æ®·¹ÀÌ½º
+			// ï¿½ï¿½Ã¼ Æ®ï¿½ï¿½ï¿½Ì½ï¿½
 			TArray<AActor*> ActorsToIgnore;
 			ActorsToIgnore.Add(OwnerCharacter);
 
@@ -66,7 +70,7 @@ void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 				true
 				);
 
-			// ÀûÁß À§Ä¡ ¹× Å¸°Ù ¾÷µ¥ÀÌÆ®
+			// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 			if (HitResult.bBlockingHit)
 			{
 				MouseHitLocation = HitResult.ImpactPoint;
@@ -87,21 +91,21 @@ void UAuraBeamSpell::StoreAdditionalTarget(TArray<AActor*>& OutAdditionalTargets
 {
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetAvatarActorFromActorInfo());
-	ActorsToIgnore.Add(MouseHitActor); // ÀÌ¹Ì ºö¿¡ ¸Â°í ÀÖ±â ¶§¹®¿¡ Á¦¿Ü
+	ActorsToIgnore.Add(MouseHitActor); // ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Â°ï¿½ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-	// ±¸Çü ¿À¹ö·¦
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	TArray<AActor*> OverlappingActors;
 	UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(
 		GetAvatarActorFromActorInfo(),
 		OverlappingActors,
 		ActorsToIgnore,
-		850.f, // Å½»ö ¹Ý°æ
+		850.f, // Å½ï¿½ï¿½ ï¿½Ý°ï¿½
 		MouseHitActor->GetActorLocation());
 
 	int32 NumAdditionalTargets = FMath::Min(GetAbilityLevel() - 1, MaxNumShockTargets);
 	//int32 NumAdditionalTargets = 5;
 
-	// °¡Àå ±ÙÁ¢ÇÑ ´ë»ó Ã£À½
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½
 	UAuraAbilitySystemLibrary::GetClosestTargets(
 		NumAdditionalTargets,
 		OverlappingActors,

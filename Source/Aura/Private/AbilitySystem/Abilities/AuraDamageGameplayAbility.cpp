@@ -4,6 +4,8 @@
 #include "AbilitySystem/Abilities/AuraDamageGameplayAbility.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Character/AuraCharacter.h"
 #include "Interaction/CombatInterface.h"
 
 void UAuraDamageGameplayAbility::CauseDamage(AActor* TargetActor)
@@ -16,6 +18,31 @@ void UAuraDamageGameplayAbility::CauseDamage(AActor* TargetActor)
 	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data.Get(), UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor));
 }
 
+void UAuraDamageGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
+                                            const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+                                            bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (AvatarActor == nullptr)
+		return;
+
+	AAuraCharacter* Aura = Cast<AAuraCharacter>(AvatarActor);
+	if (Aura == nullptr)
+		return;
+
+	UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(AvatarActor));
+	if (AuraASC == nullptr)
+		return;
+	
+	// ë²”ìœ„ ìŠ¤í‚¬ì¸ì§€ ì²´í¬
+	if (SpellType != ESpellType::Ranged)
+		return;
+
+	AuraASC->MessageRemove(FGameplayTag::RequestGameplayTag("GameplayCue.Message.WaitForExecute"));
+}
+
 FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassDefaults(AActor* TargetActor, FVector InRadialDamageOrigin, bool bOverrideKnockbackDirection, FVector InKnockbackDirectionOverride, bool bOverrideDeathImpulse, FVector DeathImpulseDirectionOverride, bool bOverridePitch, float PitchOverride) const
 {
 	FDamageEffectParams Params;
@@ -26,28 +53,29 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 	Params.SourceAbilitySystemComponent = GetAbilitySystemComponentFromActorInfo();
 	Params.TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	
-	// µ¥¹ÌÁö
+	// ë°ë¯¸ì§€
 	Params.BaseDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 	Params.AbilityLevel = GetAbilityLevel();
 	Params.DamageType = DamageType;
+	Params.MagicPowerCoefficient = MagicPowerCoefficient.GetValue();
 
-	// µğ¹öÇÁ
+	// ë””ë²„í”„
 	Params.DebuffChance = DebuffChance;
 	Params.DebuffDamage = DebuffDamage;
 	Params.DebuffDuration = DebuffDuration;
 	Params.DebuffFrequency = DebuffFrequency;
 
-	// ·¢µ¹ Ãæ°İÆÄ
+	// ì¶©ê²©íŒŒ
 	Params.DeathImpulseMagnitude = DeathImpulseMagnitude;
 
-	// ³Ë¹é
+	// ë„‰ë°±
 	Params.KnockbackForceMagnitude = KnockbackForceMagnitude;
 	Params.KnockbackChance = KnockbackChance;
 
-	// ³Ë¹é È®·ü °è»ê
+	// ë„‰ë°± ê³„ì‚°
 	const bool bKnockback = FMath::RandRange(1, 100) < Params.KnockbackChance;
 
-	// ¹üÀ§ °ø°İÀÌ ¾Æ´Ñ ½ºÆç¿¡ ´ëÇØ ÇÇÄ¡, ³Ë¹é, Ãæ°İÆÄ ¿À¹ö¶óÀÌµå
+	// íƒ€ê²Ÿ ë°©í–¥ìœ¼ë¡œ ì¶©ê²©íŒŒì™€ ë„‰ë°± ì‹¤ì‹œ
 	if (IsValid(TargetActor))
 	{
 		FRotator Rotation = (TargetActor->GetActorLocation() - GetAvatarActorFromActorInfo()->GetActorLocation()).Rotation();
@@ -68,14 +96,14 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 		}
 	}
 
-	// ³Ë¹é ¹æÇâ ÀçÁ¤ÀÇ
+	// ë„‰ë°± ë°©í–¥ ì˜¤ë²„ë¼ì´ë“œ
 	if (bOverrideKnockbackDirection && bKnockback)
 	{
-		// ³Ë¹é ¹æÇâ º¤ÅÍ Á¤±ÔÈ­(´ÜÀ§ º¤ÅÍ·Î º¯È¯)
+		// ë°±í„° ì •ê·œí™” ì´í›„ í¬ê¸° ê³„ì‚°
 		InKnockbackDirectionOverride.Normalize();
 		Params.KnockbackForce = InKnockbackDirectionOverride * KnockbackForceMagnitude;
 
-		// ÇÇÄ¡ ÀçÁ¤ÀÇ
+		// í”¼ì¹˜ ì˜¤ë²„ë¼ì´ë“œ
 		if (bOverridePitch)
 		{
 			FRotator KnockbackRotation = InKnockbackDirectionOverride.Rotation();
@@ -84,7 +112,7 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 		}
 	}
 
-	// »ç¸Á Ãæ°İÆÄ ÀçÁ¤ÀÇ
+	// ì¶©ê²©íŒŒ ë°©í–¥ ì˜¤ë²„ë¼ì´ë“œ
 	if (bOverrideDeathImpulse)
 	{
 		DeathImpulseDirectionOverride.Normalize();
@@ -98,7 +126,7 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 		}
 	}
 
-	// ¹üÀ§ °ø°İ ÆÇÁ¤
+	// ë²”ìœ„ ê³µê²© íŒì •
 	if (bIsRadialDamage)
 	{
 		Params.bIsRadialDamage = bIsRadialDamage;

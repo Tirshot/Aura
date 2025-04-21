@@ -77,33 +77,33 @@ UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
 
 void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 {
-	// ¼­¹ö¿¡¼­ ½ÇÇàµÇ´Â ÇÔ¼ö
-	// ¹«±â ¶³¾îÆ®¸²
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½Ô¼ï¿½
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 
-	// ·¢µ¹ Àç»ý
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 	MulticastHandleDeath(DeathImpulse);
 }
 
 void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& DeathImpulse)
 {
-	// »ç¸Á »ç¿îµå Àç»ý
+	// ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 	UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation(), GetActorRotation());
 
-	// ¹«±â ·¢µ¹
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	Weapon->SetSimulatePhysics(true);
 	Weapon->SetEnableGravity(true);
 	Weapon->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	Weapon->AddImpulse(DeathImpulse * 0.1f, NAME_None, true);
 
-	// Ä³¸¯ÅÍ ·¢µ¹
+	// Ä³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	GetMesh()->SetSimulatePhysics(true);
 	GetMesh()->SetEnableGravity(true);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block); // worldstatic¿¡ ´ëÇØ ºÎ‹HÈû
+	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block); // worldstaticï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Î‹Hï¿½ï¿½
 	GetMesh()->AddImpulse(DeathImpulse, NAME_None, true);
 
-	// Ä³¸¯ÅÍ Ãæµ¹ ºñÈ°¼ºÈ­
+	// Ä³ï¿½ï¿½ï¿½ï¿½ ï¿½æµ¹ ï¿½ï¿½È°ï¿½ï¿½È­
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Dissolve();
 	bDead = true;
@@ -134,12 +134,12 @@ void AAuraCharacterBase::BeginPlay()
 
 void AAuraCharacterBase::InitAbilityActorInfo()
 {
-	// ASCÀÇ À¯È¿¼ºÀ» È®º¸ÇÏ±â À§ÇØ ÀÚ½Ä Å¬·¡½ºÀÇ ³¡¿¡¼­ È£ÃâÇÒ °Í.
+	// ASCï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
 }
 
 FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
-	// TO-DO : MontageTag¿¡ µû¶ó¼­ ¾Ë¸ÂÀº ¼ÒÄÏ ¹ÝÈ¯ÇÏ±â
+	// TO-DO : MontageTagï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ë¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ï¿½Ï±ï¿½
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
 	{
@@ -245,16 +245,16 @@ void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> Gameplay
 	check(IsValid(GetAbilitySystemComponent()));
 	check(GameplayEffectClass);
 
-	// ÄÁÅØ½ºÆ® ÇÚµé
+	// ï¿½ï¿½ï¿½Ø½ï¿½Æ® ï¿½Úµï¿½
 	FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();
 	
-	// ÄÁÅØ½ºÆ® ÇÚµé¿¡ º»ÀÎÀ» ¼Ò½º·Î ÁöÁ¤ <- ÀÌÆåÆ®¸¦ º»ÀÎ¿¡°Ô Àû¿ëÇÏ±â ¶§¹®
+	// ï¿½ï¿½ï¿½Ø½ï¿½Æ® ï¿½Úµé¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ <- ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½Î¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½
 	ContextHandle.AddSourceObject(this);
 
-	// ½ºÆå ÇÚµé
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½
 	FGameplayEffectSpecHandle SpecHandle = GetAbilitySystemComponent()->MakeOutgoingSpec(GameplayEffectClass, Level, ContextHandle);
 	
-	// °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ®¸¦ Å¸°Ù¿¡°Ô Àû¿ëÇÔ
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ Å¸ï¿½Ù¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), GetAbilitySystemComponent());
 }
 
@@ -263,34 +263,35 @@ void AAuraCharacterBase::InitializeDefaultAttributes() const
 	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);
 	ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);
 	ApplyEffectToSelf(InitializeVitalAttributes, 1.f);
+	ApplyEffectToSelf(InitializeRegenAttributes, 1.f);
 }
 
 void AAuraCharacterBase::Dissolve()
 {
-	// ¸Þ½Ã µðÁ¹ºê
+	// ï¿½Þ½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	if (IsValid(DissolveMaterialInstance))
 	{
-		// µ¿Àû ¸ÓÆ¼¸®¾ó ÀÎ½ºÅÏ½º »ý¼º
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ ï¿½Î½ï¿½ï¿½Ï½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		UMaterialInstanceDynamic* DynamicMI = UMaterialInstanceDynamic::Create(DissolveMaterialInstance, this);
 		
-		// ¸Þ½Ã¿¡ ¸ÓÆ¼¸®¾ó Àû¿ë
+		// ï¿½Þ½Ã¿ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		GetMesh()->SetMaterial(0, DynamicMI);
 
-		// Å¸ÀÓ¶óÀÎ ½ÇÇà
+		// Å¸ï¿½Ó¶ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		StartDissolveTimeline(DynamicMI);
 	}
 
-	// ¹«±â µðÁ¹ºê
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	if (IsValid(WeaponDissolveMaterialInstance))
 	{
-		// µ¿Àû ¸ÓÆ¼¸®¾ó ÀÎ½ºÅÏ½º »ý¼º
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ ï¿½Î½ï¿½ï¿½Ï½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		UMaterialInstanceDynamic* DynamicMI = UMaterialInstanceDynamic::Create(WeaponDissolveMaterialInstance, this);
 
-		// ¸Þ½Ã¿¡ ¸ÓÆ¼¸®¾ó Àû¿ë
+		// ï¿½Þ½Ã¿ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		Weapon->SetMaterial(0, DynamicMI);
 
-		// Å¸ÀÓ¶óÀÎ ½ÇÇà
-		StartWeponDissolveTimeline(DynamicMI);
+		// Å¸ï¿½Ó¶ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+		StartWeaponDissolveTimeline(DynamicMI);
 	}
 }
 
@@ -298,8 +299,8 @@ void AAuraCharacterBase::AddCharacterAbilites()
 {
 	UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
 
-	// ÀÌ ÇÔ¼ö¸¦ ½ÇÇàÇÏ´Â ÁÖÃ¼°¡ ¼­¹öÀÎÁö È®ÀÎ
-	if (!HasAuthority())
+	// ì„œë²„ì—ì„œë§Œ ì‹¤í–‰
+	if (HasAuthority() == false)
 		return;
 
 	AuraASC->AddCharacterAbilities(StartupAbilities);

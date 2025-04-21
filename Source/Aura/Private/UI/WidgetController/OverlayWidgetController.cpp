@@ -21,9 +21,9 @@ void UOverlayWidgetController::BroadcastInitialValues()
 void UOverlayWidgetController::BindCallbacksToDependencies()
 {
     GetAuraPS()->OnXPChangedDelegate.AddUObject(this, &UOverlayWidgetController::OnXPChanged);
-    GetAuraPS()->OnLevelChangedDelegate.AddLambda([this](int32 NewLevel)
+    GetAuraPS()->OnLevelChangedDelegate.AddLambda([this](int32 NewLevel, bool bLevelUp)
         {
-            OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
+            OnPlayerLevelChangedDelegate.Broadcast(NewLevel, bLevelUp);
         });
 
     AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
@@ -71,7 +71,16 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
             // 어빌리티 부여 이전이면 델리게이트에 함수 바인딩
             GetAuraASC()->AbilitiesGivenDelegate.AddUObject(this, &UOverlayWidgetController::BroadcastAbilityInfo);
         }
+        
+        GetAuraASC()->OnMessageTagReceived.AddLambda([this](const FGameplayTag& Tag)
+        {
+            const FUIWidgetRow* Row = GetDataTableRowByTag<FUIWidgetRow>(MessageWidgetDataTable, Tag);
+            if (Row)
+                MessageWidgetRowDelegate.Broadcast(*Row);
+        });
 
+        GetAuraASC()->OnMessageRemoved.AddDynamic(this, &UOverlayWidgetController::MessageRemove);
+        
         // 플로팅 메세지
         GetAuraASC()->EffectAssetTags.AddLambda(
             [this](const FGameplayTagContainer& AssetTags)
@@ -141,4 +150,9 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
     Info.InputTag = Slot;
     Info.AbilityTag = AbilityTag;
     AbilityInfoDelegate.Broadcast(Info);
+}
+
+void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)
+{
+    OnMessageRemoved.Broadcast(Tag);
 }

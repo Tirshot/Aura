@@ -12,10 +12,12 @@ class AURA_API UAuraFirebolt : public UAuraProjectileSpell
 	GENERATED_BODY()
 
 public:
-	virtual FString GetDescription(int32 Level) override;
-	virtual FString GetNextLevelDescription(int32 Level) override;
+	UAuraFirebolt();
+	
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
-	// ´ÙÁß Åõ»çÃ¼
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼
 	UFUNCTION(BlueprintCallable)
 	void SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget);
 

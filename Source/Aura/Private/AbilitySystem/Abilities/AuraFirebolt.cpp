@@ -1,17 +1,25 @@
 ﻿
 #include "AbilitySystem/Abilities/AuraFirebolt.h"
 
+#include "AuraGameplayTags.h"
 #include "Interaction/CombatInterface.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraProjectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
-FString UAuraFirebolt::GetDescription(int32 Level)
+UAuraFirebolt::UAuraFirebolt()
+{
+	SpellType = ESpellType::Projectile;
+}
+
+FString UAuraFirebolt::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
 	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
 	const float ManaCost = FMath::Abs(GetManaCost(Level));
 	const float Cooldown = GetCoolDown(Level);
-
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+	
 	if (Level == 1)
 	{
 		return FString::Printf(TEXT(
@@ -19,7 +27,7 @@ FString UAuraFirebolt::GetDescription(int32 Level)
 			Level,
 			ManaCost,
 			Cooldown,
-			ScaledDamage
+			ScaledDamage + MagicPowerDamage
 			);
 	}
 	else
@@ -30,16 +38,18 @@ FString UAuraFirebolt::GetDescription(int32 Level)
 			ManaCost,
 			Cooldown,
 			FMath::Min(NumProjectiles, Level),
-			ScaledDamage
+			ScaledDamage + MagicPowerDamage
 		);
 	}
 }
 
-FString UAuraFirebolt::GetNextLevelDescription(int32 Level)
+FString UAuraFirebolt::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
 {
 	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
 	const float ManaCost = FMath::Abs(GetManaCost(Level));
 	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
 
 	return FString::Printf(TEXT(
 		"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>적중하면 폭발하는 구체를 %d개 발사하여 </><Damage>%d</><Default>의 피해를 입히고 일정 확률로 대상에게 화상을 입힙니다.</>"),
@@ -47,7 +57,7 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level)
 		ManaCost,
 		Cooldown,
 		FMath::Min(NumProjectiles, Level),
-		ScaledDamage
+		ScaledDamage + MagicPowerDamage
 	);
 }
 

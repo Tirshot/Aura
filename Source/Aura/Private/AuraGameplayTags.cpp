@@ -9,83 +9,101 @@ FAuraGameplayTags FAuraGameplayTags::GameplayTags;
 void FAuraGameplayTags::InitailizeNativeGameplayTags()
 {
 	/*
-	*  1Â÷ ÁÖ¿ä ¼Ó¼º
+	*  1ì°¨ ì†ì„±
 	*/
 	GameplayTags.Attributes_Primary_Strength = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Attributes.Primary.Strength"),
-		FString("¹°¸® µ¥¹ÌÁö Áõ°¡")
+		FString("Strength Attribute")
 	);
 
 	GameplayTags.Attributes_Primary_Intelligence = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Attributes.Primary.Intelligence"),
-		FString("¸¶¹ı µ¥¹ÌÁö Áõ°¡")
+		FString("Intelligence Attribute")
 	);
 
 	GameplayTags.Attributes_Primary_Resilience = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Attributes.Primary.Resilience"),
-		FString("ºí·Ï È®·ü, Ä¡¸í ÀúÇ× Áõ°¡")
+		FString("Resilience Attribute")
 	);
 
 	GameplayTags.Attributes_Primary_Vigor = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Attributes.Primary.Vigor"),
-		FString("Ã¼·Â, ¸¶³ª È¸º¹·Â Áõ°¡")
+		FString("Vigor Attribute")
 	);
 
 	/*
-	*  2Â÷ ¼Ó¼º
+	*  2ì°¨ ì†ì„±
 	*/
+	GameplayTags.Attributes_Secondary_MagicAttackPower = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Attributes.Secondary.MagicAttackPower"),
+		FString("MagicAttackPower Attribute")
+	);
+	
 	GameplayTags.Attributes_Secondary_Armor = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.Armor"),
-		FString("¹æ¾î·Â Áõ°¡")
+		FString("Armor Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_ArmorPenetration = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.ArmorPenetration"),
-		FString("¹æ¾î °üÅë Áõ°¡")
+		FString("ArmorPenetration Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_BlockChance = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.BlockChance"),
-		FString("ºí·Ï È®·ü Áõ°¡")
+		FString("BlockChance Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_CriticalHitChance = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.CriticalHitChance"),
-		FString("Å©¸®Æ¼ÄÃ È®·ü Áõ°¡")
+		FString("Critical Hit Chance Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_CriticalHitDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.CriticalHitDamage"),
-		FString("Å©¸®Æ¼ÄÃ µ¥¹ÌÁö Áõ°¡")
+		FString("Critical Hit Damage Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_CriticalHitResistance = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.CriticalHitResistance"),
-		FString("Å©¸®Æ¼ÄÃ ÀúÇ× È®·ü Áõ°¡")
+		FString("Critical Hit Resistance Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_HealthRegeneration = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.HealthRegeneration"),
-		FString("Ã¼·Â ¸®Á¨ Áõ°¡")
+		FString("Health Regen Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_ManaRegeneration = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.ManaRegeneration"),
-		FString("¸¶³ª ¸®Á¨ Áõ°¡")
+		FString("Mana Regen Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_MaxHealth = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.MaxHealth"),
-		FString("ÃÖ´ë Ã¼·Â Áõ°¡")
+		FString("Max Health Attribute")
 	);
 
 	GameplayTags.Attributes_Secondary_MaxMana = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.MaxMana"),
-		FString("ÃÖ´ë ¸¶³ª Áõ°¡")
+		FString("Max Mana Attribute")
+	);
+	
+	/*
+	*  ë°”ì´íƒˆ ì†ì„±
+	*/
+	GameplayTags.Attributes_Vital_Health = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Attributes.Vital.Health"),
+		FString("Current Health Attribute")
+	);
+
+	GameplayTags.Attributes_Vital_Mana = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Attributes.Vital.Mana"),
+		FString("Current Mana Attribute")
 	);
 
 	/*
-	*  ¸ŞÅ¸ ¼Ó¼º
+	*  ë©”íƒ€ ì†ì„±
 	*/
 	GameplayTags.Attributes_Meta_IncomingXP = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Meta.IncomingXP"),
@@ -94,7 +112,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 
 
 	/*
-	*  ÀÔ·Â ÅÂ±×
+	*  ì…ë ¥ íƒœê·¸
 	*/
 
 	GameplayTags.InputTag_LMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -137,13 +155,13 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Passive 2")
 	);
 
-	// µ¥¹ÌÁö
+	// ë°ë¯¸ì§€
 	GameplayTags.Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Damage"),
 		FString("Damage")
 	);
 
-	// µ¥¹ÌÁö Å¸ÀÔ
+	// ì†ì„± ê³µê²©
 	GameplayTags.Damage_Fire = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Damage.Fire"),
 		FString("Fire Damage Type")
@@ -163,8 +181,13 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FName("Damage.Physical"),
 		FString("Physical Damage Type")
 	);
+	
+	GameplayTags.Damage_MagicAttackPowerCoefficient = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Damage.MagicAttackPowerCoefficient"),
+		FString("MagicAttackPower Coefficient")
+	);
 
-	// ÀúÇ×
+	// ì†ì„± ì €í•­
 	GameplayTags.Attributes_Resistance_Fire = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Resistance.Fire"),
 		FString("Fire Resistance")
@@ -185,7 +208,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Physical Resistance")
 	);
 
-	// µğ¹öÇÁ
+	// ë””ë²„í”„
 	GameplayTags.Debuff_Burn = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Debuff.Burn"),
 		FString("Fire Debuff")
@@ -226,20 +249,20 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Debuff Frequency")
 	);
 
-	// µ¥¹ÌÁö Å¸ÀÔ°ú ÀúÇ× ¿¬°á
+	// ì†ì„±ê³¼ ì†ì„± ì €í•­ ë§¤ì¹˜
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Fire, GameplayTags.Attributes_Resistance_Fire);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Lightning, GameplayTags.Attributes_Resistance_Lightning);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Arcane, GameplayTags.Attributes_Resistance_Arcane);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Physical, GameplayTags.Attributes_Resistance_Physical);
 
-	// µ¥¹ÌÁö Å¸ÀÔ°ú µğ¹öÇÁ ¿¬°á
+	// ì†ì„±ê³¼ ë””ë²„í”„ ë§¤ì¹˜
 	GameplayTags.DamageTypesToDebuff.Add(GameplayTags.Damage_Fire, GameplayTags.Debuff_Burn);
 	GameplayTags.DamageTypesToDebuff.Add(GameplayTags.Damage_Lightning, GameplayTags.Debuff_Stun);
 	GameplayTags.DamageTypesToDebuff.Add(GameplayTags.Damage_Arcane, GameplayTags.Debuff_Arcane);
 	GameplayTags.DamageTypesToDebuff.Add(GameplayTags.Damage_Physical, GameplayTags.Debuff_Physical);
 
 	/*
-	 /  ¾îºô¸®Æ¼
+	 /  ê²Œì„í”Œë ˆì´ ì–´ë¹Œë¦¬í‹°
 	 */
 
 	GameplayTags.Abilities_None = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -272,6 +295,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Electrocute Ability")
 	);
 
+	GameplayTags.Abilities_Lightning_Teleport = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Lightning.Teleport"),
+		FString("Teleport Ability")
+	);
+
 	GameplayTags.Abilities_Arcane_ArcaneShards = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Arcane.ArcaneShards"),
 		FString("ArcaneShards Ability")
@@ -283,7 +311,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	);
 
 	/*
-	/	ÆĞ½Ãºê ¾îºô¸®Æ¼
+	/	íŒ¨ì‹œë¸Œ ì–´ë¹Œë¦¬í‹°
 	*/
 	GameplayTags.Abilities_Passive_LifeSiphon = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Passive.LifeSiphon"),
@@ -302,7 +330,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 
 
 	/*
-	/  ¾îºô¸®Æ¼ »óÅÂ
+	/  ì–´ë¹Œë¦¬í‹° ìƒíƒœ
 	*/
 	GameplayTags.Abilities_Status_Locked = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Status.Locked"),
@@ -325,7 +353,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	);
 
 	/* 
-	/  ¾îºô¸®Æ¼ Å¸ÀÔ
+	/  ì–´ë¹Œë¦¬í‹° íƒ€ì…
 	*/
 	GameplayTags.Abilities_Type_Offensive = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Type.Offensive"),
@@ -343,20 +371,20 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	);
 
 	/* 
-	/  Äğ´Ù¿î
+	/  ì¿¨ë‹¤ìš´ íƒœê·¸
 	*/
 	GameplayTags.Cooldown_Fire_FireBolt = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Cooldown.Fire.FireBolt"),
 		FString("FireBolt Ability Cooldown")
 	);
 
-	// ÇÇ°İ
+	// í”¼ê²©ë°˜ì‘
 	GameplayTags.Effects_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Effects.HitReact"),
 		FString("HitReact")
 	);
 
-	// ÀüÅõ ¼ÒÄÏ
+	// ê³µê²© ì†Œì¼“
 	GameplayTags.CombatSocket_LeftHand = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("CombatSocket.LeftHand"),
 		FString("LeftHand")
@@ -377,7 +405,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Tail")
 	);
 
-	// ¸ùÅ¸ÁÖ ÅÂ±×
+	// ëª½íƒ€ì£¼
 	GameplayTags.Montage_Attack_1 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Montage.Attack.1"),
 		FString("Attack 1")
@@ -398,7 +426,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Attack 4")
 	);
 
-	// ÀÔ·Â »óÅÂ
+	// ì…ë ¥ ë°©ì§€
 	GameplayTags.Player_Block_CursorTrace = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Player.Block.CursorTrace"),
 		FString("Block Tracing under the cursor")
@@ -424,9 +452,15 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Player_Abilities_WaitForExecute")
 	);
 
-	// °ÔÀÓÇÃ·¹ÀÌ Å¥
+	// ê²Œì„í”Œë ˆì´ í
 	GameplayTags.GameplayCue_FireBlast = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("GameplayCue.FireBlast"),
 		FString("GameplayCue_FireBlast")
+	);
+
+	// ì´ˆê¸°í™” ê²Œì„í”Œë ˆì´ ì´í™íŠ¸
+	GameplayTags.Init_Attributes = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Init.Attributes"),
+		FString("No Floating Text when Initialize Attributes")
 	);
 }

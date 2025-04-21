@@ -9,10 +9,42 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
+#include "Game/LoadScreenSaveGame.h"
 
 void UAuraAbilitySystemComponent::AbilityActorInfoSet()
 {
     OnGameplayEffectAppliedDelegateToSelf.AddUObject(this, &UAuraAbilitySystemComponent::ClientEffectApplied);
+}
+
+void UAuraAbilitySystemComponent::AddCharacterAbilitiesFromSaveData(ULoadScreenSaveGame* SaveData)
+{
+    // 저장된 어빌리티 순회
+    for (const FSavedAbility& Data : SaveData->SavedAbilities)
+    {
+        const TSubclassOf<UGameplayAbility> LoadedAbilityClass = Data.GameplayAbility;
+
+        FGameplayAbilitySpec LoadedAbilitySpec = FGameplayAbilitySpec(LoadedAbilityClass, Data.AbilityLevel);
+        LoadedAbilitySpec.DynamicAbilityTags.AddTag(Data.AbilitySlot);
+        LoadedAbilitySpec.DynamicAbilityTags.AddTag(Data.AbilityStatus);
+        
+        if (Data.AbilityType == FAuraGameplayTags::Get().Abilities_Type_Offensive)
+        {
+            GiveAbility(LoadedAbilitySpec);
+        }
+        else if (Data.AbilityType == FAuraGameplayTags::Get().Abilities_Type_Passive)
+        {
+            if (Data.AbilityStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
+            {
+                GiveAbilityAndActivateOnce(LoadedAbilitySpec);
+            }
+            else
+            {
+                GiveAbility(LoadedAbilitySpec);
+            }
+        }
+    }
+    bStartupAbilitiesGiven = true;
+    AbilitiesGivenDelegate.Broadcast();
 }
 
 void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities)
@@ -40,6 +72,7 @@ void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSub
     {
         // 게임플레이 어빌리티 스펙 생성
         FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+        AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
         GiveAbilityAndActivateOnce(AbilitySpec);
     }
 }
@@ -58,39 +91,40 @@ void UAuraAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
         1. Player.Abilities.WaitForExecute 태그가 부여된 ASC에 대해
         2. Player.Abilities.WaitForExecute 태그를 가진 어빌리티의
         3. 입력태그를 체크
-        - 어빌리티의 입력태그가 LMB인 경우?
-        - 어빌리티의 입력태그가 LMB가 아닌 경우?
-        - 다른 키를 누르면 입력을 취소?
+        - 어빌리티의 입력태그가 LMB인 경우 어빌리티 실행
+        - 어빌리티의 입력태그가 LMB가 아닌 경우 어빌리티 취소 후 입력을 취소
         */
+        
         if (HasMatchingGameplayTag(GameplayTags.Player_Abilities_WaitForExecute))
         {
             if (AbilitySpec.IsActive())
             {
                 // 왼쪽 버튼 클릭 혹은 어빌리티 버튼 입력
-                if (InputTag.MatchesTagExact(GameplayTags.InputTag_LMB)
-                    || AbilitySpec.DynamicAbilityTags.HasTag(InputTag))
+                bool bValidInput = InputTag.MatchesTagExact(GameplayTags.InputTag_LMB)
+                                || AbilitySpec.DynamicAbilityTags.HasTag(InputTag);
+
+                // 다른 키 입력 시 어빌리티 취소
+                if (bValidInput == false)
                 {
-                    // 해당 어빌리티에 대해 누르기 발동
-                    AbilitySpecInputPressed(AbilitySpec);
-                    InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
+                    CancelAbilityHandle(AbilitySpec.Handle);
                     return;
                 }
-                else
-                {
-                    // 다른 키 입력 시 어빌리티 취소
-                    CancelAbilityHandle(AbilitySpec.Handle);
-                }
+            
+                // 해당 어빌리티에 대해 누르기 발동
+                AbilitySpecInputPressed(AbilitySpec);
+                InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
+                return;
             }
         }
+        
         // 어빌리티에 할당된 입력태그가 입력으로 받은 입력태그와 일치
-        else if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
+        if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
         {
             // 해당 어빌리티에 대해 누르기 발동
             AbilitySpecInputPressed(AbilitySpec);
             if (AbilitySpec.IsActive() == false)
             {
                 InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, AbilitySpec.Handle, AbilitySpec.ActivationInfo.GetActivationPredictionKey());
-                return;
             }
         }
     }
@@ -283,6 +317,17 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
         if (Level < Info.LevelRequirement)
             continue;
 
+        // 하위 스펠 습득 확인
+        if (FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(Info.RequireInferiorAbilityTag))
+        {
+            int32 RequireAbilityLevel = Info.RequireInferiorAbilityLevel;
+            int32 AbilityLevel = Spec->Level;
+
+            // 하위 스펠의 레벨 요구량보다 하위 스펠의 레벨이 낮으면 넘김
+            if (AbilityLevel < RequireAbilityLevel)
+                continue;
+        }
+
         // 활성화된 어빌리티 중 스펙을 찾지 못하였다면 생성 후 어빌리티 부여
         if (GetSpecFromAbilityTag(Info.AbilityTag) == nullptr)
         {            
@@ -327,7 +372,9 @@ void UAuraAbilitySystemComponent::ServerSpendSpellPoint_Implementation(const FGa
             // 어빌리티 레벨 상승
             AbilitySpec->Level += 1;
         }
-
+        
+        UpdateAbilityStatus(AbilitySpec->Level);
+        
         // 클라이언트로 브로드캐스트
         ClientUpdateAbilityStatus(AbilityTag, Status, AbilitySpec->Level);
         MarkAbilitySpecDirty(*AbilitySpec);
@@ -385,6 +432,8 @@ void UAuraAbilitySystemComponent::ServerEquipAbility_Implementation(const FGamep
                     // 패시브 이펙트 활성화
                     MulticastActivatePassiveEffect(AbilityTag, true);
                 }
+                AbilitySpec->DynamicAbilityTags.RemoveTag(GetStatusFromSpec(*AbilitySpec));
+                AbilitySpec->DynamicAbilityTags.AddTag(GameplayTags.Abilities_Status_Equipped);
             }
 
             // 어빌리티에 입력 태그 부여
@@ -411,8 +460,8 @@ bool UAuraAbilitySystemComponent::GetDescriptionsByAbilityTag(const FGameplayTag
     {
         if (UAuraGameplayAbility* AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec->Ability))
         {
-            OutDescription = AuraAbility->GetDescription(AbilitySpec->Level);
-            OutNextLevelDescription = AuraAbility->GetNextLevelDescription(AbilitySpec->Level + 1);
+            OutDescription = AuraAbility->GetDescription(AbilitySpec->Level, this);
+            OutNextLevelDescription = AuraAbility->GetNextLevelDescription(AbilitySpec->Level + 1, this);
             return true;
         }
     }
@@ -425,10 +474,27 @@ bool UAuraAbilitySystemComponent::GetDescriptionsByAbilityTag(const FGameplayTag
     }
     else
     {
-        OutDescription = UAuraGameplayAbility::GetLockedDescription(AbilityInfo->FindAbilityInfoForTag(AbilityTag).LevelRequirement);
+        // 이 어빌리티
+        FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+        int32 CharacterLevelRequirement = Info.LevelRequirement;
+
+        // 이 어빌리티의 하위 어빌리티
+        int32 RequireInferiorAbilityLevel = Info.RequireInferiorAbilityLevel;
+
+        OutDescription = UAuraGameplayAbility::GetLockedDescription(CharacterLevelRequirement, RequireInferiorAbilityLevel);
     }
     OutNextLevelDescription = FString();
     return false;
+}
+
+int32 UAuraAbilitySystemComponent::GetAbilityLevelByTag(const FGameplayTag& AbilityTag)
+{
+    if (FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(AbilityTag))
+    {
+        return Spec->Level;
+    }
+    
+    return 0;
 }
 
 void UAuraAbilitySystemComponent::ClearSlot(FGameplayAbilitySpec* Spec)
@@ -496,6 +562,11 @@ void UAuraAbilitySystemComponent::AssignSlotToAbility(FGameplayAbilitySpec& Spec
 void UAuraAbilitySystemComponent::MulticastActivatePassiveEffect_Implementation(const FGameplayTag& AbilityTag, bool bActivate)
 {
     ActivatePassiveEffect.Broadcast(AbilityTag, bActivate);
+}
+
+void UAuraAbilitySystemComponent::MessageRemove(const FGameplayTag& Tag)
+{
+    OnMessageRemoved.Broadcast(Tag);
 }
 
 void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()

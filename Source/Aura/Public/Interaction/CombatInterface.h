@@ -60,7 +60,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void UpdateFacingTarget(const FVector& Target);
 
-	// ÇÇ°Ý ¸ùÅ¸ÁÖ, C++¿¡¼­ ¿À¹ö¶óÀÌµå °¡´É
+	// ï¿½Ç°ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½, C++ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UAnimMontage* GetHitReactMontage();
 
@@ -108,4 +108,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UAttributeSet* GetAttributeSet();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void ShowDamageNumber(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed);
 };

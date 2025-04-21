@@ -3,10 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Data/CharacterClassInfo.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
+class ULootTiers;
+class ULoadScreenSaveGame;
 class USpellMenuWidgetController;
 class UAbilitySystemComponent;
 class UAttributeMenuWidgetController;
@@ -22,7 +25,7 @@ class AURA_API UAuraAbilitySystemLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	// À§Á¬ ÄÁÆ®·Ñ·¯
+	// ìœ„ì ¯ ì»¨íŠ¸ë¡¤ëŸ¬
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static bool MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD);
 
@@ -36,27 +39,35 @@ public:
 	static USpellMenuWidgetController* GetSpellMenuWidgetController(const UObject* WorldContextObject);
 
 	/*
-	* ¾îºô¸®Æ¼ ½Ã½ºÅÛ ÃÊ±âÈ­
+	* ì–´ë¹Œë¦¬í‹° ì‹œìŠ¤í…œ ì´ˆê¸°í™”
 	*/
 
-	// ±âº» ¼Ó¼º Àû¿ë °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ®
+	// ê¸°ë³¸ ì†ì„± ì ìš© ê²Œì„í”Œë ˆì´ ì´í™íŠ¸
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC);
 
-	// ÃÊ±â ¾îºô¸®Æ¼ ºÎ¿©
+	// ì„¸ì´ë¸Œ ëœ ê¸°ë³¸ ì†ì„± ì ìš© ê²Œì„í”Œë ˆì´ ì´í™íŠ¸
+	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
+	static void InitializeDefaultAttributesFromSaveData(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ULoadScreenSaveGame* SaveGame);
+
+	// ì´ˆê¸° ì–´ë¹Œë¦¬í‹° ë¶€ì—¬
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
 
-	// Ä³¸¯ÅÍ Å¬·¡½º Á¤º¸ °¡Á®¿À±â
+	// ìºë¦­í„° í´ë˜ìŠ¤ ì •ë³´ ê°€ì ¸ì˜¤ê¸°
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static UCharacterClassInfo* GetCharacterClassInfo(const UObject* WorldContextObject);
 
-	// ¾îºô¸®Æ¼ Á¤º¸ °¡Á®¿À±â
+	// ì–´ë¹Œë¦¬í‹° ì •ë³´ ê°€ì ¸ì˜¤ê¸°
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo")
 	static UAbilityInfo* GetAbilityInfo(const UObject* WorldContextObject);
 
+	// ë“œë ì•„ì´í…œ ì •ë³´ ê°€ì ¸ì˜¤ê¸°
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))
+	static ULootTiers* GetLootTiers(const UObject* WorldContextObject);
+
 	/*
-	* ÀüÅõ ÆÇ´Ü
+	* ì „íˆ¬ íŒë‹¨
 	*/
 	
 	UFUNCTION(BlueprintPure, Category="AuraAbilitySystemLibrary|GameplayEffects")
@@ -70,7 +81,7 @@ public:
 
 
 	/*
-	*  °ÔÀÓÇÃ·¹ÀÌ ÀÌÆåÆ® ÄÁÅØ½ºÆ® ÇÚµé
+	*  ê²Œì„í”Œë ˆì´ ì´í™íŠ¸ ì»¨í…ìŠ¤íŠ¸ í•¸ë“¤
 	*/
 
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayEffects")
@@ -85,6 +96,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayEffects")
 	static FGameplayTag  GetDamageType(const FGameplayEffectContextHandle& EffectContextHandle);
 
+	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayEffects")
+	static float GetMagicPowerCoefficient(const FGameplayEffectContextHandle& EffectContextHandle);
+	
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayEffects")
 	static FVector GetDeathImpulse(const FGameplayEffectContextHandle& EffectContextHandle);
 	
@@ -104,7 +118,6 @@ public:
 	static FVector GetRadialDamageOrigin(const FGameplayEffectContextHandle& EffectContextHandle);
 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
-	// const°¡ ¾Æ´Ï¸é Ãâ·ÂÇÉÀÌ µÊ
 	static void SetIsBlockedHit(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, bool bInIsBlockedHit);
     
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
@@ -126,6 +139,9 @@ public:
 	static void SetDamageType(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, const FGameplayTag& InDamageType);
 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
+	static void SetMagicPowerCoefficient(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, float InCoefficient);
+
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
 	static void SetDeathImpulse(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, const FVector& InImpulse);
 	
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
@@ -144,7 +160,7 @@ public:
 	static void SetRadialDamageOrigin(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, FVector InRadialDamageOrigin);
 
 	/*
-	* FDamageEffectParams º¯¼ö Á¶ÀÛ
+	* FDamageEffectParams ë³€ìˆ˜ ì¡°ì‘
 	*/ 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayEffects")
 	static void SetIsRadialDamageEffectParam(UPARAM(ref) FDamageEffectParams& DamageEffectParams, bool bIsRadial, FVector InOrigin, float InnerRadius, float OuterRadius);
@@ -159,32 +175,38 @@ public:
 	static void SetEffectParamsTargetAbilitySystemComponent(UPARAM(ref) FDamageEffectParams& DamageEffectParams, UAbilitySystemComponent* TargetASC);
 
 	/*
-	* °ÔÀÓÇÃ·¹ÀÌ ¸ŞÄ«´Ğ
+	* ê²Œì„í”Œë ˆì´ ë©”ì¹´ë‹‰
 	*/
+	// ì†ì„± ê°’ ê°€ì ¸ì˜¤ê¸°
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static float GetAttributeValue(const UObject* WorldContextObject, const FGameplayTag& AttributeTag);
 
-	// ¹üÀ§ °ø°İ
+	// ë²”ìœ„ ê³µê²©
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static void GetLivePlayersWithinRadius(const UObject* WorldContextObject, TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius, const FVector& SphereOrigin);
 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static void GetClosestTargets(int32 MaxTargets, const TArray<AActor*>& Actors, TArray<AActor*>& OutClosestTargets, const FVector& Origin);
 
-	// ÇÁ·»µé¸® ÆÄÀÌ¾î
+	// í”„ë Œë“¤ë¦¬ íŒŒì´ì–´
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static bool IsNotFriend(AActor* FirstActor, AActor* SecondActor);
 
-	// °æÇèÄ¡ º¸»ó °¡Á®¿À±â
+	// ê²½í—˜ì¹˜ ë³´ìƒ ê°€ì ¸ì˜¤ê¸°
 	static int32 GetXPRewardForClassAndLevel(const UObject* WorldContextObject, ECharacterClass CharacterClass, int32 CharacterLevel);
 
-	// µ¥¹ÌÁö ±¸Á¶Ã¼·Î µ¥¹ÌÁö ÀÔÈ÷±â
+	// ë°ë¯¸ì§€ êµ¬ì¡°ì²´ë¡œ ë°ë¯¸ì§€ ì…íˆê¸°
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|DamageEffect")
 	static FGameplayEffectContextHandle ApplyDamageEffect(const FDamageEffectParams& Params);
 	
-	// ÀÏÁ¤ÇÑ °¢µµ·Î ÆÛÆ®¸®±â
+	// ì¼ì •í•œ ê°ë„ë¡œ í¼íŠ¸ë¦¬ê¸°
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static TArray<FRotator> EvenlySpacedRotators(const FVector& Forward, const FVector& Axis, float Spread, int32 NumRotators);
 
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static TArray<FVector> EvenlyRotatedVectors(const FVector& Forward, const FVector& Axis, float Spread, int32 NumVectors);
 
+	// ë©”ì‹œì§€ ê²Œì„í”Œë ˆì´ ì´í™íŠ¸ ì ìš©
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static void ApplyMessageGameplayEffectToSelf(const FGameplayTag& MessageTag, AActor* AvatarActor);
 };

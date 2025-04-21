@@ -9,8 +9,11 @@ UCLASS()
 class AURA_API UElectrocute : public UAuraBeamSpell
 {
 	GENERATED_BODY()
+
+public:
+	UElectrocute();
 	
 public:
-	virtual FString GetDescription(int32 Level) override;
-	virtual FString GetNextLevelDescription(int32 Level) override;
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 };
