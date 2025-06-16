@@ -248,6 +248,15 @@ void AAuraCharacter::HideMagicCircle_Implementation() const
 
 void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
 {
+    // 저장중 위젯 생성
+    if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController()))
+    {
+        if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(AuraPC->GetHUD()))
+        {
+            AuraHUD->CreateSaveProgressWidget();
+        }
+    }
+    
     // 게임 모드에 접근
     AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
     
@@ -316,6 +325,15 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         AuraASC->ForEachAbility(SaveAbilityDelegate);
         
         AuraGameMode->SaveInGameProgressData(SaveData);
+
+        // 저장중 위젯 제거
+        if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController()))
+        {
+            if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(AuraPC->GetHUD()))
+            {
+                AuraHUD->RemoveSaveProgressWidget();
+            }
+        }
     }
 }
 
@@ -332,19 +350,27 @@ void AAuraCharacter::Die(const FVector& DeathImpulse)
     // 랙돌 효과 발생
     Super::Die(DeathImpulse);
 
+    AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+    if (AuraGM == nullptr)
+        return;
+
+    // 타이머 종료 후 저장 데이터를 불러와 게임 재시작
     FTimerDelegate DeathTimerDelegate;
-    DeathTimerDelegate.BindLambda([this]()
+    DeathTimerDelegate.BindLambda([this, AuraGM]()
     {
-        AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
         if (IsValid(AuraGM))
         {
-            AuraGM->PlayerDied(this);
+            AuraGM->RestartGameFromSaveData(this);
         }
     });
     
     // 타이머 설정
     GetWorldTimerManager().SetTimer(DeathTimer, DeathTimerDelegate, DeathTime, false);
 
+    // 사망과 관련된 처리들
+    float RemainingTime = GetWorldTimerManager().GetTimerRemaining(DeathTimer);
+    AuraGM->PlayerDied(this, RemainingTime);
+    
     // 카메라 추락 방지
     Camera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 }

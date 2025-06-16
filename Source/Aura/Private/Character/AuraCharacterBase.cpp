@@ -77,11 +77,9 @@ UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
 
 void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 {
-	// �������� ����Ǵ� �Լ�
-	// ���� ����Ʈ��
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 
-	// ���� ���
+	// 랙돌 효과
 	MulticastHandleDeath(DeathImpulse);
 }
 
@@ -139,7 +137,6 @@ void AAuraCharacterBase::InitAbilityActorInfo()
 
 FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
-	// TO-DO : MontageTag�� ���� �˸��� ���� ��ȯ�ϱ�
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
 	{

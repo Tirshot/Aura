@@ -24,6 +24,8 @@ enum class ETargetingStatus : uint8
 	None
 };
 
+DECLARE_MULTICAST_DELEGATE(FOnCardSelectionInitilized);
+
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
 {
@@ -31,9 +33,13 @@ class AURA_API AAuraPlayerController : public APlayerController
 
 public:
 	AAuraPlayerController();
-
+	
+protected:
+	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
+public:
 	UFUNCTION(Client, Reliable)
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed = false);
 
@@ -46,9 +52,23 @@ public:
 
 	void SetTargetingStatus(ETargetingStatus InStatus);
 
-protected:
-	virtual void BeginPlay() override;
-	virtual void SetupInputComponent() override;
+public:
+	/*
+	 * 어빌리티 업그레이드 카드
+	 */
+	// 카드 선택 UI 초기화 완료시 호출되는 델리게이트
+	FOnCardSelectionInitilized OnCardSelectionInitializedDelegate;
+	
+	// 카드 선택 버튼 콜백
+	UFUNCTION()
+	void HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag);
+
+	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
+	UFUNCTION(Server, Reliable)
+	void Server_SelectUpgrade(FGameplayTag SelectedUpgradeTag);
+
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveUpgrade(FGameplayTag RemoveTag);
 
 private:
 	UPROPERTY(EditAnywhere, Category="Input")

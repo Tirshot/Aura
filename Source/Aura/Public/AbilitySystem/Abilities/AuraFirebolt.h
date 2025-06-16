@@ -21,13 +21,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget);
 
+	virtual bool CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
 	
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	int32 NumProjectiles = 0;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Firebolt")
 	float ProjectileSpread = 90.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Firebolt")
-	int32 MaxNumProjectiles = 5;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Firebolt")
 	float HomingAccMin = 1600.f;

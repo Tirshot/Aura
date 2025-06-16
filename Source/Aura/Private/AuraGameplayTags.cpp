@@ -370,6 +370,49 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("None Abilities")
 	);
 
+	/*
+	 * 어빌리티 업그레이드 태그
+	 */
+	GameplayTags.Upgrades_Fire_FireBolt_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireBolt.IncreaseNum"),
+	FString("Increase Number of FireBolt Projectiles")
+	);
+
+	GameplayTags.Upgrades_Fire_FireBlast_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireBlast.IncreaseNum"),
+	FString("Increase Number of FireBlast Projectiles")
+	);
+
+	GameplayTags.Upgrades_Arcane_ArcaneShards_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneShards.IncreaseNum"),
+	FString("Increase Number of Shards")
+	);
+	
+	GameplayTags.Upgrades_Lightning_Teleport_DecreaseCoolDown = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.Teleport.DecreaseCoolDown"),
+	FString("Decrease Cooldown of Teleport")
+	);
+	
+	GameplayTags.Upgrades_Fire_FireBolt_Temp = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireBolt.Temp"),
+	FString("Temp FireBolt Projectiles")
+	);
+
+	GameplayTags.Upgrades_Fire_FireBlast_Temp= UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireBlast.Temp"),
+	FString("Temp FireBlast Projectiles")
+	);
+
+	GameplayTags.Upgrades_Arcane_ArcaneShards_Temp = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneShards.Temp"),
+	FString("Temp Shards")
+	);
+	
+	GameplayTags.Upgrades_Lightning_Teleport_Temp = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.Teleport.Temp"),
+	FString("Temp Teleport")
+	);
+	
 	/* 
 	/  쿨다운 태그
 	*/

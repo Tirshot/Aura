@@ -8,7 +8,9 @@
 #include "Data/CharacterClassInfo.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
+class UGameOverWidgetController;
 class ULootTiers;
+class UAbilityUpgradeInfo;
 class ULoadScreenSaveGame;
 class USpellMenuWidgetController;
 class UAbilitySystemComponent;
@@ -37,6 +39,9 @@ public:
 	
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static USpellMenuWidgetController* GetSpellMenuWidgetController(const UObject* WorldContextObject);
+	
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UGameOverWidgetController* GetGameOverWidgetController(const UObject* WorldContextObject);
 
 	/*
 	* 어빌리티 시스템 초기화
@@ -61,6 +66,10 @@ public:
 	// 어빌리티 정보 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo")
 	static UAbilityInfo* GetAbilityInfo(const UObject* WorldContextObject);
+
+	// 어빌리티 업그레이드 정보 가져오기
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))
+	static UAbilityUpgradeInfo* GetAbilityUpgradeInfo(const UObject* WorldContextObject);
 
 	// 드랍 아이템 정보 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))
@@ -208,5 +217,5 @@ public:
 
 	// 메시지 게임플레이 이펙트 적용
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static void ApplyMessageGameplayEffectToSelf(const FGameplayTag& MessageTag, AActor* AvatarActor);
+	static void ApplyGameplayTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor);
 };

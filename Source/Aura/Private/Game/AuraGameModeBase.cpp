@@ -5,6 +5,7 @@
 
 #include "AuraLogChannels.h"
 #include "EngineUtils.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 #include "Kismet/GameplayStatics.h"
@@ -13,13 +14,35 @@
 #include "Interaction/SaveInterface.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "GameFramework/Character.h"
+#include "Player/AuraPlayerController.h"
+#include "Player/AuraPlayerState.h"
+#include "UI/HUD/AuraHUD.h"
+#include "UI/WidgetController/GameOverWidgetController.h"
 
 void AAuraGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
 
 	Maps.Add(DefaultMapName, DefaultMap);
+}
 
+void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (NewPlayer)
+	{
+		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(NewPlayer->GetHUD()))
+		{
+			// 어빌리티 업그레이드 카드 세팅
+			AuraHUD->OnInitializeGameModeDelegate.Broadcast();
+			if (AAuraPlayerState* AuraPS = NewPlayer->GetPlayerState<AAuraPlayerState>())
+			{
+				AuraPS->OnRandomUpgradeTagsGeneratedDelegate.AddDynamic(this, &AAuraGameModeBase::HandleRandomUpgradeTagsGenerated);
+				AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraGameModeBase::HandlePlayerStateInitialized);
+			}
+		}
+	}
 }
 
 AActor* AAuraGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
@@ -262,7 +285,18 @@ FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetNam
 	return FString();
 }
 
-void AAuraGameModeBase::PlayerDied(ACharacter* DeadCharacter)
+void AAuraGameModeBase::PlayerDied(ACharacter* DeadCharacter, float RemainingTime)
+{
+	if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(DeadCharacter->GetController()))
+	{
+		if (UGameOverWidgetController* GameOverWC = UAuraAbilitySystemLibrary::GetGameOverWidgetController(DeadCharacter))
+		{
+			GameOverWC->SetRemainingTime(RemainingTime);
+		}
+	}
+}
+
+void AAuraGameModeBase::RestartGameFromSaveData(ACharacter* DeadCharacter)
 {
 	// 저장 오브젝트 불러와 마지막 저장 확인
 	ULoadScreenSaveGame* SaveGame = RetrieveInGameSaveData();
@@ -270,4 +304,37 @@ void AAuraGameModeBase::PlayerDied(ACharacter* DeadCharacter)
 		return;
 
 	UGameplayStatics::OpenLevel(DeadCharacter, FName(SaveGame->MapAssetName));
+}
+
+void AAuraGameModeBase::RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject)
+{
+	// 저장 오브젝트 불러와 마지막 저장 확인
+	ULoadScreenSaveGame* SaveGame = RetrieveInGameSaveData();
+	if (IsValid(SaveGame) == false)
+		return;
+
+	UGameplayStatics::OpenLevel(WorldContextObject, FName(SaveGame->MapAssetName));
+}
+
+void AAuraGameModeBase::HandleRandomUpgradeTagsGenerated(AAuraPlayerState* AuraPS,
+	TArray<FGameplayTag>& RandomUpgradeTags)
+{
+	if (!HasAuthority())
+		return;
+
+	if (RandomUpgradeTags.IsEmpty() || RandomUpgradeTags.Num() < 3)
+		return;
+	
+	if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(AuraPS->GetPlayerController()->GetHUD()))
+	{
+		auto Tag0 = RandomUpgradeTags[0];
+		auto Tag1 = RandomUpgradeTags[1];
+		auto Tag2 = RandomUpgradeTags[2];
+		AuraHUD->ReceivedCardsDelegate.Broadcast(Tag0, Tag1, Tag2);
+	}
+}
+
+void AAuraGameModeBase::HandlePlayerStateInitialized(AAuraPlayerState* InitializedPlayerState)
+{
+	InitializedPlayerState->GetRandomUpgradeTagsForActivatedAbility_Three();
 }

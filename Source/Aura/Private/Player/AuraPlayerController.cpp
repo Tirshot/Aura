@@ -14,11 +14,16 @@
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraFunctionLibrary.h"
-#include "AbilitySystem/Abilities/AuraGameplayAbility.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/MagicCircle.h"
 #include "Components/DecalComponent.h"
 #include "Aura/Aura.h"
 #include "Interaction/HighlightInterface.h"
+#include "Player/AuraPlayerState.h"
+#include "UI/HUD/AuraHUD.h"
+#include "UI/ViewModel/MVVM_AbilityCard.h"
+#include "UI/ViewModel/MVVM_CardSelection.h"
+#include "UI/Widget/LoadScreenWidget.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
@@ -27,6 +32,76 @@ AAuraPlayerController::AAuraPlayerController()
 
     // 길 찾기 스플라인
     Spline = CreateDefaultSubobject<USplineComponent>("Spline");
+}
+
+void AAuraPlayerController::BeginPlay()
+{
+    Super::BeginPlay();
+
+    // IMC가 할당되지 않았다면 중단
+    check(AuraContext);
+
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    if (Subsystem)
+    {
+        // IMC, 우선순위
+        Subsystem->AddMappingContext(AuraContext, 0);
+    }
+
+    // 마우스 커서 활성화
+    bShowMouseCursor = true;
+    DefaultMouseCursor = EMouseCursor::Default;
+
+    // UI와 입력 상호작용
+    FInputModeGameAndUI InputModeData;
+
+    // 마우스 커서가 뷰포트에 갇히지 않도록 설정
+    InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    InputModeData.SetHideCursorDuringCapture(false);
+    SetInputMode(InputModeData);
+
+    // 델리게이트 바인딩
+    OnCardSelectionInitializedDelegate.AddLambda([this]()
+    {
+        if (IsLocalPlayerController()) // 로컬 플레이어 컨트롤러에서만 UI 로직 처리
+        {
+            // HUD가 생성된 후 (또는 Upgrade UI가 활성화될 때)
+            if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+            {
+                if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+                {
+                    // 각 CardViewModel의 OnUpgradeSelected 델리게이트 구독
+                    for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i) // GetNumCards는 예시
+                    {
+                        if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
+                        {
+                            CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
+                        }
+                    }
+                }
+            }
+        }
+    });
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+    {
+        AuraHUD->OnInitializePlayerControllerDelegate.Broadcast();
+    }
+}
+
+
+void AAuraPlayerController::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+
+    // 커스텀 입력 컴포넌트 유효성 확인
+    UAuraInputComponent* AuraInputComponent = CastChecked<UAuraInputComponent>(InputComponent);
+
+    AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
+    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
+    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
+    
+    // 어빌리티와 입력 액션 바인딩
+    AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 }
 
 void AAuraPlayerController::PlayerTick(float DeltaTime)
@@ -149,49 +224,51 @@ void AAuraPlayerController::SetTargetingStatus(ETargetingStatus InStatus)
     TargetingStatus = InStatus;
 }
 
-void AAuraPlayerController::BeginPlay()
+void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag)
 {
-    Super::BeginPlay();
+    Server_SelectUpgrade(SelectedUpgradeTag);
 
-    // IMC가 할당되지 않았다면 중단
-    check(AuraContext);
-
-    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-    if (Subsystem)
+    // 카드 선택 UI 닫기
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
-        // IMC, 우선순위
-        Subsystem->AddMappingContext(AuraContext, 0);
+        AuraHUD->CardSelectionWidget->RemoveFromParent();
     }
-
-    // 마우스 커서 활성화
-    bShowMouseCursor = true;
-    DefaultMouseCursor = EMouseCursor::Default;
-
-    // UI와 입력 상호작용
-    FInputModeGameAndUI InputModeData;
-
-    // 마우스 커서가 뷰포트에 갇히지 않도록 설정
-    InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputModeData.SetHideCursorDuringCapture(false);
-    SetInputMode(InputModeData);
 }
 
-
-void AAuraPlayerController::SetupInputComponent()
+void AAuraPlayerController::Server_RemoveUpgrade_Implementation(FGameplayTag RemoveTag)
 {
-    Super::SetupInputComponent();
-
-    // 커스텀 입력 컴포넌트 유효성 확인
-    UAuraInputComponent* AuraInputComponent = CastChecked<UAuraInputComponent>(InputComponent);
-
-    AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
-    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
-    AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
+    if (!HasAuthority())
+        return;
     
-    // 어빌리티와 입력 액션 바인딩
-    AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
+    AActor* AvatarActor = GetPawn();
+    if (AvatarActor == nullptr)
+        return;
+
+    // 업그레이드 태그 제거
+    if (AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>())
+    {
+        // 플레이어 상태의 태그 컨테이너에서 해당 태그 제거
+        AuraPlayerState->Server_RemoveAbilityUpgradeTag(RemoveTag);
+    }
 }
 
+void AAuraPlayerController::Server_SelectUpgrade_Implementation(FGameplayTag SelectedUpgradeTag)
+{
+    if (!HasAuthority())
+        return;
+    
+    AActor* AvatarActor = GetPawn();
+    if (AvatarActor == nullptr)
+        return;
+
+    // 업그레이드 태그 적용
+    // UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(SelectedUpgradeTag, AvatarActor);
+    if (AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>())
+    {
+        // 플레이어 상태의 태그 컨테이너 내에 저장
+        AuraPlayerState->Server_AddAbilityUpgradeTag(SelectedUpgradeTag);
+    }
+}
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {

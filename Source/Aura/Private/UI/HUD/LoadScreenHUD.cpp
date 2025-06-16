@@ -10,19 +10,19 @@ void ALoadScreenHUD::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ·Îµå ¸Þ´ºÀÇ ºä ¸ðµ¨ »ý¼º
+	// ï¿½Îµï¿½ ï¿½Þ´ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	LoadScreenViewModel = NewObject<UMVVM_LoadScreen>(this, LoadScreenViewModelClass);
 
-	// ºä ¸ðµ¨ ÃÊ±âÈ­ - ·Îµå ½½·ÔÀÇ ºä ¸ðµ¨ »ý¼º
+	// ï¿½ï¿½ ï¿½ï¿½ ï¿½Ê±ï¿½È­ - ï¿½Îµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	LoadScreenViewModel->InitializeLoadSlots();
 
-	// ·Îµå ¸Þ´ºÀÇ ºä »ý¼º
+	// ï¿½Îµï¿½ ï¿½Þ´ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	LoadScreenWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), LoadScreenWidgetClass);
 	LoadScreenWidget->AddToViewport();
 
-	// ·Îµå ¸Þ´ºÀÇ ºä¸¦ ºí·çÇÁ¸°Æ®¿¡¼­ ÃÊ±âÈ­ ½ÃÅ´
+	// ï¿½Îµï¿½ ï¿½Þ´ï¿½ï¿½ï¿½ ï¿½ä¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½ï¿½Å´
 	LoadScreenWidget->BlueprintInitializeWidget();
 
-	// µ¥ÀÌÅÍ ºÒ·¯¿À±â
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò·ï¿½ï¿½ï¿½ï¿½ï¿½
 	LoadScreenViewModel->LoadData();
 }

@@ -15,19 +15,20 @@ class AURA_API ALoadScreenHUD : public AHUD
 	GENERATED_BODY()
 	
 public:
-	// MVVM - ºä(View)
+	// MVVM - ï¿½ï¿½(View)
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> LoadScreenWidgetClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<ULoadScreenWidget> LoadScreenWidget;
 
-	// MVVM - ºä ¸ðµ¨(ViewModel)
+	// MVVM - ï¿½ï¿½ ï¿½ï¿½(ViewModel)
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_LoadScreen> LoadScreenViewModelClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_LoadScreen> LoadScreenViewModel;
+	
 protected:
 	virtual void BeginPlay() override;
 };

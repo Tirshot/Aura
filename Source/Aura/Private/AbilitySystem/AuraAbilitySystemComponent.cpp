@@ -45,6 +45,7 @@ void UAuraAbilitySystemComponent::AddCharacterAbilitiesFromSaveData(ULoadScreenS
     }
     bStartupAbilitiesGiven = true;
     AbilitiesGivenDelegate.Broadcast();
+    UpdateAbilityStatus(SaveData->PlayerLevel);
 }
 
 void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities)
@@ -59,11 +60,13 @@ void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf
         {
             AbilitySpec.DynamicAbilityTags.AddTag(AuraAbility->StartupInputTag);
             AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
+            
             GiveAbility(AbilitySpec);
         }
     }
     bStartupAbilitiesGiven = true;
     AbilitiesGivenDelegate.Broadcast();
+    UpdateAbilityStatus(1);
 }
 
 void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities)
@@ -335,7 +338,6 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
 
             // 해금 가능 태그 부여
             AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
-                        
             GiveAbility(AbilitySpec);
 
             // 즉시 복제
@@ -583,6 +585,7 @@ void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
 
 void UAuraAbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 AbilityLevel)
 {
+    // 
     AbilityStatusChanged.Broadcast(AbilityTag, StatusTag, AbilityLevel);
 }
 

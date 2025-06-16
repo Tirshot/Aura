@@ -6,10 +6,12 @@
 #include "AuraGameplayTags.h"
 #include "Actor/AuraFireBall.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 
 UAuraFireBlast::UAuraFireBlast()
 {
 	SpellType = ESpellType::Projectile;
+	MaxNumProjectiles = 18;
 }
 
 FString UAuraFireBlast::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -83,4 +85,33 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 		FireBall->FinishSpawning(SpawnTransform);
 	}
 	return FireBalls;
+}
+
+bool UAuraFireBlast::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	bool bUpgradesApplied = false;
+	
+	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
+	if (Upgrades.IsEmpty())
+		return false;
+	
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	for (const auto& Upgrade : Upgrades)
+	{
+		// (1) 투사체 갯수 증가 체크
+		FGameplayTag IncreaseNum = Tags.Upgrades_Fire_FireBlast_IncreaseNum;
+		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
+		{
+			// 투사체 갯수 증가
+			int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+			int32 Magnification = 2;
+
+			// 갯수 2개 씩 증가
+			NumFireBalls = BaseNumFireBalls + (StackCount * Magnification);
+			bUpgradesApplied = true;
+		}
+	}
+
+	return bUpgradesApplied;
 }

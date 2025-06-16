@@ -6,6 +6,9 @@
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+struct FGameplayTagContainer;
+class AAuraPlayerState;
+class UAbilityUpgradeInfo;
 class ULootTiers;
 class ULoadScreenSaveGame;
 class UCharacterClassInfo;
@@ -20,11 +23,17 @@ class AURA_API AAuraGameModeBase : public AGameModeBase
 
 protected:
 	virtual void BeginPlay() override;
-
+	
+	// HUD가 생성되었을 때 호출될 함수 (델리게이트 바인딩)
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	
 public:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 public:
+	/* 
+	 * 저장, 로드 관련
+	 */
 	void SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex);
 	static void DeleteSlot(const FString& SlotName, int32 SlotIndex);
 	ULoadScreenSaveGame* RetrieveInGameSaveData();
@@ -41,13 +50,29 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<USaveGame> LoadScreenSaveGameClass;
 
+	void PlayerDied(ACharacter* DeadCharacter, float RemainingTime);
+	void RestartGameFromSaveData(ACharacter* DeadCharacter);
+	void RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject);
 
+public:
+	/*
+	 * 로그라이크
+	 */
+	UFUNCTION()
+	void HandleRandomUpgradeTagsGenerated(AAuraPlayerState* AuraPS, TArray<FGameplayTag>& RandomUpgradeTags);
+
+	UFUNCTION()
+	void HandlePlayerStateInitialized(AAuraPlayerState* InitializedPlayerState);
+	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Character Class Default")
 	TObjectPtr<UCharacterClassInfo> CharacterClassInfo;
 
 	UPROPERTY(EditDefaultsOnly, Category="Ability Info")
 	TObjectPtr<UAbilityInfo> AbilityInfo;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Ability Upgrade Info")
+	TObjectPtr<UAbilityUpgradeInfo> AbilityUpgradeInfo;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Item")
 	TObjectPtr<ULootTiers> LootTiers;
@@ -67,6 +92,4 @@ public:
 	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
 
 	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
-
-	void PlayerDied(ACharacter* DeadCharacter);
 };

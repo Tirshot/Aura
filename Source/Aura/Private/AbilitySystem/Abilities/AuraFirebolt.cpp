@@ -4,12 +4,14 @@
 #include "AuraGameplayTags.h"
 #include "Interaction/CombatInterface.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/AuraProjectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 UAuraFirebolt::UAuraFirebolt()
 {
 	SpellType = ESpellType::Projectile;
+	MaxNumProjectiles = 5;
 }
 
 FString UAuraFirebolt::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -37,7 +39,7 @@ FString UAuraFirebolt::GetDescription(int32 Level, const UObject* WorldContextOb
 			Level,
 			ManaCost,
 			Cooldown,
-			FMath::Min(NumProjectiles, Level),
+			FMath::Min(MaxNumProjectiles, Level),
 			ScaledDamage + MagicPowerDamage
 		);
 	}
@@ -56,7 +58,7 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level, const UObject* World
 		Level,
 		ManaCost,
 		Cooldown,
-		FMath::Min(NumProjectiles, Level),
+		FMath::Min(MaxNumProjectiles, Level),
 		ScaledDamage + MagicPowerDamage
 	);
 }
@@ -83,7 +85,8 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 	*/
 
 	const FVector Forward = Rotation.Vector();
-	const int32 EffectiveNumProjectiles = FMath::Min(NumProjectiles, GetAbilityLevel());
+	const int32 AbilityLevel = GetAbilityLevel();
+	const int32 EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectiles + AbilityLevel);
 	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Forward, FVector::UpVector, ProjectileSpread, EffectiveNumProjectiles);
 
 	for (const FRotator& Rot : Rotators)
@@ -122,4 +125,29 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 
 		Projectile->FinishSpawning(SpawnTransform);  
 	}
+}
+
+bool UAuraFirebolt::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	bool bUpgradesApplied = false;
+	
+	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
+	if (Upgrades.IsEmpty())
+		return false;
+	
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	for (const auto& Upgrade : Upgrades)
+	{
+		// 업그레이드 태그 검증
+		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), Tags.Upgrades_Fire_FireBolt_IncreaseNum))
+		{
+			// 투사체 갯수 증가
+			int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), Upgrade.UpgradeEffectTag);
+			NumProjectiles += StackCount;
+			bUpgradesApplied = true;
+		}
+	}
+
+	return bUpgradesApplied;
 }

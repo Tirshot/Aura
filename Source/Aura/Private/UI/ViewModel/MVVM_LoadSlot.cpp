@@ -3,6 +3,10 @@
 
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 
+#include "AuraGameplayTags.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+
 void UMVVM_LoadSlot::InitializeSlot()
 {
 	const int32 WidgetSwitcherIndex = SlotStatus.GetValue();

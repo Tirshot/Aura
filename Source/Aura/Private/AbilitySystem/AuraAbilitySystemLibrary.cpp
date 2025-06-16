@@ -76,6 +76,18 @@ USpellMenuWidgetController* UAuraAbilitySystemLibrary::GetSpellMenuWidgetControl
 	return nullptr;
 }
 
+UGameOverWidgetController* UAuraAbilitySystemLibrary::GetGameOverWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AAuraHUD* AuraHUD = nullptr;
+
+	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
+	{
+		return AuraHUD->GetGameOverWidgetController(WCParams);
+	}
+	return nullptr;
+}
+
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC)
 {
 	AActor* AvatarActor = ASC->GetAvatarActor();
@@ -155,7 +167,13 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UO
 
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 
+	// 세이브 데이터의 리젠 속성 적용
+	FGameplayEffectContextHandle RegenAttributesContextHandle = ASC->MakeEffectContext();
+	RegenAttributesContextHandle.AddSourceObject(SourceActor);
 	
+	const FGameplayEffectSpecHandle RegenAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->RegenAttributes, 1.f, RegenAttributesContextHandle);
+
+	ASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
 }
 
 void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
@@ -289,7 +307,7 @@ TArray<FVector> UAuraAbilitySystemLibrary::EvenlyRotatedVectors(const FVector& F
 	return Vectors;
 }
 
-void UAuraAbilitySystemLibrary::ApplyMessageGameplayEffectToSelf(const FGameplayTag& MessageTag, AActor* AvatarActor)
+void UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor)
 {
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
 	if (AuraCharacter == nullptr)
@@ -300,14 +318,18 @@ void UAuraAbilitySystemLibrary::ApplyMessageGameplayEffectToSelf(const FGameplay
 		return;
 	
 	// 기본 GE 클래스 생성 후 태그 부여
-	TSubclassOf<UGameplayEffect> EffectClass = UGameplayEffect::StaticClass(); 
+	static TSubclassOf<UGameplayEffect> GETagGrantingClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/Blueprints/AbilitySystem/Aura/Effects/GE_GrandInfiniteTag.GE_GrandInfiniteTag_C")); 
+
 	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.f, EffectContext);
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GETagGrantingClass, 1.f, EffectContext);
 
 	if (SpecHandle.IsValid())
 	{
-		SpecHandle.Data->AddDynamicAssetTag(MessageTag);
+		SpecHandle.Data.Get()->DynamicGrantedTags.AddTag(Tag);
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		
+		FGameplayTagContainer CurrentOwnedTags;
+		ASC->GetOwnedGameplayTags(CurrentOwnedTags);
 	}
 }
 
@@ -327,6 +349,15 @@ UAbilityInfo* UAuraAbilitySystemLibrary::GetAbilityInfo(const UObject* WorldCont
 		return nullptr;
 
 	return AuraGameMode->AbilityInfo;
+}
+
+UAbilityUpgradeInfo* UAuraAbilitySystemLibrary::GetAbilityUpgradeInfo(const UObject* WorldContextObject)
+{
+	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
+	if (AuraGameMode == nullptr)
+		return nullptr;
+
+	return AuraGameMode->AbilityUpgradeInfo;
 }
 
 ULootTiers* UAuraAbilitySystemLibrary::GetLootTiers(const UObject* WorldContextObject)

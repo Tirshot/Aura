@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/AuraDamageGameplayAbility.h"
+#include "AuraProjectileSpell.h"
 #include "AuraFireBlast.generated.h"
 
 class AAuraFireBall;
 
 UCLASS()
-class AURA_API UAuraFireBlast : public UAuraDamageGameplayAbility
+class AURA_API UAuraFireBlast : public UAuraProjectileSpell
 {
 	GENERATED_BODY()
 	
@@ -22,9 +22,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	TArray<AAuraFireBall*> SpawnFireBalls();
 
+public:
+	virtual bool CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")
-	int32 NumFireBalls = 12;
+	int32 BaseNumFireBalls = 12;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")
+	int32 NumFireBalls = 0;
 
 private:
 	UPROPERTY(EditDefaultsOnly)

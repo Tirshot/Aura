@@ -19,27 +19,27 @@ void UAuraWidgetController::SetWidgetControllerParams(const FWidgetControllerPar
 
 void UAuraWidgetController::BroadcastAbilityInfo()
 {
-    // ¾îºô¸®Æ¼°¡ ÁÖ¾îÁöÁö ¾Ê¾Ò´Ù¸é ¸®ÅÏ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò´Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (!GetAuraASC()->bStartupAbilitiesGiven)
         return;
 
-    // ¾îºô¸®Æ¼¸¦ ¼øÈ¸ÇÏÁö ¾Ê°í µ¨¸®°ÔÀÌÆ®¸¦ »ç¿ë
-    // ÄÝ¹é ÇÔ¼ö ¹ÙÀÎµù
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½ï¿½È¸ï¿½ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½
+    // ï¿½Ý¹ï¿½ ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½Îµï¿½
     FForEachAbility BroadcastDelegate;
     BroadcastDelegate.BindLambda([this](const FGameplayAbilitySpec& AbilitySpec)
         {
-            // ÅÂ±×¸¦ ÀÌ¿ëÇØ¼­ ¾îºô¸®Æ¼ Á¤º¸ °¡Á®¿À±â
+            // ï¿½Â±×¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(GetAuraASC()->GetAbilityTagFromSpec(AbilitySpec));
 
-            // ¾îºô¸®Æ¼¿¡ ÀÔ·Â ÅÂ±× ¹× »óÅÂ ÅÂ±× ºÎ¿©
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½Â±ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Â±ï¿½ ï¿½Î¿ï¿½
             Info.InputTag = GetAuraASC()->GetInputTagFromSpec(AbilitySpec);
             Info.StatusTag = GetAuraASC()->GetStatusFromSpec(AbilitySpec);
 
-            // ºí·çÇÁ¸°Æ® µ¨¸®°ÔÀÌÆ®·Î Àü¼Û
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             AbilityInfoDelegate.Broadcast(Info);
         });
 
-    // µ¨¸®°ÔÀÌÆ® ½ÇÇà
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
     GetAuraASC()->ForEachAbility(BroadcastDelegate);
 }
 

@@ -75,8 +75,7 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 			AuraGM->SaveWorldState(GetWorld(), MapName);
 		}
 		
-		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
-
+		// 체력 회복
 		if (AAuraCharacter* AvatarActor = Cast<AAuraCharacter>(OtherActor))
 		{
 			if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AvatarActor->GetAbilitySystemComponent()))
@@ -88,6 +87,10 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 				AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 			}
 		}
+
+		// 저장
+		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
+
 		HandleGlowEffects();
 	}
 }

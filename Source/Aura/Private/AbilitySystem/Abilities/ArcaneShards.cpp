@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraGameplayTags.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 
 FString UArcaneShards::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
@@ -40,4 +41,30 @@ FString UArcaneShards::GetNextLevelDescription(int32 Level, const UObject* World
 		ScaledDamage + MagicPowerDamage,
 		Level
 	);
+}
+
+bool UArcaneShards::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	bool bUpgradesApplied = false;
+	
+	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
+	if (Upgrades.IsEmpty())
+		return false;
+	
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	for (const auto& Upgrade : Upgrades)
+	{
+		// 업그레이드 태그 검증
+		// (1) 투사체 갯수 증가 태그
+		FGameplayTag IncreaseNum = Tags.Upgrades_Arcane_ArcaneShards_IncreaseNum;
+		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
+		{
+			// 투사체 갯수 증가
+			bUpgradesApplied = true;
+			NumPoints = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+		}
+	}
+
+	return bUpgradesApplied;
 }

@@ -17,25 +17,20 @@ void UAttributeMenuWidgetController::BroadcastInitialValues()
 		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
 
-	// 플레이어 상태 가져옴
 	GetAuraPS()->OnAttributePointChangedDelegate.Broadcast(AuraPlayerState->GetAttributePoints());
 }
 
 void UAttributeMenuWidgetController::BindCallbacksToDependencies()
 {
-	// 속성 세트 가져오기
 	check(AttributeInfo);
 
-	// 플레이어 상태 가져옴
 	GetAuraPS()->OnAttributePointChangedDelegate.AddLambda([this](int32 NewValue)
 		{
-			// 블루프린트 델리게이트 호출
 			OnAttributePointChangedDelegate.Broadcast(NewValue);
 		});
 
 	GetAuraPS()->OnSpellPointChangedDelegate.AddLambda([this](int32 NewValue)
 		{
-			// 블루프린트 델리게이트 호출
 			OnSpellPointChangedDelegate.Broadcast(NewValue);
 		});
 

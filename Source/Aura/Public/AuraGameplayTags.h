@@ -103,6 +103,19 @@ public:
 	FGameplayTag Abilities_Type_Passive;
 	FGameplayTag Abilities_Type_None;
 
+	// 어빌리티 업그레이드 태그(로그라이크)
+	FGameplayTag Upgrades_Fire_FireBolt_Temp;
+	FGameplayTag Upgrades_Fire_FireBolt_IncreaseNum;
+	
+	FGameplayTag Upgrades_Arcane_ArcaneShards_Temp;
+	FGameplayTag Upgrades_Arcane_ArcaneShards_IncreaseNum;
+	
+	FGameplayTag Upgrades_Fire_FireBlast_Temp;
+	FGameplayTag Upgrades_Fire_FireBlast_IncreaseNum;
+	
+	FGameplayTag Upgrades_Lightning_Teleport_Temp;
+	FGameplayTag Upgrades_Lightning_Teleport_DecreaseCoolDown;
+
 	// 쿨다운 태그
 	FGameplayTag Cooldown_Fire_FireBolt;
 
