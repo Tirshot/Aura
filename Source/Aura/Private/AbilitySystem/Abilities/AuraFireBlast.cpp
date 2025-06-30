@@ -12,6 +12,7 @@ UAuraFireBlast::UAuraFireBlast()
 {
 	SpellType = ESpellType::Projectile;
 	MaxNumProjectiles = 18;
+	NumFireBalls = BaseNumFireBalls;
 }
 
 FString UAuraFireBlast::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -71,7 +72,7 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 			FireBallClass,
 			SpawnTransform,
 			GetOwningActorFromActorInfo(),
-			CurrentActorInfo->PlayerController->GetPawn(),
+			GetAvatarActorFromActorInfo()->GetInstigatorController()->GetPawn(),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 		FireBall->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();

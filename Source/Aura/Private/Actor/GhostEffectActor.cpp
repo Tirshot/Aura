@@ -14,7 +14,7 @@ AGhostEffectActor::AGhostEffectActor()
 
 void AGhostEffectActor::SetGhostActorMesh(USkeletalMeshComponent* SourceMesh, UMaterialInterface* GhostMaterial)
 {
-	Mesh->SetSkeletalMesh(SourceMesh->SkeletalMesh);
+	Mesh->SetSkeletalMeshAsset(SourceMesh->GetSkeletalMeshAsset());
 
 	// 포즈 정지
 	Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);

@@ -21,3 +21,16 @@ FAuraAbilityInfo UAbilityInfo::FindAbilityInfoForTag(const FGameplayTag& Ability
 
 	return FAuraAbilityInfo();
 }
+
+FName UAbilityInfo::GetAbilityNameForTag(const FGameplayTag& AbilityTag)
+{
+	for (const FAuraAbilityInfo& Info : AbilityInformation)
+	{
+		if (Info.AbilityTag == AbilityTag)
+		{
+			return Info.AbilityName;
+		}
+	}
+
+	return FName();
+}

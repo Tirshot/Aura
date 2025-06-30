@@ -3,12 +3,8 @@
 #include "Actor/AuraEffectActor.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
-#include "GameFramework/Character.h"
-#include "Interaction/CombatInterface.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Player/AuraPlayerController.h"
 
 
 AAuraEffectActor::AAuraEffectActor()
@@ -36,8 +32,53 @@ void AAuraEffectActor::Tick(float DeltaTime)
 	// 사인파 진행 시간이 주기를 넘으면 초기화
 	if (RunningTime > SinPeriod)
 		RunningTime = 0.f;
-
-	ItemMovement(DeltaTime);
+	
+	if (bRelocated)
+	{
+		ItemMovement(DeltaTime);
+		SetActorLocationAndRotation(CalculatedLocation, CalculatedRotation);
+	}
+	//
+	// if (bAnimationFinished)
+	// {
+	// 	if (bRelocated == false)
+	// 	{
+	// 		FVector CurrentActorLocation = GetActorLocation();
+	// 		
+	// 		FVector TraceStart = CurrentActorLocation + FVector(0.f,0.f,100.f);
+	// 		FVector TraceEnd = CurrentActorLocation - FVector(0.f,0.f,2000.f);
+	//
+	// 		FHitResult HitResult;
+	// 		FCollisionQueryParams Params;
+	// 		Params.AddIgnoredActor(this);
+	//
+	// 		ActorLineTraceSingle(
+	// 			HitResult,
+	// 			TraceStart,
+	// 			TraceEnd,
+	// 			ECC_WorldStatic,
+	// 			Params);
+	//
+	// 		FVector NewLocation;
+	// 		if (HitResult.HasValidHitObjectHandle())
+	// 		{
+	// 			NewLocation = HitResult.ImpactPoint + FVector(0.f, 0.f, 10.f);
+	// 			NewLocation = FVector(CurrentActorLocation.X, CurrentActorLocation.Y, NewLocation.Z);
+	// 		}
+	// 		else
+	// 		{
+	// 			NewLocation = CurrentActorLocation;
+	// 		}
+	//
+	// 		SetActorLocation(NewLocation);
+	// 		InitialLocation = NewLocation;
+	// 		
+	// 		StartSinusoidalMovement();
+	// 		StartRotation();
+	// 		
+	// 		bRelocated = true;
+	// 	}
+	// }
 }
 
 void AAuraEffectActor::StartSinusoidalMovement()
@@ -52,9 +93,8 @@ void AAuraEffectActor::StartRotation()
 {
 	bRotates = true;
 	CalculatedRotation = GetActorRotation();
-	CalculatedLocation = InitialLocation;
 }
-
+ 
 void AAuraEffectActor::ItemMovement(float DeltaTime)
 {
 	// 회전
@@ -77,7 +117,7 @@ void AAuraEffectActor::ItemMovement(float DeltaTime)
 void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {
 	// 몬스터인지 확인
-	if (TargetActor->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemy)
+	if (TargetActor->ActorHasTag(FName("Enemy")) && bApplyEffectsToEnemy == false)
 		return;
 
 	// 타겟의 어빌리티 시스템 인터페이스 가져옴

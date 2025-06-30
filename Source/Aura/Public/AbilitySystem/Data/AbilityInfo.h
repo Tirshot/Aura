@@ -15,6 +15,9 @@ struct FAuraAbilityInfo
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FName AbilityName = FName("");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag AbilityTag = FGameplayTag();
 
 	UPROPERTY(BlueprintReadOnly)
@@ -38,12 +41,9 @@ struct FAuraAbilityInfo
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 LevelRequirement = 1;
 
-	// 하위 어빌리티의 레벨 요구량 체크
+	// 하위 어빌리티의 체크
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag RequireInferiorAbilityTag;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	int32 RequireInferiorAbilityLevel = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayAbility> Ability;
@@ -59,6 +59,5 @@ public:
 	TArray<FAuraAbilityInfo> AbilityInformation;
 
 	FAuraAbilityInfo FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound = false) const;
-
-	
+	FName GetAbilityNameForTag(const FGameplayTag& AbilityTag);
 };

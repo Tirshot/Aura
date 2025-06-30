@@ -91,13 +91,16 @@ UGameOverWidgetController* UAuraAbilitySystemLibrary::GetGameOverWidgetControlle
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC)
 {
 	AActor* AvatarActor = ASC->GetAvatarActor();
-
+	AAuraCharacterBase* AvatarCharacter = Cast<AAuraCharacterBase>(AvatarActor);
+	
 	// 액터의 클래스 정보 가져오기
 	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(AvatarActor);
 	if (CharacterClassInfo == nullptr)
 		return;
 
 	FCharacterClassDefaultInfo ClassDefaultInfo = CharacterClassInfo->GetClassDefaultInfo(CharacterClass);
+
+	
 
 	// 이펙트 스펙을 위한 컨텍스트 핸들 생성
 	FGameplayEffectContextHandle PrimaryAttributesContextHandle = ASC->MakeEffectContext();
@@ -109,11 +112,11 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* World
 	FGameplayEffectContextHandle VitalAttributesContextHandle = ASC->MakeEffectContext();
 	VitalAttributesContextHandle.AddSourceObject(AvatarActor);
 
-	// 이펙트 적용을 위한 이펙트 스펙 생성 후 적용
-	const FGameplayEffectSpecHandle PrimaryAttributesSpecHandle = ASC->MakeOutgoingSpec(ClassDefaultInfo.PrimaryAttributes, Level, PrimaryAttributesContextHandle);
+	// 이펙트 적용을 위한 이펙트 스펙 생성 후 적용 - ClassClassInfo가 아닌 클래스 디폴트를 참조하도록 수정됨
+	const FGameplayEffectSpecHandle PrimaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultPrimaryAttributes, Level, PrimaryAttributesContextHandle);
 	ASC->ApplyGameplayEffectSpecToSelf(*PrimaryAttributesSpecHandle.Data.Get());
 
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, Level, SecondaryAttributesContextHandle);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultSecondaryAttributes, Level, SecondaryAttributesContextHandle);
 	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
 
 	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes, Level, VitalAttributesContextHandle);
@@ -222,16 +225,15 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 
-	const AActor* SourceActor = SourceASC->GetAvatarActor();
-	const AActor* TargetActor = TargetASC->GetAvatarActor();
+	AActor* SourceActor = SourceASC->GetAvatarActor();
+	AActor* TargetActor = TargetASC->GetAvatarActor();
 
 	auto EffectClass = Params.DamageGameplayEffectClass;
 
 	// 이펙트 컨텍스트 핸들 생성
 	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	EffectContextHandle.AddSourceObject(SourceActor);
-	
-	
+
 	// 충격파 및 넉백 힘 설정
 	SetDeathImpulse(EffectContextHandle, Params.DeathImpulse);
 	SetKnockbackForce(EffectContextHandle, Params.KnockbackForce);
@@ -267,14 +269,16 @@ TArray<FRotator> UAuraAbilitySystemLibrary::EvenlySpacedRotators(const FVector& 
 {
 	TArray<FRotator> Rotators;
 
-	const FVector LeftSpread = Forward.RotateAngleAxis(-Spread / 2.f, Axis);
+	const FVector NormalizedAxis = Axis.GetSafeNormal();
+
+	const FVector LeftSpread = Forward.RotateAngleAxis(-Spread / 2.f, NormalizedAxis);
 	if (NumRotators > 1)
 	{
-		const float DeltaSpread = Spread / (NumRotators - 1);
+		const float DeltaSpread = Spread / (NumRotators);
 		for (int32 i = 0; i < NumRotators; i++)
 		{
 			// Z축 기준 DeltaSpread 만큼 회전
-			const FVector Direction = LeftSpread.RotateAngleAxis(DeltaSpread * i, FVector::UpVector);
+			const FVector Direction = LeftSpread.RotateAngleAxis(DeltaSpread * i, NormalizedAxis);
 			Rotators.Add(Direction.Rotation());
 		}
 	}
@@ -331,6 +335,36 @@ void UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(const FGameplayTag&
 		FGameplayTagContainer CurrentOwnedTags;
 		ASC->GetOwnedGameplayTags(CurrentOwnedTags);
 	}
+}
+
+TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor)
+{
+	TArray<FGameplayTag> AllActiveTags;
+	TArray<FGameplayAbilitySpec> ActiveSpecs;
+	
+	if (auto* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(AvatarActor))
+	{
+		// 활성화된 어빌리티
+		ActiveSpecs = ASC->GetActivatableAbilities();
+	}
+	
+	for (FGameplayAbilitySpec& Spec : ActiveSpecs)
+	{
+		FGameplayTagContainer AbilityTagContainer = Spec.Ability->AbilityTags;
+		if (AbilityTagContainer.HasTag(FAuraGameplayTags::Get().Abilities_None))
+			continue;
+
+		for (auto Tag : AbilityTagContainer)
+		{
+			if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities"))))
+			{
+				// 어빌리티 태그라면 추가
+				AllActiveTags.Add(Tag);
+			}
+		}
+	}
+    
+	return AllActiveTags;
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)

@@ -131,6 +131,11 @@ private:
 
 	void ItemMovement(float DeltaTime);
 
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+	bool bAnimationFinished = false;
+	
+	bool bRelocated = false;
+
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	EEffectType EffectType = EEffectType::Heal;

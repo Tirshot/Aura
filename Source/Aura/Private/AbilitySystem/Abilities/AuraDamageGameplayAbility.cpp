@@ -23,24 +23,6 @@ void UAuraDamageGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Han
                                             bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-	
-	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (AvatarActor == nullptr)
-		return;
-
-	AAuraCharacter* Aura = Cast<AAuraCharacter>(AvatarActor);
-	if (Aura == nullptr)
-		return;
-
-	UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(AvatarActor));
-	if (AuraASC == nullptr)
-		return;
-	
-	// 범위 스킬인지 체크
-	if (SpellType != ESpellType::Ranged)
-		return;
-
-	AuraASC->MessageRemove(FGameplayTag::RequestGameplayTag("GameplayCue.Message.WaitForExecute"));
 }
 
 FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassDefaults(AActor* TargetActor, FVector InRadialDamageOrigin, bool bOverrideKnockbackDirection, FVector InKnockbackDirectionOverride, bool bOverrideDeathImpulse, FVector DeathImpulseDirectionOverride, bool bOverridePitch, float PitchOverride) const
@@ -85,7 +67,7 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 		}
 		FVector ToTarget = Rotation.Vector();
 
-		if (bOverrideKnockbackDirection == false && bKnockback)
+		if (bOverrideKnockbackDirection == false)
 		{
 			Params.KnockbackForce = ToTarget * KnockbackForceMagnitude;
 		}
@@ -94,6 +76,11 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 		{
 			Params.DeathImpulse = ToTarget * DeathImpulseMagnitude;
 		}
+	}
+
+	if (bKnockback == false)
+	{
+		Params.KnockbackForce = FVector::ZeroVector;
 	}
 
 	// 넉백 방향 오버라이드
@@ -141,6 +128,26 @@ FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassD
 float UAuraDamageGameplayAbility::GetDamageAtLevel() const
 {
 	return Damage.GetValueAtLevel(GetAbilityLevel());
+}
+
+void UAuraDamageGameplayAbility::RemoveRangeSpellHelpMessage(AActor* AvatarActor)
+{
+	if (AvatarActor == nullptr)
+		return;
+
+	AAuraCharacter* Aura = Cast<AAuraCharacter>(AvatarActor);
+	if (Aura == nullptr)
+		return;
+
+	UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(AvatarActor));
+	if (AuraASC == nullptr)
+		return;
+	
+	// 범위 스킬인지 체크
+	if (SpellType != ESpellType::Ranged)
+		return;
+
+	AuraASC->MessageRemove(FGameplayTag::RequestGameplayTag("GameplayCue.Message.WaitForExecute"));
 }
 
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const

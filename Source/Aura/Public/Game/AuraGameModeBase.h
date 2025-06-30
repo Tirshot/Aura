@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+class AAuraPlayerController;
 struct FGameplayTagContainer;
 class AAuraPlayerState;
 class UAbilityUpgradeInfo;
@@ -58,6 +59,9 @@ public:
 	/*
 	 * 로그라이크
 	 */
+	UFUNCTION()
+	void HandleInitializeCards(APlayerController* PC);
+	
 	UFUNCTION()
 	void HandleRandomUpgradeTagsGenerated(AAuraPlayerState* AuraPS, TArray<FGameplayTag>& RandomUpgradeTags);
 

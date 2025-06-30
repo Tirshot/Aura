@@ -35,7 +35,7 @@ void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
 		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(NewPlayer->GetHUD()))
 		{
 			// 어빌리티 업그레이드 카드 세팅
-			AuraHUD->OnInitializeGameModeDelegate.Broadcast();
+			AuraHUD->InitializeCardsDelegate.AddUObject(this ,&AAuraGameModeBase::HandleInitializeCards);
 			if (AAuraPlayerState* AuraPS = NewPlayer->GetPlayerState<AAuraPlayerState>())
 			{
 				AuraPS->OnRandomUpgradeTagsGeneratedDelegate.AddDynamic(this, &AAuraGameModeBase::HandleRandomUpgradeTagsGenerated);
@@ -316,8 +316,19 @@ void AAuraGameModeBase::RestartGameFromSaveDataWithWorldContextObject(UObject* W
 	UGameplayStatics::OpenLevel(WorldContextObject, FName(SaveGame->MapAssetName));
 }
 
+void AAuraGameModeBase::HandleInitializeCards(APlayerController* PC)
+{
+	if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PC))
+	{
+		if (AAuraPlayerState* AuraPS = AuraPC->GetPlayerState<AAuraPlayerState>())
+		{
+			AuraPS->GetRandomUpgradeTagsForActivatedAbility_Three();
+		}
+	}
+}
+
 void AAuraGameModeBase::HandleRandomUpgradeTagsGenerated(AAuraPlayerState* AuraPS,
-	TArray<FGameplayTag>& RandomUpgradeTags)
+                                                         TArray<FGameplayTag>& RandomUpgradeTags)
 {
 	if (!HasAuthority())
 		return;

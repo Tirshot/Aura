@@ -7,35 +7,48 @@ TArray<FVector> UAuraSummonAbility::GetSpawnLocations()
 {
 	const FVector Forward = GetAvatarActorFromActorInfo()->GetActorForwardVector();
 	const FVector Location = GetAvatarActorFromActorInfo()->GetActorLocation();
+
+	int Attempt = 0;
 	
-	// ÀÏÁ¤ÇÑ °Å¸®¸¶´Ù ¼ÒÈ¯¼ö ¹èÄ¡
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Å¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ï¿½ï¿½ ï¿½ï¿½Ä¡
 	const float DeltaSpread = SpawnSpread / NumMinions;
 
-	// ZÃà ±âÁØ ÁÂ¿ì 45µµÀÇ ¹æÇâº¤ÅÍ
+	// Zï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Â¿ï¿½ 45ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½âº¤ï¿½ï¿½
 	const FVector LeftSpread = Forward.RotateAngleAxis(-SpawnSpread / 2, FVector::UpVector);
 	TArray<FVector> SpawnLocations;
-	for (int32 i = 0; i < NumMinions; i++)
+
+	int idx = 0;
+	
+	while ( idx < NumMinions )
 	{
-		// ³ª´« °¢µµ ¾¿ È¸Àü
-		const FVector Direction = LeftSpread.RotateAngleAxis(DeltaSpread * i, FVector::UpVector);
-		FVector ChosenSpawnLocation = Location + Direction * FMath::FRandRange(MinSpawnDistance, MaxSpawnDistance);
-		
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ È¸ï¿½ï¿½
+		const FVector Direction = LeftSpread.RotateAngleAxis(DeltaSpread * idx, FVector::UpVector);
+		FVector DirectionVector = Direction * FMath::FRandRange(MinSpawnDistance, MaxSpawnDistance - 50.f * Attempt);
+		FVector ChosenSpawnLocation = Location + DirectionVector;
+
 		FHitResult Hit;
-		GetWorld()->LineTraceSingleByChannel(Hit, ChosenSpawnLocation + FVector(0.f, 0.f, 400.f), ChosenSpawnLocation - FVector(0.f, 0.f, 400.f), ECC_Visibility);
-
-		if (Hit.bBlockingHit)
+			
+		if (GetWorld()->LineTraceSingleByChannel(Hit, ChosenSpawnLocation + FVector(0.f, 0.f, 400.f), ChosenSpawnLocation - FVector(0.f, 0.f, 400.f), ECC_Visibility))
 		{
-			ChosenSpawnLocation = Hit.ImpactPoint;
+			if (Hit.bBlockingHit)
+			{
+				ChosenSpawnLocation = Hit.ImpactPoint;
+				SpawnLocations.Add(ChosenSpawnLocation);
+				idx++;
+			}
 		}
-		SpawnLocations.Add(ChosenSpawnLocation);
-	}
+			
+		Attempt ++;
 
+		if (Attempt > 15)
+			break;
+	}
 	return SpawnLocations;
 }
 
 TSubclassOf<APawn> UAuraSummonAbility::GetRandomMinionClass()
 {
-	// ·£´ý ¼±ÅÃ
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	int32 Selection = FMath::RandRange(0, MinionClasses.Num() - 1);
 
 	return MinionClasses[Selection];

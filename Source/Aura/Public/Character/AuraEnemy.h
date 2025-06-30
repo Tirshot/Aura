@@ -13,6 +13,8 @@ class UWidgetComponent;
 class UBehaviorTree;
 class AAuraAIController;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAttributeChanged, float, NewValue, AActor*, InstigatorActor);
+
 UCLASS()
 class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface, public IHighlightInterface
 {
@@ -63,10 +65,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	int32 Level = 1;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UTexture> PictureFrameImage;
+	
 	UPROPERTY(EditAnywhere, category="AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree;
 

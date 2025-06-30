@@ -29,7 +29,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")
 	int32 BaseNumFireBalls = 12;
 	
-	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FireBlast")
 	int32 NumFireBalls = 0;
 
 private:

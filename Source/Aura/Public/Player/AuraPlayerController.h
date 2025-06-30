@@ -58,6 +58,9 @@ public:
 	 */
 	// 카드 선택 UI 초기화 완료시 호출되는 델리게이트
 	FOnCardSelectionInitilized OnCardSelectionInitializedDelegate;
+
+	UFUNCTION()
+	void HandleCardSelectionInitialized();
 	
 	// 카드 선택 버튼 콜백
 	UFUNCTION()

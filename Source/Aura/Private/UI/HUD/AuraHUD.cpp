@@ -102,9 +102,13 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
 
     // 저장중 위젯 컨트롤러 생성 및 연결
     SaveProgressWidgetController = GetSaveProgressWidgetController(WidgetControllerParams);
-    
-    // 하드코딩 - 게임 모드가 초기화되면 업그레이드 카드 선택 UI 노출
-    OnInitializeGameModeDelegate.AddUObject(this, &AAuraHUD::InitializeCardSelectionUI);
+
+    // 카드 선택 UI 뷰 모델 생성
+    CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
+    CardSelectionViewModel->InitializeSlot();
+
+    // 게임 모드 초기화 이후에 해당 델리게이트를 호출하여 카드 선택 UI 생성 하기
+    CreateCardSelectionUIDelegate.AddDynamic(this, &AAuraHUD::InitializeCardSelectionUI);
     
     // 플레이어 컨트롤러 초기화 완료 델리게이트 바인딩
     OnInitializePlayerControllerDelegate.AddUObject(this, &AAuraHUD::OnInitializePlayerController);
@@ -145,10 +149,7 @@ void AAuraHUD::OnInitializePlayerController()
 
 void AAuraHUD::InitializeCardSelectionUI()
 {
-    // 뷰 모델과 뷰 생성
-    CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
-    CardSelectionViewModel->InitializeSlot();
-
+    // 뷰 생성
     CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
     CardSelectionWidget->AddToViewport();
 

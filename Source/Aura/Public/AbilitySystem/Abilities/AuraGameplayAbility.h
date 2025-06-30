@@ -22,7 +22,7 @@ public:
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
 
-	static FString GetLockedDescription(int32 Level, int32 InferiorAbilityLevel = 0);
+	static FString GetLockedDescription(int32 Level, const UObject* WorldContextObject, const FGameplayTag& InferiorAbilityTag = FGameplayTag());
 
 public:
 	UFUNCTION(BlueprintCallable)

@@ -152,6 +152,9 @@ public:
 	UPROPERTY()
 	TArray<FSavedMap> SavedMaps;
 
+	UPROPERTY()
+	FGameplayTagContainer SavedAbilityUpgrades;
+
 	FSavedMap GetSavedMapWithMapName(const FString& InMapName);
 	bool HasMap(const FString& InMapName);
 };

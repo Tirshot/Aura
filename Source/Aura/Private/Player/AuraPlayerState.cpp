@@ -10,7 +10,6 @@
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "UI/HUD/AuraHUD.h"
 
 
 AAuraPlayerState::AAuraPlayerState()
@@ -49,6 +48,7 @@ void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AAuraPlayerState, XP);
     DOREPLIFETIME(AAuraPlayerState, AttributePoints);
     DOREPLIFETIME(AAuraPlayerState, SpellPoints);
+    DOREPLIFETIME(AAuraPlayerState, OwnedAbilityUpgradeTags);
 }
 
 void AAuraPlayerState::SetXP(int32 GainedXP)
@@ -113,6 +113,11 @@ void AAuraPlayerState::SetMana(const float InMana)
     {
         AuraAS->SetMana(InMana);
     }
+}
+
+void AAuraPlayerState::SetAbilityUpgradeTagContainer(const FGameplayTagContainer& InTagContainer)
+{
+    OwnedAbilityUpgradeTags = InTagContainer;
 }
 
 int32 AAuraPlayerState::GetUpgradeTagCount(FGameplayTag UpgradeTag)
@@ -228,6 +233,8 @@ void AAuraPlayerState::HandleAbilitiesSet()
 TArray<FGameplayTag> AAuraPlayerState::GetAllActiveAbilityTags() const
 {
     TArray<FGameplayTag> AllActiveTags;
+
+    auto AuraTags = FAuraGameplayTags::Get();
     
     // 활성화된 어빌리티
     TArray<FGameplayAbilitySpec> ActiveSpecs = AbilitySystemComponent->GetActivatableAbilities();
@@ -235,15 +242,21 @@ TArray<FGameplayTag> AAuraPlayerState::GetAllActiveAbilityTags() const
     for (FGameplayAbilitySpec& Spec : ActiveSpecs)
     {
         FGameplayTagContainer AbilityTagContainer = Spec.Ability->AbilityTags;
-        if (AbilityTagContainer.HasTag(FAuraGameplayTags::Get().Abilities_None))
+        if (AbilityTagContainer.HasTag(AuraTags.Abilities_None))
             continue;
 
-        for (auto Tag : AbilityTagContainer)
+        if (AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Fire")))
+            || AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Arcane")))
+            || AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Lightning")))
+            )
         {
-            if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities"))))
+            for (auto Tag : AbilityTagContainer)
             {
-                // 어빌리티 태그라면 추가
-                AllActiveTags.Add(Tag);
+                if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities"))))
+                {
+                    // 어빌리티 태그라면 추가
+                    AllActiveTags.Add(Tag);
+                }
             }
         }
     }

@@ -21,7 +21,7 @@ struct FWidgetControllerParams;
 class USpellMenuWidgetController;
 
 // GameMode 초기화 이후 호출
-DECLARE_MULTICAST_DELEGATE(FOnInitializeGameMode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInitializeGameMode);
 
 // PlayerController 초기화 이후 호출
 DECLARE_MULTICAST_DELEGATE(FOnInitializePlayerController);
@@ -48,7 +48,8 @@ public:
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
 public:
-	FOnInitializeGameMode OnInitializeGameModeDelegate;
+	UPROPERTY(BlueprintCallable)
+	FOnInitializeGameMode CreateCardSelectionUIDelegate;
 	FOnInitializePlayerController OnInitializePlayerControllerDelegate;
 	FOnInitializeCards InitializeCardsDelegate;
 	FOnInitializeCardsReceived ReceivedCardsDelegate;
@@ -60,7 +61,9 @@ public:
 	UFUNCTION()
 	void OnInitializePlayerController();
 	
+	UFUNCTION()
 	void InitializeCardSelectionUI();
+	
 	void HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1, FGameplayTag UpgradeTag2);
 	
 private:

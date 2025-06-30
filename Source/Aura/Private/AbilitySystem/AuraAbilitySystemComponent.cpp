@@ -10,6 +10,7 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "Game/LoadScreenSaveGame.h"
+#include "Interaction/CombatInterface.h"
 
 void UAuraAbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -217,6 +218,21 @@ FGameplayTag UAuraAbilitySystemComponent::GetStatusFromSpec(const FGameplayAbili
     return FGameplayTag();
 }
 
+FGameplayTag UAuraAbilitySystemComponent::GetStatusFromSpec(FGameplayAbilitySpec* AbilitySpec)
+{
+    if (!AbilitySpec)
+        return FGameplayTag();
+        
+    for (FGameplayTag Tag : AbilitySpec->DynamicAbilityTags)
+    {
+        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities.Status"))))
+        {
+            return Tag;
+        }
+    }
+    return FGameplayTag();
+}
+
 FGameplayTag UAuraAbilitySystemComponent::GetStatusFromAbilityTag(const FGameplayTag& AbilityTag)
 {
     if (const FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(AbilityTag))
@@ -320,29 +336,39 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
         if (Level < Info.LevelRequirement)
             continue;
 
-        // 하위 스펠 습득 확인
-        if (FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(Info.RequireInferiorAbilityTag))
-        {
-            int32 RequireAbilityLevel = Info.RequireInferiorAbilityLevel;
-            int32 AbilityLevel = Spec->Level;
-
-            // 하위 스펠의 레벨 요구량보다 하위 스펠의 레벨이 낮으면 넘김
-            if (AbilityLevel < RequireAbilityLevel)
-                continue;
-        }
-
         // 활성화된 어빌리티 중 스펙을 찾지 못하였다면 생성 후 어빌리티 부여
         if (GetSpecFromAbilityTag(Info.AbilityTag) == nullptr)
-        {            
-            FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Info.Ability, 1);
+        {
+            auto* Spec = GetSpecFromAbilityTag(Info.RequireInferiorAbilityTag);
+            auto InferiorAbilityStatus= GetStatusFromSpec(Spec);
+            
+            // 하위 스펠 습득 확인
+            if (InferiorAbilityStatus == FAuraGameplayTags::Get().Abilities_Status_Equipped
+                || InferiorAbilityStatus == FAuraGameplayTags::Get().Abilities_Status_Unlocked)
+            {
+                FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Info.Ability, 1);
 
-            // 해금 가능 태그 부여
-            AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
-            GiveAbility(AbilitySpec);
+                // 해금 가능 태그 부여
+                AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+                GiveAbility(AbilitySpec);
 
-            // 즉시 복제
-            MarkAbilitySpecDirty(AbilitySpec);
-            ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible, 1);
+                // 즉시 복제
+                MarkAbilitySpecDirty(AbilitySpec);
+                ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible, 1);
+            }
+            else if (Info.RequireInferiorAbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.None"))
+                || Info.RequireInferiorAbilityTag.MatchesTag(FGameplayTag()))
+            {
+                FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Info.Ability, 1);
+
+                // 해금 가능 태그 부여
+                AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+                GiveAbility(AbilitySpec);
+
+                // 즉시 복제
+                MarkAbilitySpecDirty(AbilitySpec);
+                ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible, 1);
+            }
         }
     }
 }
@@ -374,8 +400,12 @@ void UAuraAbilitySystemComponent::ServerSpendSpellPoint_Implementation(const FGa
             // 어빌리티 레벨 상승
             AbilitySpec->Level += 1;
         }
-        
-        UpdateAbilityStatus(AbilitySpec->Level);
+
+        if (GetAvatarActor()->Implements<UCombatInterface>())
+        {
+            int32 CharacterLevel = ICombatInterface::Execute_GetCharacterLevel(GetAvatarActor()); 
+            UpdateAbilityStatus(CharacterLevel);
+        }
         
         // 클라이언트로 브로드캐스트
         ClientUpdateAbilityStatus(AbilityTag, Status, AbilitySpec->Level);
@@ -480,10 +510,7 @@ bool UAuraAbilitySystemComponent::GetDescriptionsByAbilityTag(const FGameplayTag
         FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
         int32 CharacterLevelRequirement = Info.LevelRequirement;
 
-        // 이 어빌리티의 하위 어빌리티
-        int32 RequireInferiorAbilityLevel = Info.RequireInferiorAbilityLevel;
-
-        OutDescription = UAuraGameplayAbility::GetLockedDescription(CharacterLevelRequirement, RequireInferiorAbilityLevel);
+        OutDescription = UAuraGameplayAbility::GetLockedDescription(CharacterLevelRequirement, this, Info.RequireInferiorAbilityTag);
     }
     OutNextLevelDescription = FString();
     return false;

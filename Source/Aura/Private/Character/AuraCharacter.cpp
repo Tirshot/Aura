@@ -108,6 +108,7 @@ void AAuraCharacter::LoadProgress()
                 AuraPlayerState->SetXP(SaveData->XP);
                 AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
                 AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgrades);
             }
             
             // 1차 속성, 2차 속성 적용
@@ -323,9 +324,15 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         
         // 활성화된 어빌리티에 대하여 델리게이트 호출
         AuraASC->ForEachAbility(SaveAbilityDelegate);
+
+        // 어빌리티 업그레이드 저장
+        if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+        {
+            SaveData->SavedAbilityUpgrades = AuraPS->GetAbilityUpgradeTagContainer();
+        }
         
         AuraGameMode->SaveInGameProgressData(SaveData);
-
+        
         // 저장중 위젯 제거
         if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController()))
         {

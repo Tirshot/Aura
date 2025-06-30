@@ -142,41 +142,22 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		float Resistance = 0.f;
 		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(CaptureDef, EvalParams, Resistance);
 		Resistance = FMath::Clamp(Resistance, 0.f, 100);
-
+		
 		// 속성 저항이 데미지를 퍼센트로 무시함
 		DamageTypeValue *= (100.f - Resistance) / 100.f;
-
+		Damage += DamageTypeValue;
+		
 		// 방사형 피해 계산
 		if (UAuraAbilitySystemLibrary::IsRadialDamage(EffectContextHandle))
 		{
-			if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(TargetAvatar))
-			{
-				CombatInterface->GetOnDamageDelegate().AddLambda([&](float DamageAmount)
-					{
-						DamageTypeValue = DamageAmount;
-						if (CombatInterface)
-							CombatInterface->GetOnDamageDelegate().Clear();
-					});
-			}
-
-			FVector DamageOrigin = UAuraAbilitySystemLibrary::GetRadialDamageOrigin(EffectContextHandle);
-			DamageOrigin.Z += 100.f;
-			
-			UGameplayStatics::ApplyRadialDamageWithFalloff(
+			Damage = CalculateRadialDamage(
 				TargetAvatar,
 				DamageTypeValue,
-				0.f, // 최소 대미지
-				DamageOrigin,
+				UAuraAbilitySystemLibrary::GetRadialDamageOrigin(EffectContextHandle),
 				UAuraAbilitySystemLibrary::GetRadialDamageInnerRadius(EffectContextHandle),
 				UAuraAbilitySystemLibrary::GetRadialDamageOuterRadius(EffectContextHandle),
-				1.f, // 감쇠 계수
-				UDamageType::StaticClass(), // 
-				TArray<AActor*>(), // IgnoreActor
-				SourceAvatar, // DamageCauser
-				nullptr); // Controller Instigator
+				1.0f);
 		}
-
-		Damage += DamageTypeValue;
 	}
 
 	// 소스 마법 공격력 계산
@@ -268,6 +249,23 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// 메타 속성으로 데미지 넘김
 	const FGameplayModifierEvaluatedData EvalData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);
 	OutexecutionOutput.AddOutputModifier(EvalData);
+}
+
+float UExecCalc_Damage::CalculateRadialDamage(const AActor* TargetActor, float BaseDamage, const FVector& Origin, float InnerRadius, float OuterRadius,
+	float DamageFalloff) const
+{
+	FVector TargetLocation = TargetActor->GetActorLocation();
+
+	// 타겟 - 데미지 중심 = 중심에서 타겟까지의 벡터
+	FVector DamageVector = TargetLocation - Origin;
+	float DistanceToTarget = DamageVector.Length();
+
+	const TRange<float> DistanceRange(InnerRadius, OuterRadius);
+	const TRange<float> DamageScaleRange(DamageFalloff, 0.f);
+
+	const float DamageScale = FMath::GetMappedRangeValueClamped(DistanceRange, DamageScaleRange, DistanceToTarget);
+	const float Damage = BaseDamage * DamageScale;
+	return Damage;
 }
 
 void UExecCalc_Damage::DetermineDebuff(const FGameplayEffectCustomExecutionParameters& ExecutionParams, const FGameplayEffectSpec& EffectSpec, FAggregatorEvaluateParameters EvalParams, const TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition>& InTagsToDefs) const

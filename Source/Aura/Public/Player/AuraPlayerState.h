@@ -71,6 +71,9 @@ public:
 
 	void SetHealth(const float InHealth);
 	void SetMana(const float InMana);
+
+	FGameplayTagContainer& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
+	void SetAbilityUpgradeTagContainer(const FGameplayTagContainer& InTagContainer);
 	
 public:
 	// 어빌리티 업그레이드

@@ -82,9 +82,11 @@ public:
 	FGameplayTag Abilities_Summon;
 	FGameplayTag Abilities_Fire_FireBolt;
 	FGameplayTag Abilities_Fire_FireBlast;
+	FGameplayTag Abilities_Fire_Firenado;
 	FGameplayTag Abilities_Lightning_Electrocute;
 	FGameplayTag Abilities_Lightning_Teleport;
 	FGameplayTag Abilities_Arcane_ArcaneShards;
+	FGameplayTag Abilities_Arcane_MindControl;
 	FGameplayTag Abilities_HitReact;
 	
 	// 패시브 어빌리티

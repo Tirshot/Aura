@@ -218,4 +218,9 @@ public:
 	// 메시지 게임플레이 이펙트 적용
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static void ApplyGameplayTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor);
+
+	// 활성화 모든 어빌리티의 태그를 반환
+	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static TArray<FGameplayTag> GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor);
+
 };

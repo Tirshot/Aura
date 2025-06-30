@@ -42,6 +42,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	float GetDamageAtLevel() const;
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveRangeSpellHelpMessage(AActor* AvatarActor);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

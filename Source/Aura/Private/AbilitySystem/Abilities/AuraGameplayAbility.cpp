@@ -6,6 +6,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
@@ -20,12 +21,21 @@ FString UAuraGameplayAbility::GetNextLevelDescription(int32 Level, const UObject
     return FString::Printf(TEXT("<Default>%s, </><Level>%d</>"), L"Default Ability Name - LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum", Level);
 }
 
-FString UAuraGameplayAbility::GetLockedDescription(int32 Level, int32 InferiorAbilityLevel)
+FString UAuraGameplayAbility::GetLockedDescription(int32 Level, const UObject* WorldContextObject, const FGameplayTag& InferiorAbilityTag)
 {
-    if (InferiorAbilityLevel > 0)
-        return FString::Printf(TEXT("<Default>캐릭터 레벨 </><Level>%d</><Default>부터 습득 가능.</>\n<Default>하위 스펠 레벨 </><Level>%d</><Default>부터 습득 가능.</>"), Level, InferiorAbilityLevel);
-    
-    return FString::Printf(TEXT("<Default>캐릭터 레벨 </><Level>%d</><Default>부터 습득 가능.</>"), Level);
+    // 빈 태그
+    if (InferiorAbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.None")))
+        return FString::Printf(TEXT("<Default>캐릭터 레벨 </><Level>%d</><Default>부터 습득 가능합니다.</>"), Level);
+
+    // 하위 어빌리티 태그 받음
+    {
+        auto AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(WorldContextObject);
+        FName InferiorAbilityName = AbilityInfo->GetAbilityNameForTag(InferiorAbilityTag);
+        
+        return FString::Printf(TEXT("<Default>캐릭터 레벨 </><Level>%d</><Default>부터 습득 가능합니다.</>\n<Damage>하위 어빌리티 %s를 습득해야 합니다.</>")
+            ,Level
+            ,*InferiorAbilityName.ToString());
+    }
 }
 
 TArray<FAuraAbilityUpgradeInfo> UAuraGameplayAbility::GetAbilityUpgradeForTag(AActor* AvatarActor, FGameplayTag AbilityTag)

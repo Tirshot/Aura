@@ -61,27 +61,8 @@ void AAuraPlayerController::BeginPlay()
     SetInputMode(InputModeData);
 
     // 델리게이트 바인딩
-    OnCardSelectionInitializedDelegate.AddLambda([this]()
-    {
-        if (IsLocalPlayerController()) // 로컬 플레이어 컨트롤러에서만 UI 로직 처리
-        {
-            // HUD가 생성된 후 (또는 Upgrade UI가 활성화될 때)
-            if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
-            {
-                if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
-                {
-                    // 각 CardViewModel의 OnUpgradeSelected 델리게이트 구독
-                    for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i) // GetNumCards는 예시
-                    {
-                        if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
-                        {
-                            CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
-                        }
-                    }
-                }
-            }
-        }
-    });
+    OnCardSelectionInitializedDelegate.AddUObject(this ,&AAuraPlayerController::HandleCardSelectionInitialized);
+
     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
         AuraHUD->OnInitializePlayerControllerDelegate.Broadcast();
@@ -222,6 +203,26 @@ void AAuraPlayerController::HideMagicCircle()
 void AAuraPlayerController::SetTargetingStatus(ETargetingStatus InStatus)
 {
     TargetingStatus = InStatus;
+}
+
+void AAuraPlayerController::HandleCardSelectionInitialized()
+{
+    if (IsLocalPlayerController())
+    {
+        if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+        {
+            if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+            {
+                for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
+                {
+                    if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
+                    {
+                        CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
+                    }
+                }
+            }
+        }
+    }
 }
 
 void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag)
