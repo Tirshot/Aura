@@ -10,10 +10,19 @@
  */
 struct FAuraGameplayTags
 {
+private:
+	// 생성자를 private으로 만들어서 외부에서 임의로 인스턴스를 생성하는 것을 방지
+	FAuraGameplayTags() {}
+
+	// 복사 생성자 및 대입 연산자 제거
+	FAuraGameplayTags(const FAuraGameplayTags&) = delete;
+	FAuraGameplayTags& operator=(const FAuraGameplayTags&) = delete;
 
 public:
 	static const FAuraGameplayTags& Get() { return GameplayTags; }
 	static void InitailizeNativeGameplayTags();
+	void InitializeAbilitiesTagsArray();
+	void InitializeAttributesTagsArray();
 
 	FGameplayTag Attributes_Primary_Strength;
 	FGameplayTag Attributes_Primary_Intelligence;
@@ -85,6 +94,7 @@ public:
 	FGameplayTag Abilities_Fire_Firenado;
 	FGameplayTag Abilities_Lightning_Electrocute;
 	FGameplayTag Abilities_Lightning_Teleport;
+	FGameplayTag Abilities_Lightning_SpawnElectroSphere;
 	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_Arcane_MindControl;
 	FGameplayTag Abilities_HitReact;
@@ -106,17 +116,30 @@ public:
 	FGameplayTag Abilities_Type_None;
 
 	// 어빌리티 업그레이드 태그(로그라이크)
+	FGameplayTag Upgrades_Fire_Increase10PercentDamage;
 	FGameplayTag Upgrades_Fire_FireBolt_Temp;
 	FGameplayTag Upgrades_Fire_FireBolt_IncreaseNum;
-	
-	FGameplayTag Upgrades_Arcane_ArcaneShards_Temp;
-	FGameplayTag Upgrades_Arcane_ArcaneShards_IncreaseNum;
 	
 	FGameplayTag Upgrades_Fire_FireBlast_Temp;
 	FGameplayTag Upgrades_Fire_FireBlast_IncreaseNum;
 	
+	FGameplayTag Upgrades_Fire_FireNado_IncreaseRange;
+	
+	FGameplayTag Upgrades_Arcane_Increase10PercentDamage;
+	FGameplayTag Upgrades_Arcane_ArcaneShards_Temp;
+	FGameplayTag Upgrades_Arcane_ArcaneShards_IncreaseNum;
+	FGameplayTag Upgrades_Arcane_ArcaneShards_FirstLargeShard;
+	
+	FGameplayTag Upgrades_Lightning_Increase10PercentDamage;
+	FGameplayTag Upgrades_Lightning_Electrocute_AdditionalTarget;
+	
 	FGameplayTag Upgrades_Lightning_Teleport_Temp;
 	FGameplayTag Upgrades_Lightning_Teleport_DecreaseCoolDown;
+	FGameplayTag Upgrades_Lightning_Teleport_ReturnToInitLocation;
+	
+	FGameplayTag Upgrades_Lightning_SpawnElectroSphere_IncreaseTraceRange;
+	FGameplayTag Upgrades_Lightning_SpawnElectroSphere_DecreaseMovementSpeed;
+	FGameplayTag Upgrades_Lightning_SpawnElectroSphere_HomingNearestTarget;
 
 	// 쿨다운 태그
 	FGameplayTag Cooldown_Fire_FireBolt;
@@ -134,6 +157,8 @@ public:
 
 	TMap<FGameplayTag, FGameplayTag> DamageTypesToResistances;
 	TMap<FGameplayTag, FGameplayTag> DamageTypesToDebuff;
+	TArray<FGameplayTag> GameplayAbilitiesTags;
+	TArray<FGameplayTag> AttributesTags;
 
 	// 피격 반응
 	FGameplayTag Effects_HitReact;

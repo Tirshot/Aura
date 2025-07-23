@@ -15,9 +15,12 @@
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Actor/AbilityRangeIndicator.h"
 #include "Actor/MagicCircle.h"
 #include "Components/DecalComponent.h"
 #include "Aura/Aura.h"
+#include "Game/AuraGameModeBase.h"
 #include "Interaction/HighlightInterface.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -61,12 +64,7 @@ void AAuraPlayerController::BeginPlay()
     SetInputMode(InputModeData);
 
     // 델리게이트 바인딩
-    OnCardSelectionInitializedDelegate.AddUObject(this ,&AAuraPlayerController::HandleCardSelectionInitialized);
-
-    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
-    {
-        AuraHUD->OnInitializePlayerControllerDelegate.Broadcast();
-    }
+    OnCardSelectedDelegate.AddUObject(this ,&AAuraPlayerController::HandleCardSelectionInitialized);
 }
 
 
@@ -184,7 +182,13 @@ void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial)
     // 생성
     if (IsValid(MagicCircle) == false)
     {
+        AActor* AvatarActor = GetPawn();
+        if (!AvatarActor)
+            return;
+        
         MagicCircle = GetWorld()->SpawnActor<AMagicCircle>(MagicCircleClass);
+        MagicCircle->CircleInitialized.Broadcast(AvatarActor);
+        
         if (DecalMaterial)
         {
             MagicCircle->MagicCircleDecal->SetMaterial(0, DecalMaterial);
@@ -196,7 +200,39 @@ void AAuraPlayerController::HideMagicCircle()
 {
     if (IsValid(MagicCircle))
     {
+        AActor* AvatarActor = GetPawn();
+        if (!AvatarActor)
+            return;
+        
+        MagicCircle->RemoveCircle.Broadcast(AvatarActor);
         MagicCircle->Destroy();
+    }
+}
+
+void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue)
+{
+    // 생성
+    if (IsValid(RangeIndicator) == false)
+    {
+        AActor* AvatarActor = GetPawn();
+        if (!AvatarActor)
+            return;
+        
+        RangeIndicator = GetWorld()->SpawnActor<AAbilityRangeIndicator>(RangeIndicatorClass);
+        RangeIndicator->IndicatorInitialized.Broadcast(AvatarActor, RangeShape, Location, Width, Height, Radius, Red, Green, Blue);
+    }
+}
+
+void AAuraPlayerController::HideRangeIndicator()
+{
+    if (IsValid(RangeIndicator))
+    {
+        AActor* AvatarActor = GetPawn();
+        if (!AvatarActor)
+            return;
+        
+        RangeIndicator->RemoveIndicator.Broadcast(AvatarActor);
+        RangeIndicator->Destroy();
     }
 }
 
@@ -207,18 +243,16 @@ void AAuraPlayerController::SetTargetingStatus(ETargetingStatus InStatus)
 
 void AAuraPlayerController::HandleCardSelectionInitialized()
 {
-    if (IsLocalPlayerController())
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
-        if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+        if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
         {
-            if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+            for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
             {
-                for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
+                if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
                 {
-                    if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
-                    {
+                    if (!CardViewModel->OnUpgradeSelectedDelegate.IsBound())
                         CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
-                    }
                 }
             }
         }
@@ -233,6 +267,36 @@ void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgra
     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
         AuraHUD->CardSelectionWidget->RemoveFromParent();
+    }
+}
+
+void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpgradeInfo>& SelectedUpgradeInfo)
+{
+    Server_SelectUpgrade(SelectedUpgradeInfo[0].UpgradeEffectTag);
+
+    // 카드 선택 UI 닫기
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+    {
+        AuraHUD->CardSelectionWidget->RemoveFromParent();
+    }
+}
+
+void AAuraPlayerController::Server_CreateCardSelection_Implementation(AActor* InteractedActor)
+{
+    if (!HasAuthority())
+        return;
+    
+    // 게임 모드에게 카드 뽑기를 요청
+    if (AAuraGameModeBase* GameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        if (APawn* InteractedPawn = Cast<APawn>(InteractedActor))
+        {
+            if (APlayerController* PC = Cast<APlayerController>(InteractedPawn->GetController()))
+            {
+                // GameMode의 카드 뽑기 로직 호출
+                GameMode->HandleInitializeCards(PC);
+            }
+        }
     }
 }
 
@@ -263,7 +327,6 @@ void AAuraPlayerController::Server_SelectUpgrade_Implementation(FGameplayTag Sel
         return;
 
     // 업그레이드 태그 적용
-    // UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(SelectedUpgradeTag, AvatarActor);
     if (AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>())
     {
         // 플레이어 상태의 태그 컨테이너 내에 저장

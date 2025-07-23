@@ -81,7 +81,7 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 	}
 
 	// ���� ����Ʈ, �����Ƽ ����
-	const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 	const int32 SpellPoints = GetAuraPS()->GetSpellPoints();
 	FGameplayTag AbilityStatus;
 
@@ -213,7 +213,7 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& AbilityStatus, int32 SpellPoints, bool& bEnableSpellPointsButton, bool& bEnableEquipButton)
 {
 	// ���� �Ҹ����� ������ ������ ���̹Ƿ� �Ҹ����� ������ ����Ѵ�.
-	const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 
 	// �⺻ ����
 	bEnableSpellPointsButton = false;

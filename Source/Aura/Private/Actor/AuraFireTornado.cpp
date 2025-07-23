@@ -32,6 +32,14 @@ AAuraFireTornado::AAuraFireTornado()
 void AAuraFireTornado::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// DamageRadius에 의해 메시 크기 스케일
+	float NewScaleValue = DamageRadius / 200.f;
+	FVector NewScale(NewScaleValue);
+	
+	Mesh->SetWorldScale3D(NewScale);
+
+	//
 	SetLifeSpan(LifeSpan);
 	SetReplicateMovement(true);
 	

@@ -9,6 +9,7 @@
 UElectrocute::UElectrocute()
 {
 	SpellType = ESpellType::Targeting;
+	AdditionalTargets = GetAbilityLevel() - 1;
 }
 
 FString UElectrocute::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -58,4 +59,17 @@ FString UElectrocute::GetNextLevelDescription(int32 Level, const UObject* WorldC
 		ScaledDamage + MagicPowerDamage,
 		Level - 1
 		);
+}
+
+void UElectrocute::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	// 업그레이드 태그 검증
+	// (1) 타겟 갯수 증가 태그
+	FGameplayTag IncreaseNum = Tags.Upgrades_Lightning_Electrocute_AdditionalTarget;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
+	{
+		AdditionalTargets += GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+	}
 }

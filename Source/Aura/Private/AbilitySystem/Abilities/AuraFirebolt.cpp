@@ -103,21 +103,50 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 		Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
-
+		
+		float Distance = FVector::Dist(HomingTarget->GetActorLocation(), SocketLocation);
+		
 		// 투사체 유도
 		// 대상이 몬스터인지 확인
 		if (HomingTarget && HomingTarget->Implements<UCombatInterface>())
 		{
-			Projectile->ProjectileMovement->HomingTargetComponent = HomingTarget->GetRootComponent();
+			if (Distance <= AbilityRange)
+			{
+				Projectile->ProjectileMovement->HomingTargetComponent = HomingTarget->GetRootComponent();
+			}
+			else
+			{
+				FVector NormalVector = (ProjectileTargetLocation - SocketLocation);
+				NormalVector.Normalize();
+				
+				FVector NewVector = SocketLocation + (NormalVector * AbilityRange);
+				
+				Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
+				Projectile->HomingTargetSceneComponent->SetWorldLocation(NewVector);
+				Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
+			}
 		}
 		else // 대상이 몬스터가 아닌 대상
 		{
 			// 마우스 클릭 위치의 컴포넌트 가져오기
 			// 새로운 씬 컴포넌트 생성 <- 가비지 컬렉터에 추가하기 위해 멤버 변수로 추가!!
-			Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
-			Projectile->HomingTargetSceneComponent->SetWorldLocation(ProjectileTargetLocation);
-
-			Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
+			if (FVector::Distance(ProjectileTargetLocation, SocketLocation) <= AbilityRange)
+			{
+				Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
+				Projectile->HomingTargetSceneComponent->SetWorldLocation(ProjectileTargetLocation);
+				Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
+			}
+			else
+			{
+				FVector NormalVector = (ProjectileTargetLocation - SocketLocation);
+				NormalVector.Normalize();
+				
+				FVector NewVector = SocketLocation + (NormalVector * AbilityRange);
+				
+				Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
+				Projectile->HomingTargetSceneComponent->SetWorldLocation(NewVector);
+				Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
+			}
 		}
 		// 유도 가속력
 		Projectile->ProjectileMovement->HomingAccelerationMagnitude = FMath::FRandRange(HomingAccMin, HomingAccMax);
@@ -127,27 +156,15 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 	}
 }
 
-bool UAuraFirebolt::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraFirebolt::CheckAbilityUpgrades(FGameplayTag AbilityTag)
 {
-	bool bUpgradesApplied = false;
-	
-	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
-	if (Upgrades.IsEmpty())
-		return false;
-	
 	const auto& Tags = FAuraGameplayTags::Get();
 
-	for (const auto& Upgrade : Upgrades)
+	// 업그레이드 태그 검증
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), Tags.Upgrades_Fire_FireBolt_IncreaseNum))
 	{
-		// 업그레이드 태그 검증
-		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), Tags.Upgrades_Fire_FireBolt_IncreaseNum))
-		{
-			// 투사체 갯수 증가
-			int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), Upgrade.UpgradeEffectTag);
-			NumProjectiles += StackCount;
-			bUpgradesApplied = true;
-		}
+		// 투사체 갯수 증가
+		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), Tags.Upgrades_Fire_FireBolt_IncreaseNum);
+		NumProjectiles += StackCount;
 	}
-
-	return bUpgradesApplied;
 }

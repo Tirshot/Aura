@@ -13,7 +13,7 @@ void UMVVM_AbilityCard::SetUpgradeName(FString InUpgradeName)
 	UE_MVVM_SET_PROPERTY_VALUE(UpgradeName, InUpgradeName);
 }
 
-void UMVVM_AbilityCard::SetUpgradeDescription(FString InUpgradeDescription)
+void UMVVM_AbilityCard::SetUpgradeDescription(FText InUpgradeDescription)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(UpgradeDescription, InUpgradeDescription);
 }

@@ -18,6 +18,9 @@ public:
 	// 시작 시 부여되는 입력 태그
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	FGameplayTag StartupInputTag;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GameplayAbility")
+	float AbilityRange = 300.f;
 
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
@@ -26,7 +29,7 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable)
-	virtual bool CheckAbilityUpgrades(FGameplayTag AbilityTag) { return false; }
+	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) {};
 	
 	UFUNCTION(BlueprintCallable)
 	static TArray<FAuraAbilityUpgradeInfo> GetAbilityUpgradeForTag(AActor* AvatarActor, FGameplayTag AbilityTag);
@@ -40,11 +43,4 @@ public:
 protected:
 	float GetManaCost(float InLevel = 1.f) const;
 	float GetCoolDown(float InLevel = 1.f) const;
-
-public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameplayEffect|Cost")
-	FScalableFloat BaseCostFromCurve;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GameplayEffect|Cost")
-	float ManaCostRefund = 0.f;
 };

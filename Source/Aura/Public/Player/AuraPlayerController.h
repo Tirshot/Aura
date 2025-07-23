@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayTagContainer.h"
+#include "Actor/AbilityRangeIndicator.h"
 #include "AuraPlayerController.generated.h"
 
+class AAbilityRangeIndicator;
+struct FAuraAbilityUpgradeInfo;
 class IHighlightInterface;
 class UInputMappingContext;
 class UInputAction;
@@ -24,7 +27,7 @@ enum class ETargetingStatus : uint8
 	None
 };
 
-DECLARE_MULTICAST_DELEGATE(FOnCardSelectionInitilized);
+DECLARE_MULTICAST_DELEGATE(FOnCardSelected);
 
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
@@ -50,14 +53,27 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void HideMagicCircle();
 
-	void SetTargetingStatus(ETargetingStatus InStatus);
+	// 범위 데칼
+	UFUNCTION(BlueprintCallable)
+	void ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue);
 
+	UFUNCTION(BlueprintCallable)
+	void HideRangeIndicator();
+
+	void SetTargetingStatus(ETargetingStatus InStatus);
+	void SetCachedDestination(const FVector& InLocation){CachedDestination = InLocation;}
+	TObjectPtr<USplineComponent> GetMoveSpline(){return Spline;}
+	void SetAutoRunning(bool bInAuto){bAutoRunning = bInAuto;}
+
+	bool IsShiftKeyDown() { return bShiftKeyDown; }
+
+	
 public:
 	/*
 	 * 어빌리티 업그레이드 카드
 	 */
 	// 카드 선택 UI 초기화 완료시 호출되는 델리게이트
-	FOnCardSelectionInitilized OnCardSelectionInitializedDelegate;
+	FOnCardSelected OnCardSelectedDelegate;
 
 	UFUNCTION()
 	void HandleCardSelectionInitialized();
@@ -65,7 +81,13 @@ public:
 	// 카드 선택 버튼 콜백
 	UFUNCTION()
 	void HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag);
+	
+	UFUNCTION()
+	void HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpgradeInfo>& SelectedUpgradeInfo);
 
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_CreateCardSelection(AActor* InteractedActor);
+	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
 	void Server_SelectUpgrade(FGameplayTag SelectedUpgradeTag);
@@ -139,5 +161,11 @@ private:
 	UPROPERTY()
 	TObjectPtr<AMagicCircle> MagicCircle;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AAbilityRangeIndicator> RangeIndicatorClass;
+	
+	UPROPERTY()
+	TObjectPtr<AAbilityRangeIndicator> RangeIndicator;
+	
 	void UpdateMagicCircleLocation();
 };

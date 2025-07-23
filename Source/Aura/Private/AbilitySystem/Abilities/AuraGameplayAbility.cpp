@@ -58,16 +58,14 @@ bool UAuraGameplayAbility::HasUpgradeTag(AActor* AvatarActor, FGameplayTag Tag)
     if (!AvatarActor)
         return false;
     
-    if (AActor* OwnerActor = AvatarActor->GetOwner())
+    if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(Cast<APawn>(AvatarActor)->GetController()))
     {
-        if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(OwnerActor))
+        if (AAuraPlayerState* AuraPlayerState = AuraPC->GetPlayerState<AAuraPlayerState>())
         {
-            if (AAuraPlayerState* AuraPlayerState = AuraPC->GetPlayerState<AAuraPlayerState>())
-            {
-                return AuraPlayerState->OwnedAbilityUpgradeTags.HasTag(Tag);
-            }
+            return AuraPlayerState->OwnedAbilityUpgradeTags.HasTag(Tag);
         }
     }
+    
     return false;
 }
 
@@ -76,7 +74,7 @@ int32 UAuraGameplayAbility::GetUpgradeStackCount(AActor* AvatarActor,FGameplayTa
     if (!Tag.IsValid() || !AvatarActor)
         return 0;
 
-    if (APlayerController* PC = Cast<APlayerController>(AvatarActor->GetOwner()))
+    if (APlayerController* PC = Cast<APlayerController>(Cast<APawn>(AvatarActor)->GetController()))
     {
         if (AAuraPlayerState* AuraPS = PC->GetPlayerState<AAuraPlayerState>())
         {

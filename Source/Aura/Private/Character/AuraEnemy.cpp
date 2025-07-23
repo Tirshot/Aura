@@ -117,6 +117,17 @@ AActor* AAuraEnemy::GetCombatTarget_Implementation() const
     return CombatTarget;
 }
 
+void AAuraEnemy::SetIsBeingShocked_Implementation(bool bInShock)
+{
+    // 보스는 쇼크로 인한 경직 무시
+    if (ActorHasTag("Boss"))
+        return;
+    
+    bIsBeingShock = bInShock;
+
+    BeingShockedTagChanged();
+}
+
 void AAuraEnemy::BeginPlay()
 {
     Super::BeginPlay();
@@ -182,6 +193,17 @@ void AAuraEnemy::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
     }
 }
 
+void AAuraEnemy::BeingShockedTagChanged()
+{
+    Super::BeingShockedTagChanged();
+
+    if (AuraAIController && AuraAIController->GetBlackboardComponent())
+    {
+        // 블랙보드 키 설정
+        AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("BeingShocked"), bIsBeingShock);
+    }
+}
+
 void AAuraEnemy::InitAbilityActorInfo()
 {
     AbilitySystemComponent->InitAbilityActorInfo(this, this);
@@ -196,6 +218,7 @@ void AAuraEnemy::InitAbilityActorInfo()
 
     // 스턴 태그 대기
     AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::Get().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraEnemy::StunTagChanged);
+
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

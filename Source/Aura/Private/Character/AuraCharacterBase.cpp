@@ -11,6 +11,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/Passive/PassiveNiagaraComponent.h"
+#include "Player/AuraPlayerController.h"
 
 AAuraCharacterBase::AAuraCharacterBase()
 {
@@ -113,6 +114,11 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& Deat
 void AAuraCharacterBase::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	bIsStunned = NewCount > 0;
+	GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : BaseWalkSpeed;
+}
+
+void AAuraCharacterBase::BeingShockedTagChanged()
+{
 	GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : BaseWalkSpeed;
 }
 
@@ -235,6 +241,31 @@ UAttributeSet* AAuraCharacterBase::GetAttributeSet_Implementation()
 FOnDamageSignature& AAuraCharacterBase::GetOnDamageDelegate()
 {
 	return OnDamageDelegate;
+}
+
+void AAuraCharacterBase::ShowRangeIndicator_Implementation(ERangeShape RangeShape, const FVector& Location, float Width,
+	float Height, float Radius, float Red, float Green, float Blue)
+{
+	if (IsLocallyControlled() == false)
+		return;
+
+	AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
+	if (AuraPC)
+	{
+		AuraPC->ShowRangeIndicator(RangeShape, Location, Width, Height, Radius, Red, Green, Blue);
+	}
+}
+
+void AAuraCharacterBase::HideRangeIndicator_Implementation() const
+{
+	if (IsLocallyControlled() == false)
+		return;
+
+	AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
+	if (AuraPC)
+	{
+		AuraPC->HideRangeIndicator();
+	}
 }
 
 void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const

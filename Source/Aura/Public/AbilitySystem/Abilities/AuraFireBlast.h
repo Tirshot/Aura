@@ -23,7 +23,7 @@ public:
 	TArray<AAuraFireBall*> SpawnFireBalls();
 
 public:
-	virtual bool CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")

@@ -29,27 +29,6 @@ void AAbilityRangeIndicator::Tick(float DeltaTime)
 
 void AAbilityRangeIndicator::ShowIndicator(ERangeShape Shape, const FVector& Location, float InRadius, float InWidth, float InHeight, float InAngle)
 {
-	switch (Shape)
-	{
-		case 0: // 원형
-			{
-				DecalComponent->SetWorldLocation(Location);
-				
-
-				break;
-			}
-
-		case 1: // 직사각형
-			{
-				
-				break;
-			}
-
-		case 2: // 부채꼴
-			{
-				
-				break;
-			}
-	}
+	
 }
 

@@ -6,6 +6,7 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Player/AuraPlayerController.h"
+#include "Player/AuraPlayerState.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/Widget/AuraUserWidget.h"
@@ -107,11 +108,20 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
     CardSelectionViewModel->InitializeSlot();
 
-    // 게임 모드 초기화 이후에 해당 델리게이트를 호출하여 카드 선택 UI 생성 하기
-    CreateCardSelectionUIDelegate.AddDynamic(this, &AAuraHUD::InitializeCardSelectionUI);
-    
-    // 플레이어 컨트롤러 초기화 완료 델리게이트 바인딩
-    OnInitializePlayerControllerDelegate.AddUObject(this, &AAuraHUD::OnInitializePlayerController);
+    if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PS))
+    {
+        AuraPS->OnUpgradeCardsInitializedDelegate.AddDynamic(this, &AAuraHUD::HandleRandomAbilityUpgradeInfos);
+    }
+}
+
+void AAuraHUD::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
+void AAuraHUD::OnPlayerStateCardsOninitialized(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos)
+{
+    HandleRandomAbilityUpgradeInfos(UpgradeInfos);
 }
 
 void AAuraHUD::CreateSaveProgressWidget()
@@ -139,28 +149,6 @@ void AAuraHUD::RemoveSaveProgressWidget()
     }
 }
 
-void AAuraHUD::OnInitializePlayerController()
-{
-    if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetOwningPlayerController()))
-    {
-        AuraPC->OnCardSelectionInitializedDelegate.Broadcast();
-    }
-}
-
-void AAuraHUD::InitializeCardSelectionUI()
-{
-    // 뷰 생성
-    CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
-    CardSelectionWidget->AddToViewport();
-
-    CardSelectionWidget->BlueprintInitializeWidget();
-
-    //
-    ReceivedCardsDelegate.AddUObject(this, &AAuraHUD::HandleRandomAbilityUpgrade);
-    
-    // 게임모드의 델리게이트 호출 -> 카드를 이니셜라이즈
-    InitializeCardsDelegate.Broadcast(GetOwningPlayerController());
-}
 
 void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1,
     FGameplayTag UpgradeTag2)
@@ -168,6 +156,12 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
     auto* Info = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfo(this);
     if (Info == nullptr)
         return;
+    
+    // 뷰 생성
+    CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
+    CardSelectionWidget->AddToViewport();
+
+    CardSelectionWidget->BlueprintInitializeWidget();
     
     auto* CardViewModel_0 = CardSelectionViewModel->GetCardViewModelByIndex(0);
     if (CardViewModel_0)
@@ -206,5 +200,47 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_2->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag2);
+    }
+}
+
+void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos)
+{
+    // 뷰 생성
+    CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
+    CardSelectionWidget->AddToViewport();
+
+    CardSelectionWidget->BlueprintInitializeWidget();
+    
+    auto* CardViewModel_0 = CardSelectionViewModel->GetCardViewModelByIndex(0);
+    if (CardViewModel_0)
+    {
+        CardViewModel_0->SetUpgradeTag(UpgradeInfos[0].UpgradeEffectTag);
+        CardViewModel_0->SetUpgradeDescription(UpgradeInfos[0].UpgradeDescription);
+        CardViewModel_0->SetUpgradeName(UpgradeInfos[0].UpgradeName);
+        CardViewModel_0->SetUpgradeMaxLevel(UpgradeInfos[0].UpgradeMaxLevel);
+
+        CardViewModel_0->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[0].UpgradeEffectTag);
+    }
+
+    auto* CardViewModel_1 = CardSelectionViewModel->GetCardViewModelByIndex(1);
+    if (CardViewModel_1)
+    {
+        CardViewModel_1->SetUpgradeTag(UpgradeInfos[1].UpgradeEffectTag);
+        CardViewModel_1->SetUpgradeDescription(UpgradeInfos[1].UpgradeDescription);
+        CardViewModel_1->SetUpgradeName(UpgradeInfos[1].UpgradeName);
+        CardViewModel_1->SetUpgradeMaxLevel(UpgradeInfos[1].UpgradeMaxLevel);
+        
+        CardViewModel_1->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[1].UpgradeEffectTag);
+    }
+
+    auto* CardViewModel_2 = CardSelectionViewModel->GetCardViewModelByIndex(2);
+    if (CardViewModel_2)
+    {
+        CardViewModel_2->SetUpgradeTag(UpgradeInfos[2].UpgradeEffectTag);
+        CardViewModel_2->SetUpgradeDescription(UpgradeInfos[2].UpgradeDescription);
+        CardViewModel_2->SetUpgradeName(UpgradeInfos[2].UpgradeName);
+        CardViewModel_2->SetUpgradeMaxLevel(UpgradeInfos[2].UpgradeMaxLevel);
+        
+        CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[2].UpgradeEffectTag);
     }
 }

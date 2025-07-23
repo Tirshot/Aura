@@ -20,10 +20,10 @@ struct FAuraAbilityInfo
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag AbilityTag = FGameplayTag();
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag InputTag = FGameplayTag();
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FGameplayTag StatusTag = FGameplayTag();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

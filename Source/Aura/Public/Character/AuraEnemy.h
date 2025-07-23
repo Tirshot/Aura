@@ -36,6 +36,7 @@ public:
 	virtual void Die(const FVector& DeathImpulse) override;
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
+	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	// 전투 인터페이스 끝
 	
 	UPROPERTY(BlueprintAssignable)
@@ -46,7 +47,8 @@ public:
 
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
-
+	virtual void BeingShockedTagChanged() override;
+	
 	void SetLevel(int32 InLevel) {Level = InLevel;}
 	
 	UPROPERTY(BlueprintReadOnly, category="Combat")

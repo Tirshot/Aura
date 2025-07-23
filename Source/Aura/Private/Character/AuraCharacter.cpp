@@ -122,7 +122,7 @@ void AAuraCharacter::OnRep_PlayerState()
     Super::OnRep_PlayerState();
 
     // 클라이언트를 위해 어빌리티 액터 정보 초기화
-    InitAbilityActorInfo();
+    // InitAbilityActorInfo();
 }
 
 void AAuraCharacter::AddToXP_Implementation(int32 InXP)

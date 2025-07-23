@@ -10,20 +10,22 @@
 void UMVVM_LoadScreen::InitializeLoadSlots()
 {
 	LoadSlot_0 = NewObject<UMVVM_LoadSlot>(this, LoadSlotViewModelClass);
-	LoadSlot_0->LoadSlotName = FString("LoadSlot_0");
+	LoadSlot_0->SetLoadSlotName("LoadSlot_0");
 	LoadSlot_0->SlotIndex = 0;
 
 	LoadSlot_1 = NewObject<UMVVM_LoadSlot>(this, LoadSlotViewModelClass);
-	LoadSlot_1->LoadSlotName = FString("LoadSlot_1");
+	LoadSlot_1->SetLoadSlotName("LoadSlot_1");
 	LoadSlot_1->SlotIndex = 1;
 
 	LoadSlot_2 = NewObject<UMVVM_LoadSlot>(this, LoadSlotViewModelClass);
-	LoadSlot_2->LoadSlotName = FString("LoadSlot_2");
+	LoadSlot_2->SetLoadSlotName("LoadSlot_2");
 	LoadSlot_2->SlotIndex = 2;
 
 	LoadSlots.Add(0, LoadSlot_0);
 	LoadSlots.Add(1, LoadSlot_1);
 	LoadSlots.Add(2, LoadSlot_2);
+
+	SetNumLoadSlots(LoadSlots.Num());
 }
 
 UMVVM_LoadSlot* UMVVM_LoadScreen::GetLoadSlotViewModelByIndex(int32 Index)
@@ -54,9 +56,9 @@ void UMVVM_LoadScreen::NewSlotButtonPressed(int32 Slot, const FString& EnteredNa
 
 	// 게임 인스턴스로 값 넘기기
 	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGameMode->GetGameInstance());
-	AuraGameInstance->LoadSlotName = LoadSlots[Slot]->LoadSlotName;
+	AuraGameInstance->LoadSlotName = LoadSlots[Slot]->GetLoadSlotName();
 	AuraGameInstance->LoadSlotIndex = LoadSlots[Slot]->SlotIndex;
-	AuraGameInstance->PlayerStartTag = LoadSlots[Slot]->PlayerStartTag;
+	AuraGameInstance->PlayerStartTag = AuraGameMode->DefaultPlayerStartTag;
 }
 
 void UMVVM_LoadScreen::NewGameButtonPressed(int32 Slot)
@@ -89,7 +91,7 @@ void UMVVM_LoadScreen::ConfirmButtonPressed()
 {
 	if (IsValid(SelectedSlot))
 	{
-		AAuraGameModeBase::DeleteSlot(SelectedSlot->LoadSlotName, SelectedSlot->SlotIndex);
+		AAuraGameModeBase::DeleteSlot(SelectedSlot->GetLoadSlotName(), SelectedSlot->SlotIndex);
 
 		// 슬롯 초기화
 		SelectedSlot->SlotStatus = Vacant;
@@ -103,7 +105,7 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
 	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGameMode->GetGameInstance());
 	AuraGameInstance->PlayerStartTag = SelectedSlot->PlayerStartTag;
-	AuraGameInstance->LoadSlotName = SelectedSlot->LoadSlotName;
+	AuraGameInstance->LoadSlotName = SelectedSlot->GetLoadSlotName();
 	AuraGameInstance->LoadSlotIndex = SelectedSlot->SlotIndex;
 
 	if (IsValid(SelectedSlot))
@@ -119,7 +121,7 @@ void UMVVM_LoadScreen::LoadData()
 	for (const TPair<int32, UMVVM_LoadSlot*> LoadSlot : LoadSlots)
 	{
 		// 저장된 게임 찾아오기
-		ULoadScreenSaveGame* SaveObject = AuraGameMode->GetSaveSlotData(LoadSlot.Value->LoadSlotName, LoadSlot.Key);
+		ULoadScreenSaveGame* SaveObject = AuraGameMode->GetSaveSlotData(LoadSlot.Value->GetLoadSlotName(), LoadSlot.Key);
 
 		// 플레이어 이름 가져오기
 		const FString PlayerName = SaveObject->PlayerName;
@@ -128,9 +130,15 @@ void UMVVM_LoadScreen::LoadData()
 
 		LoadSlot.Value->SlotStatus = SaveSlotStatus;
 		LoadSlot.Value->SetPlayerName(PlayerName);
-		LoadSlot.Value->SetLevel(SaveObject->PlayerLevel);
+		LoadSlot.Value->InitializeSlot();
+		
 		LoadSlot.Value->SetMapName(SaveObject->MapName);
 		LoadSlot.Value->PlayerStartTag = SaveObject->PlayerStartTag;
-		LoadSlot.Value->InitializeSlot();
+		LoadSlot.Value->SetLevel(SaveObject->PlayerLevel);
 	}
+}
+
+void UMVVM_LoadScreen::SetNumLoadSlots(int32 InNum)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(NumLoadSlots, InNum);
 }

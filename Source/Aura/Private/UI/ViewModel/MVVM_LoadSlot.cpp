@@ -3,10 +3,6 @@
 
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 
-#include "AuraGameplayTags.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-
 void UMVVM_LoadSlot::InitializeSlot()
 {
 	const int32 WidgetSwitcherIndex = SlotStatus.GetValue();
@@ -27,5 +23,10 @@ void UMVVM_LoadSlot::SetLevel(int32 InLevel)
 void UMVVM_LoadSlot::SetMapName(FString InMapName)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(MapName, InMapName);
+}
+
+void UMVVM_LoadSlot::SetLoadSlotName(FString InSlotName)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(LoadSlotName, InSlotName);
 }
  

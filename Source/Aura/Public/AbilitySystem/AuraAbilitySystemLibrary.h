@@ -217,10 +217,13 @@ public:
 
 	// 메시지 게임플레이 이펙트 적용
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static void ApplyGameplayTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor);
+	static void ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor);
+
+	// 메시지 태그 제거
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|Message")
+	static void RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag);
 
 	// 활성화 모든 어빌리티의 태그를 반환
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static TArray<FGameplayTag> GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor);
-
 };

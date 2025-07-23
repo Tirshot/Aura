@@ -21,16 +21,19 @@ public:
 	
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
-
-	virtual bool CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
 	
 public:
 	UFUNCTION(BlueprintCallable)
-	bool TeleportToLocation(const FHitResult& HitResult);
+	bool TeleportToLocation(const FVector& FromLocation, const FVector& ToLocation);
+
+	UFUNCTION(BlueprintCallable)
+	bool ReturnToInitialLocation();
 
 	// 잔상 효과
 	UFUNCTION(BlueprintCallable)
-	void GhostEffect(const FVector& InitialLocation, const FVector& DestinationLocation, TSubclassOf<AGhostEffectActor> GhostClass, UMaterialInterface* GhostMaterial);
+	void GhostEffect(TSubclassOf<AGhostEffectActor> GhostClass, UMaterialInterface* GhostMaterial);
 
 	UFUNCTION(BlueprintCallable)
 	bool ShouldTeleportCooldownReset();
@@ -41,6 +44,13 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleport")
 	float MaxHeight = 500.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Teleport")
+	FVector InitialLocation = FVector::ZeroVector;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Teleport")
+	FVector DestinedLocation = FVector::ZeroVector;
+	
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Teleport")
 	int NumGhosts = 5;
@@ -50,4 +60,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Teleport|Upgrades")
 	float TeleportCooldownResetProbability = 0.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Teleport|Upgrades")
+	bool bCanReturn = false;
 };

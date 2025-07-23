@@ -24,10 +24,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FEnableSelectSlotButton EnableSelectSlotButton;
-
-	UPROPERTY()
-	FString LoadSlotName;
-
+	
 	UPROPERTY()
 	int32 SlotIndex;
 
@@ -45,10 +42,12 @@ public:
 	void SetPlayerName(FString InPlayerName);
 	void SetLevel(int32 InLevel);
 	void SetMapName(FString InMapName);
+	void SetLoadSlotName(FString InSlotName);
 
 	FString GetPlayerName() const { return PlayerName; }
 	int32 GetLevel() const { return Level;}
 	FString GetMapName() const { return MapName; }
+	FString GetLoadSlotName() const {return LoadSlotName;}
 
 private:
 	/*필드 노티파이*/
@@ -60,4 +59,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta = (AllowPrivateAccess = "true"))
 	FString MapName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta = (AllowPrivateAccess = "true"))
+	FString LoadSlotName;
 };

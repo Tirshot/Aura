@@ -3,9 +3,11 @@
 
 #include "Game/AuraGameModeBase.h"
 
+#include "AuraGameplayTags.h"
 #include "AuraLogChannels.h"
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 #include "Kismet/GameplayStatics.h"
@@ -14,6 +16,7 @@
 #include "Interaction/SaveInterface.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "GameFramework/Character.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -32,15 +35,9 @@ void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
 
 	if (NewPlayer)
 	{
-		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(NewPlayer->GetHUD()))
+		if (AAuraPlayerState* AuraPS = NewPlayer->GetPlayerState<AAuraPlayerState>())
 		{
-			// 어빌리티 업그레이드 카드 세팅
-			AuraHUD->InitializeCardsDelegate.AddUObject(this ,&AAuraGameModeBase::HandleInitializeCards);
-			if (AAuraPlayerState* AuraPS = NewPlayer->GetPlayerState<AAuraPlayerState>())
-			{
-				AuraPS->OnRandomUpgradeTagsGeneratedDelegate.AddDynamic(this, &AAuraGameModeBase::HandleRandomUpgradeTagsGenerated);
-				AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraGameModeBase::HandlePlayerStateInitialized);
-			}
+			AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraGameModeBase::HandlePlayerStateInitialized);
 		}
 	}
 }
@@ -77,9 +74,9 @@ AActor* AAuraGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 void AAuraGameModeBase::SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex)
 {
 	// 이미 게임이 존재하면 데이터 삭제
-	if (UGameplayStatics::DoesSaveGameExist(LoadSlot->LoadSlotName, SlotIndex))
+	if (UGameplayStatics::DoesSaveGameExist(LoadSlot->GetLoadSlotName(), SlotIndex))
 	{
-		UGameplayStatics::DeleteGameInSlot(LoadSlot->LoadSlotName, SlotIndex);
+		UGameplayStatics::DeleteGameInSlot(LoadSlot->GetLoadSlotName(), SlotIndex);
 	}
 
 	// 저장 오브젝트 생성
@@ -94,7 +91,7 @@ void AAuraGameModeBase::SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex)
 	LoadScreenSaveGame->MapAssetName = LoadSlot->MapAssetName;
 
 	// 최종 저장
-	UGameplayStatics::SaveGameToSlot(LoadScreenSaveGame, LoadSlot->LoadSlotName, SlotIndex);
+	UGameplayStatics::SaveGameToSlot(LoadScreenSaveGame, LoadSlot->GetLoadSlotName(), SlotIndex);
 }
 
 void AAuraGameModeBase::DeleteSlot(const FString& SlotName, int32 SlotIndex)
@@ -250,7 +247,7 @@ void AAuraGameModeBase::LoadWorldState(UWorld* World)
 
 void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 {
-	const FString SlotName = Slot->LoadSlotName;
+	const FString SlotName = Slot->GetLoadSlotName();
 	const int32 SlotIndex = Slot->SlotIndex;
 
 	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()));
@@ -303,7 +300,7 @@ void AAuraGameModeBase::RestartGameFromSaveData(ACharacter* DeadCharacter)
 	if (IsValid(SaveGame) == false)
 		return;
 
-	UGameplayStatics::OpenLevel(DeadCharacter, FName(SaveGame->MapAssetName));
+	UGameplayStatics::LoadGameFromSlot(SaveGame->SlotName, SaveGame->SlotIndex);
 }
 
 void AAuraGameModeBase::RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject)
@@ -322,7 +319,11 @@ void AAuraGameModeBase::HandleInitializeCards(APlayerController* PC)
 	{
 		if (AAuraPlayerState* AuraPS = AuraPC->GetPlayerState<AAuraPlayerState>())
 		{
-			AuraPS->GetRandomUpgradeTagsForActivatedAbility_Three();
+			auto RandomUpgradeInfos = GetRandomUpgradeInfosForActivatedAbility_Three(AuraPS);
+			AuraPS->SetUpgradeCardInfo(RandomUpgradeInfos);
+
+			// 카드 내 선택 버튼 브로드캐스트
+			AuraPC->OnCardSelectedDelegate.Broadcast();
 		}
 	}
 }
@@ -341,11 +342,127 @@ void AAuraGameModeBase::HandleRandomUpgradeTagsGenerated(AAuraPlayerState* AuraP
 		auto Tag0 = RandomUpgradeTags[0];
 		auto Tag1 = RandomUpgradeTags[1];
 		auto Tag2 = RandomUpgradeTags[2];
-		AuraHUD->ReceivedCardsDelegate.Broadcast(Tag0, Tag1, Tag2);
+
+		auto* Info = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfo(this);
+
+		TArray<FAuraAbilityUpgradeInfo> UpgradeInfos;
+		UpgradeInfos.Empty();
+		
+		UpgradeInfos.Add(Info->GetUpgradeInfoForUpgradeTag(Tag0));
+		UpgradeInfos.Add(Info->GetUpgradeInfoForUpgradeTag(Tag1));
+		UpgradeInfos.Add(Info->GetUpgradeInfoForUpgradeTag(Tag2));
+		
+		AuraPS->SetUpgradeCardInfo(UpgradeInfos);
 	}
 }
 
 void AAuraGameModeBase::HandlePlayerStateInitialized(AAuraPlayerState* InitializedPlayerState)
 {
-	InitializedPlayerState->GetRandomUpgradeTagsForActivatedAbility_Three();
+
+}
+
+TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActivatedAbility_Three(
+	AAuraPlayerState* AuraPS)
+{
+    TArray<FGameplayTag> ActivatedAbilityTags = AuraPS->GetAllActiveAbilityTags();
+    TArray<FGameplayTag> InActivatedAbilityTags;
+	InActivatedAbilityTags.Empty();
+    
+    TArray<FAuraAbilityUpgradeInfo> RandomUpgradeInfos;
+    RandomUpgradeInfos.Empty();
+
+    // 글로벌 업그레이드 할당
+    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Fire"));
+    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Arcane"));
+    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Lightning"));
+
+    // 어빌리티 습득 또는 레벨업 업그레이드 할당
+    TArray<FGameplayTag> AllAbilitiesTags = FAuraGameplayTags::Get().GameplayAbilitiesTags;
+    for (auto AbilityTag : AllAbilitiesTags)
+    {
+        InActivatedAbilityTags.AddUnique(AbilityTag);
+    }
+
+	while (RandomUpgradeInfos.Num() <= 3)
+	{
+		// 주어진 어빌리티 태그에 대해 랜덤한 업그레이드 태그 뽑기
+		if (UAbilityUpgradeInfo* Info = AbilityUpgradeInfo)
+		{
+			int CommonProbability = Info->UpgradeProbability[Common];
+			int RareProbability = Info->UpgradeProbability[Rare];
+			int UniqueProbability = Info->UpgradeProbability[Unique];
+			int LegendaryProbability = Info->UpgradeProbability[Legendary];
+			int SumProbability = CommonProbability + RareProbability + UniqueProbability + LegendaryProbability;
+
+			int RandProbability = FMath::RandRange(0, SumProbability);
+
+			if (RandProbability <= CommonProbability)
+			{
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, EUpgradeRarity::Common);
+    		
+				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
+				if (AvailableUpgrades.Num() > 0)
+				{
+    				RandomUpgradeInfos.AddUnique(AvailableUpgrades[RandInt]);
+				}
+				else
+				{
+					int RandInActiveAbility = FMath::RandRange(0, InActivatedAbilityTags.Num() - 1);
+					if (InActivatedAbilityTags.Num() > 0)
+						RandomUpgradeInfos.AddUnique(Info->GetUpgradeInfoForUpgradeTag(InActivatedAbilityTags[RandInActiveAbility]));
+				}
+			}
+			else if (RandProbability <= CommonProbability + RareProbability)
+			{
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Rare);
+    		
+				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
+				if (AvailableUpgrades.Num() > 0)
+				{
+					RandomUpgradeInfos.AddUnique(AvailableUpgrades[RandInt]);
+				}
+				else
+				{
+					int RandInActiveAbility = FMath::RandRange(0, InActivatedAbilityTags.Num() - 1);
+					if (InActivatedAbilityTags.Num() > 0)
+						RandomUpgradeInfos.AddUnique(Info->GetUpgradeInfoForUpgradeTag(InActivatedAbilityTags[RandInActiveAbility]));
+				}
+			}
+			else if (RandProbability <= SumProbability - LegendaryProbability)
+			{
+				// 유니크 등급 카드
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Unique);
+    		
+				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
+				if (AvailableUpgrades.Num() > 0)
+				{
+					RandomUpgradeInfos.AddUnique(AvailableUpgrades[RandInt]);
+				}
+				else
+				{
+					int RandInActiveAbility = FMath::RandRange(0, InActivatedAbilityTags.Num() - 1);
+					if (InActivatedAbilityTags.Num() > 0)
+						RandomUpgradeInfos.AddUnique(Info->GetUpgradeInfoForUpgradeTag(InActivatedAbilityTags[RandInActiveAbility]));
+				}
+			}
+			else if (RandProbability <= SumProbability)
+			{
+				// 전설 등급 카드
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Legendary);
+    		
+				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
+				if (AvailableUpgrades.Num() > 0)
+				{
+					RandomUpgradeInfos.AddUnique(AvailableUpgrades[RandInt]);
+				}
+				else
+				{
+					int RandInActiveAbility = FMath::RandRange(0, InActivatedAbilityTags.Num() - 1);
+					if (InActivatedAbilityTags.Num() > 0)
+						RandomUpgradeInfos.AddUnique(Info->GetUpgradeInfoForUpgradeTag(InActivatedAbilityTags[RandInActiveAbility]));
+				}
+			}
+		}
+	}
+    return RandomUpgradeInfos;
 }

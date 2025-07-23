@@ -305,6 +305,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Teleport Ability")
 	);
 
+	GameplayTags.Abilities_Lightning_SpawnElectroSphere = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Lightning.SpawnElectroSphere"),
+		FString("Spawn Electro Sphere Ability")
+	);
+
 	GameplayTags.Abilities_Arcane_ArcaneShards = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Arcane.ArcaneShards"),
 		FString("ArcaneShards Ability")
@@ -382,7 +387,12 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 
 	/*
 	 * 어빌리티 업그레이드 태그
-	 */
+	*/
+	GameplayTags.Upgrades_Fire_Increase10PercentDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.Increase10PercentDamage"),
+	FString("Increase Damage of Fire SpellDamage")
+	);
+	
 	GameplayTags.Upgrades_Fire_FireBolt_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Fire.FireBolt.IncreaseNum"),
 	FString("Increase Number of FireBolt Projectiles")
@@ -392,15 +402,60 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	FName("Upgrades.Fire.FireBlast.IncreaseNum"),
 	FString("Increase Number of FireBlast Projectiles")
 	);
-
+	
+	GameplayTags.Upgrades_Fire_FireNado_IncreaseRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireNado.IncreaseRange"),
+	FString("Increase Range of FireTornado Projectiles")
+	);
+	
+	GameplayTags.Upgrades_Arcane_Increase10PercentDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.Increase10PercentDamage"),
+	FString("Increase Damage of Arcane SpellDamage")
+	);
+	
 	GameplayTags.Upgrades_Arcane_ArcaneShards_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Arcane.ArcaneShards.IncreaseNum"),
 	FString("Increase Number of Shards")
 	);
 	
+	GameplayTags.Upgrades_Arcane_ArcaneShards_FirstLargeShard = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneShards.FirstLargeShard"),
+	FString("Increase Size of First Shard")
+	);
+	
+	GameplayTags.Upgrades_Lightning_Increase10PercentDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.Increase10PercentDamage"),
+	FString("Increase Damage of Lightning SpellDamage")
+	);
+	
+	GameplayTags.Upgrades_Lightning_Electrocute_AdditionalTarget = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.Electrocute.AdditionalTarget"),
+	FString("Increase Target of Electrocute Spell")
+	);
+	
 	GameplayTags.Upgrades_Lightning_Teleport_DecreaseCoolDown = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Lightning.Teleport.DecreaseCoolDown"),
 	FString("Decrease Cooldown of Teleport")
+	);
+		
+	GameplayTags.Upgrades_Lightning_Teleport_ReturnToInitLocation = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.Teleport.ReturnToInitLocation"),
+	FString("Can Return To Initial Location of Teleport")
+	);
+	
+	GameplayTags.Upgrades_Lightning_SpawnElectroSphere_IncreaseTraceRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.SpawnElectroSphere.IncreaseTraceRange"),
+	FString("Increase ElectroSphere's TraceRange")
+	);
+	
+	GameplayTags.Upgrades_Lightning_SpawnElectroSphere_DecreaseMovementSpeed = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.SpawnElectroSphere.DecreaseMovementSpeed"),
+	FString("Decrease ElectroSphere MovementSpeed")
+	);
+	
+	GameplayTags.Upgrades_Lightning_SpawnElectroSphere_HomingNearestTarget = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Lightning.SpawnElectroSphere.HomingNearestTarget"),
+	FString("Homing ElectroSphere to Nearest Target")
 	);
 	
 	GameplayTags.Upgrades_Fire_FireBolt_Temp = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -516,4 +571,36 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FName("Init.Attributes"),
 		FString("No Floating Text when Initialize Attributes")
 	);
+
+	// 모든 어빌리티 태그와 속성 태그를 배열로 저장
+	GameplayTags.InitializeAbilitiesTagsArray();
+	GameplayTags.InitializeAttributesTagsArray();
+}
+
+void FAuraGameplayTags::InitializeAbilitiesTagsArray()
+{
+	// 어빌리티 태그 - 액티브
+	GameplayTags.GameplayAbilitiesTags.Empty();
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneShards);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_MindControl);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBolt);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBlast);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_Firenado);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Electrocute);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Teleport);
+
+	// 어빌리티 태그 - 패시브
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Passive_HaloOfProtection);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Passive_LifeSiphon);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Passive_ManaSiphon);
+}
+
+void FAuraGameplayTags::InitializeAttributesTagsArray()
+{
+	// 속성 태그
+	GameplayTags.AttributesTags.Empty();
+	GameplayTags.AttributesTags.Add(GameplayTags.Attributes_Primary_Intelligence);
+	GameplayTags.AttributesTags.Add(GameplayTags.Attributes_Primary_Resilience);
+	GameplayTags.AttributesTags.Add(GameplayTags.Attributes_Primary_Strength);
+	GameplayTags.AttributesTags.Add(GameplayTags.Attributes_Primary_Vigor);
 }

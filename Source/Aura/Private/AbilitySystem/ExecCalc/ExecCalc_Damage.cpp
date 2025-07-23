@@ -9,7 +9,8 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Interaction/CombatInterface.h"
 #include "AuraAbilityTypes.h"
-#include "Kismet/GameplayStatics.h"
+#include "Character/AuraCharacter.h"
+#include "Player/AuraPlayerState.h"
 
 struct AuraDamageStatics
 {
@@ -146,7 +147,35 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		// 속성 저항이 데미지를 퍼센트로 무시함
 		DamageTypeValue *= (100.f - Resistance) / 100.f;
 		Damage += DamageTypeValue;
-		
+
+		if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(SourceAvatar))
+		{
+			if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
+			{
+				// 화염 데미지 증가
+				if (AuraPS->HasUpgradeTag(Tags.Upgrades_Fire_Increase10PercentDamage))
+				{
+					int Stacks = AuraPS->GetUpgradeTagCount(Tags.Upgrades_Fire_Increase10PercentDamage);
+
+					Damage += Damage * 0.1f * Stacks;
+				}
+				// 전기 데미지 증가
+				if (AuraPS->HasUpgradeTag(Tags.Upgrades_Lightning_Increase10PercentDamage))
+				{
+					int Stacks = AuraPS->GetUpgradeTagCount(Tags.Upgrades_Lightning_Increase10PercentDamage);
+
+					Damage += Damage * 0.1f * Stacks;
+				}
+				// 화염 데미지 증가
+				if (AuraPS->HasUpgradeTag(Tags.Upgrades_Arcane_Increase10PercentDamage))
+				{
+					int Stacks = AuraPS->GetUpgradeTagCount(Tags.Upgrades_Arcane_Increase10PercentDamage);
+
+					Damage += Damage * 0.1f * Stacks;
+				}
+			}
+		}
+
 		// 방사형 피해 계산
 		if (UAuraAbilitySystemLibrary::IsRadialDamage(EffectContextHandle))
 		{
@@ -208,14 +237,14 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 
 	// 치명타 계산
 	float SourceCriticalHitChance = 0.f;
-	float SourceCriticalHitDamage = 0.f;
+	// float SourceCriticalHitDamage = 0.f;
 	float TargetCriticalHitResistance = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitChanceDef, EvalParams, SourceCriticalHitChance);
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitDamageDef, EvalParams, SourceCriticalHitDamage);
+	// ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitDamageDef, EvalParams, SourceCriticalHitDamage);
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitResistanceDef, EvalParams, TargetCriticalHitResistance);
 
 	SourceCriticalHitChance = FMath::Max<float>(SourceCriticalHitChance, 0.f);
-	SourceCriticalHitDamage = FMath::Max<float>(SourceCriticalHitDamage, 0.f);
+	// SourceCriticalHitDamage = FMath::Max<float>(SourceCriticalHitDamage, 0.f);
 	TargetCriticalHitResistance = FMath::Max<float>(TargetCriticalHitResistance, 0.f);
 
 	// 치명저항 계수 가져오기
@@ -229,7 +258,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	UAuraAbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bCriticalHit);
 	if (bCriticalHit)
 	{
-		Damage = (Damage * 2.f) + SourceCriticalHitDamage;
+		Damage = (Damage * 2.f); // 기본 크리티컬 데미지 제거
 	}
 
 	// Block Chance 계산

@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerState.h"
 #include "AuraPlayerState.generated.h"
 
+struct FAuraAbilityUpgradeInfo;
 class UAttributeSet;
 class ULevelUpInfo;
 
@@ -16,8 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitialized, AAuraPlay
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLevelChanged, int32/*Level*/, bool /*bLevelUp*/);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAbilityUpgradeTagsChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRandomUpgradeTagsGenerated, AAuraPlayerState*, AuraPlayerState, TArray<FGameplayTag>&, RandomUpgradeTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardsInitialized, TArray<FAuraAbilityUpgradeInfo>&, InitializedCards);
 
 UCLASS()
 class AURA_API AAuraPlayerState : public APlayerState, public IAbilitySystemInterface
@@ -39,8 +39,8 @@ public:
 	// 레벨 정보
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<ULevelUpInfo> LevelUpInfo;
-	
-	UPROPERTY(BlueprintAssignable)
+
+	UPROPERTY()
 	FOnPlayerStateInitialized OnPlayerStateInitialized;
 	
 	// 값 변화 델리게이트
@@ -49,12 +49,8 @@ public:
 	FOnPlayerStatChanged OnAttributePointChangedDelegate;
 	FOnPlayerStatChanged OnSpellPointChangedDelegate;
 
-	// 업그레이드 태그 변화 델리게이트
-	UPROPERTY(BlueprintAssignable)
-	FOnAbilityUpgradeTagsChanged OnAbilityUpgradeTagsChangedDelegate;
-
-	// 랜덤 업그레이드 선택 델리게이트
-	FOnRandomUpgradeTagsGenerated OnRandomUpgradeTagsGeneratedDelegate;
+	UPROPERTY()
+	FOnCardsInitialized OnUpgradeCardsInitializedDelegate;
 	
 	FORCEINLINE int32 GetCharacterLevel() const { return Level; }
 	FORCEINLINE int32 GetXP() const { return XP; }
@@ -72,6 +68,8 @@ public:
 	void SetHealth(const float InHealth);
 	void SetMana(const float InMana);
 
+	void SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>& NewCard);
+
 	FGameplayTagContainer& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
 	void SetAbilityUpgradeTagContainer(const FGameplayTagContainer& InTagContainer);
 	
@@ -86,19 +84,37 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveAbilityUpgradeTag(FGameplayTag UpgradeTag);
 
+	UPROPERTY(ReplicatedUsing = OnRep_UpgradeCardInfo)
+	TArray<FAuraAbilityUpgradeInfo> ReplicatedCardInfo;
+
+public:
 	UFUNCTION(BlueprintCallable)
 	int32 GetUpgradeTagCount(FGameplayTag UpgradeTag);
+
+	UFUNCTION()
+	bool HasUpgradeTag(FGameplayTag UpgradeTag);
+
+	UFUNCTION()
+	TArray<FGameplayTag> GetAllAbilityTags();
 
 	// 활성화 모든 어빌리티의 태그를 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "GAS|Abilities")
 	TArray<FGameplayTag> GetAllActiveAbilityTags() const;
 
-	// 활성화된 어빌리티 중 3개 선택
-	TArray<FGameplayTag> GetRandomActivatedAbilityTags_Three(const FGameplayTagContainer& ActivatedAbilityTags);
+	// 활성화 되지 않은 모든 어빌리티의 태그를 반환
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "GAS|Abilities")
+	TArray<FGameplayTag> GetAllInActiveAbilityTags() const;
 
-	// 선택된 어빌리티 중 
-	TArray<FGameplayTag> GetRandomUpgradeTagsForActivatedAbility_Three();
-	
+	void GetRandomAttributeUpgrade();
+
+	// // 활성화된 어빌리티 중 3개 선택
+	// TArray<FGameplayTag> GetRandomActivatedAbilityTags_Three(const FGameplayTagContainer& ActivatedAbilityTags);
+	//
+	// // 선택된 어빌리티 중 
+	// TArray<FGameplayTag> GetRandomUpgradeTagsForActivatedAbility_Three();
+	//
+	// TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three();
+	//
 	UFUNCTION()
 	void HandleAbilitiesSet();
 	
@@ -137,4 +153,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_AbilityUpgradeTags();
+
+	UFUNCTION()
+	void OnRep_UpgradeCardInfo();
 };

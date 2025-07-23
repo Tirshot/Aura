@@ -6,6 +6,7 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraFireTornado.h"
+#include "Player/AuraPlayerState.h"
 
 FString UAuraFirenado::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
@@ -45,6 +46,21 @@ FString UAuraFirenado::GetNextLevelDescription(int32 Level, const UObject* World
 		FollowRadius,
 		DamageRadius
 	);
+}
+
+void UAuraFirenado::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	// 업그레이드 태그 검증
+	// (1) 범위 증가 태그
+	FGameplayTag IncreaseRange = Tags.Upgrades_Fire_FireNado_IncreaseRange;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseRange))
+	{
+		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseRange);
+
+		DamageRadius += 200.f * Stacks;
+	}
 }
 
 AAuraFireTornado* UAuraFirenado::SpawnTornado()

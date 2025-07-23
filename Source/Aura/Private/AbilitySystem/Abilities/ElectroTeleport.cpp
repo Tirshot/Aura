@@ -45,50 +45,56 @@ FString UElectroTeleport::GetNextLevelDescription(int32 Level, const UObject* Wo
 	);
 }
 
-bool UElectroTeleport::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UElectroTeleport::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo)
 {
-	bool bUpgradesApplied = false;
-	
-	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
-	if (Upgrades.IsEmpty())
-		return false;
-	
-	const auto& Tags = FAuraGameplayTags::Get();
-
-	for (const auto& Upgrade : Upgrades)
+	if (bCanReturn)
 	{
-		// (1) 텔레포트 쿨타임 초기화 업그레이드
-		FGameplayTag CooldownResetTag = Tags.Upgrades_Lightning_Teleport_DecreaseCoolDown;
-		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), CooldownResetTag))
-		{
-			int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), CooldownResetTag);
-			
-			// 스택 당 확률 증가
-			TeleportCooldownResetProbability = StackCount * 10.f;
-			bUpgradesApplied = true;
-		}
+		TeleportToLocation(GetAvatarActorFromActorInfo()->GetActorLocation(), InitialLocation);
+		bCanReturn = false;
+		CommitAbilityCooldown(Handle, ActorInfo, ActivationInfo, true);
 	}
-
-	return bUpgradesApplied;
 }
 
-bool UElectroTeleport::TeleportToLocation(const FHitResult& HitResult)
+void UElectroTeleport::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	const auto& Tags = FAuraGameplayTags::Get();
+	
+	// (1) 텔레포트 쿨타임 초기화 업그레이드
+	FGameplayTag CooldownResetTag = Tags.Upgrades_Lightning_Teleport_DecreaseCoolDown;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), CooldownResetTag))
+	{
+		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), CooldownResetTag);
+			
+		// 스택 당 확률 증가
+		TeleportCooldownResetProbability = StackCount * 10.f;
+	}
+
+	// (2) 발동시킨 곳으로 돌아가기 업그레이드
+	FGameplayTag ReturnToInitLocation = Tags.Upgrades_Lightning_Teleport_ReturnToInitLocation;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), ReturnToInitLocation))
+	{
+		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), ReturnToInitLocation);
+
+		bCanReturn = true;
+	}
+}
+
+bool UElectroTeleport::TeleportToLocation(const FVector& FromLocation, const FVector& ToLocation)
 {
 	bool bSuccessfulTeleport = false;
 	
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetAvatarActorFromActorInfo());
 	
 	float CapsuleHalfHeight = AuraCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	FVector InitialLocation = AuraCharacter->GetActorLocation() - FVector(0, 0, CapsuleHalfHeight); ;
-	FVector MouseHitLocation = HitResult.Location;
-	double Distance = FMath::Abs((InitialLocation-MouseHitLocation).Length());
-
-	float InitialZ = InitialLocation.Z;
-	float MouseHitZ = MouseHitLocation.Z;
-	float Height = MouseHitZ - InitialZ;
 	
-	if (HitResult.bBlockingHit == false)
-		return bSuccessfulTeleport;
+	FVector NewFromLocation = FromLocation - FVector(0, 0, CapsuleHalfHeight);
+	
+	double Distance = FMath::Abs((NewFromLocation-ToLocation).Length());
+
+	float InitialZ = NewFromLocation.Z;
+	float DestinedZ = ToLocation.Z;
+	float Height = DestinedZ - InitialZ;
 
 	// 거리 계산
 	if (Distance > MaxTeleportDistance || Height > MaxHeight)
@@ -97,13 +103,10 @@ bool UElectroTeleport::TeleportToLocation(const FHitResult& HitResult)
 	// NavMesh 검사
 	FNavLocation DestinationLocation;
 	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-	if (NavSys && NavSys->ProjectPointToNavigation(MouseHitLocation, DestinationLocation, FVector(50.f, 50.f, 200.f)))
+	if (NavSys && NavSys->ProjectPointToNavigation(ToLocation, DestinationLocation, FVector(50.f, 50.f, 200.f)))
 	{
-		// DestinationLocation.Location.Z += CapsuleHalfHeight;
-		// GetAvatarActorFromActorInfo()->SetActorLocation(DestinationLocation,false,nullptr,ETeleportType::None);
-
 		// 텔레포트할 최종 목표 위치 (마우스 클릭 지상 + 캐릭터 캡슐 절반 높이)
-		FVector FinalTeleportLocation = MouseHitLocation + FVector(0, 0, CapsuleHalfHeight);
+		FVector FinalTeleportLocation = ToLocation + FVector(0, 0, CapsuleHalfHeight);
 
 		// 텔레포트 수행
 		AuraCharacter->SetActorLocation(FinalTeleportLocation, false, nullptr, ETeleportType::TeleportPhysics);
@@ -113,7 +116,24 @@ bool UElectroTeleport::TeleportToLocation(const FHitResult& HitResult)
 	return bSuccessfulTeleport;
 }
 
-void UElectroTeleport::GhostEffect(const FVector& InitialLocation, const FVector& DestinationLocation, TSubclassOf<AGhostEffectActor> GhostClass, UMaterialInterface* GhostMaterial)
+bool UElectroTeleport::ReturnToInitialLocation()
+{
+	if (!bCanReturn)
+		return false;
+
+	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetAvatarActorFromActorInfo());
+	if (!AuraCharacter)
+		return false;
+
+	FVector CurrentLocation = AuraCharacter->GetActorLocation();
+	
+	FVector InterpVector = FMath::VInterpConstantTo(CurrentLocation, InitialLocation, GetWorld()->GetDeltaSeconds(), 5.f);
+	AuraCharacter->SetActorLocation(InterpVector, false, nullptr, ETeleportType::TeleportPhysics);
+
+	return true;
+}
+
+void UElectroTeleport::GhostEffect(TSubclassOf<AGhostEffectActor> GhostClass, UMaterialInterface* GhostMaterial)
 {
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetAvatarActorFromActorInfo());
 	if (!AuraCharacter || NumGhosts <= 0)
@@ -128,7 +148,7 @@ void UElectroTeleport::GhostEffect(const FVector& InitialLocation, const FVector
 			N = (float)i / (NumGhosts - 1.0f);
 			
 		// 선형 보간
-		FVector GhostLocation = FMath::Lerp(InitialLocation, DestinationLocation, N);
+		FVector GhostLocation = FMath::Lerp(InitialLocation, DestinedLocation, N);
 		FRotator GhostRotation = AuraCharacter->GetActorRotation();
 		FTransform SpawnTransform(GhostRotation, GhostLocation);
 

@@ -2,6 +2,8 @@
 
 
 #include "AbilitySystem/Abilities/AuraBeamSpell.h"
+
+#include "AuraGameplayTags.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Interaction/CombatInterface.h"
@@ -91,7 +93,7 @@ void UAuraBeamSpell::StoreAdditionalTarget(TArray<AActor*>& OutAdditionalTargets
 {
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetAvatarActorFromActorInfo());
-	ActorsToIgnore.Add(MouseHitActor); // �̹� ���� �°� �ֱ� ������ ����
+	ActorsToIgnore.Add(MouseHitActor);
 
 	// ���� ������
 	TArray<AActor*> OverlappingActors;
@@ -99,10 +101,11 @@ void UAuraBeamSpell::StoreAdditionalTarget(TArray<AActor*>& OutAdditionalTargets
 		GetAvatarActorFromActorInfo(),
 		OverlappingActors,
 		ActorsToIgnore,
-		850.f, // Ž�� �ݰ�
+		850.f,
 		MouseHitActor->GetActorLocation());
 
-	int32 NumAdditionalTargets = FMath::Min(GetAbilityLevel() - 1, MaxNumShockTargets);
+	AdditionalTargets += GetAbilityLevel() - 1;
+	int32 NumAdditionalTargets = FMath::Min(AdditionalTargets, MaxNumShockTargets);
 	//int32 NumAdditionalTargets = 5;
 
 	// ���� ������ ��� ã��

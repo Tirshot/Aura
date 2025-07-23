@@ -8,6 +8,8 @@
 
 class UDecalComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCircleInitialized, AActor*, AvatarActor);
+
 UCLASS()
 class AURA_API AMagicCircle : public AActor
 {
@@ -20,6 +22,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UDecalComponent> MagicCircleDecal;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnCircleInitialized CircleInitialized;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnCircleInitialized RemoveCircle;
+	
 protected:
 	virtual void BeginPlay() override;
 };

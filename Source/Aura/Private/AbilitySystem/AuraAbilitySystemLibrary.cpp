@@ -16,6 +16,7 @@
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
 #include "UI/WidgetController/AuraWidgetController.h"
+#include "Engine/OverlapResult.h"
 
 bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD)
 {
@@ -226,7 +227,6 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 
 	AActor* SourceActor = SourceASC->GetAvatarActor();
-	AActor* TargetActor = TargetASC->GetAvatarActor();
 
 	auto EffectClass = Params.DamageGameplayEffectClass;
 
@@ -311,7 +311,7 @@ TArray<FVector> UAuraAbilitySystemLibrary::EvenlyRotatedVectors(const FVector& F
 	return Vectors;
 }
 
-void UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor)
+void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor)
 {
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
 	if (AuraCharacter == nullptr)
@@ -337,6 +337,11 @@ void UAuraAbilitySystemLibrary::ApplyGameplayTagEffectToSelf(const FGameplayTag&
 	}
 }
 
+void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag)
+{
+	ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(MessageTag));
+}
+
 TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor)
 {
 	TArray<FGameplayTag> AllActiveTags;
@@ -350,7 +355,7 @@ TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvata
 	
 	for (FGameplayAbilitySpec& Spec : ActiveSpecs)
 	{
-		FGameplayTagContainer AbilityTagContainer = Spec.Ability->AbilityTags;
+		FGameplayTagContainer AbilityTagContainer = Spec.Ability->GetAssetTags();
 		if (AbilityTagContainer.HasTag(FAuraGameplayTags::Get().Abilities_None))
 			continue;
 

@@ -153,6 +153,8 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     // 데미지 판단
     if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
     {
+        const float FinalIncomingDamage = Data.EvaluatedData.Magnitude;
+        SetIncomingDamage(FinalIncomingDamage);
         HandleIncomingDamage(Props);
     }
 
@@ -286,16 +288,6 @@ void UAuraAttributeSet::Debuff(const FEffectProperties& Props)
 
     // 데미지 타입에 따른 디버프의 태그 가져오기
     const FGameplayTag DebuffTag = GameplayTags.DamageTypesToDebuff[DamageType];
-    Effect->InheritableOwnedTagsContainer.AddTag(DebuffTag);
-    
-    // 스턴 상태
-    if (DebuffTag.MatchesTagExact(GameplayTags.Debuff_Stun))
-    {
-        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_CursorTrace);
-        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputHeld);
-        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputPressed);
-        Effect->InheritableOwnedTagsContainer.AddTag(GameplayTags.Player_Block_InputReleased);
-    }
 
     // 디버프 스택 설정
     Effect->StackingType = EGameplayEffectStackingType::AggregateBySource;
@@ -318,6 +310,16 @@ void UAuraAttributeSet::Debuff(const FEffectProperties& Props)
         FAuraGameplayEffectContext* AuraContext = static_cast<FAuraGameplayEffectContext*>(EffectContext.Get());
         TSharedPtr<FGameplayTag> DebuffDamageType = MakeShareable(new FGameplayTag(DamageType));
         AuraContext->SetDamageType(DebuffDamageType);
+
+        // 디버프 태그 적용
+        MutableSpec->DynamicGrantedTags.AddTag(DebuffTag);
+        if (DebuffTag.MatchesTagExact(GameplayTags.Debuff_Stun))
+        {
+            MutableSpec->DynamicGrantedTags.AddTag(GameplayTags.Player_Block_CursorTrace);
+            MutableSpec->DynamicGrantedTags.AddTag(GameplayTags.Player_Block_InputHeld);
+            MutableSpec->DynamicGrantedTags.AddTag(GameplayTags.Player_Block_InputPressed);
+            MutableSpec->DynamicGrantedTags.AddTag(GameplayTags.Player_Block_InputReleased);
+        }
     }
     
     // 게임플레이 이펙트 적용
@@ -328,8 +330,6 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
 {
     const float LocalIncomingXP = GetIncomingXP();
     SetIncomingXP(0);
-
-    // TODO : 레벨업 체크 필요
 
     // Source Character는 보유자, GA_ListenForEvents가 GE_EventBasedEffect를 사용하여 IncomingXP를 더하는 중
     if (Props.SourceCharacter->Implements<UPlayerInterface>() && Props.SourceCharacter->Implements<UCombatInterface>())

@@ -5,7 +5,11 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraGameplayTags.h"
-#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Actor/PointCollection.h"
+#include "Character/AuraCharacter.h"
+#include "Interaction/PlayerInterface.h"
+#include "Kismet/KismetMathLibrary.h"
 
 FString UArcaneShards::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
@@ -43,28 +47,203 @@ FString UArcaneShards::GetNextLevelDescription(int32 Level, const UObject* World
 	);
 }
 
-bool UArcaneShards::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UArcaneShards::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                               const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	bool bUpgradesApplied = false;
-	
-	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
-	if (Upgrades.IsEmpty())
-		return false;
-	
-	const auto& Tags = FAuraGameplayTags::Get();
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
-	for (const auto& Upgrade : Upgrades)
+	auto* AvatarActor = GetAvatarActorFromActorInfo();
+	if (AvatarActor->Implements<UPlayerInterface>())
 	{
-		// 업그레이드 태그 검증
-		// (1) 투사체 갯수 증가 태그
-		FGameplayTag IncreaseNum = Tags.Upgrades_Arcane_ArcaneShards_IncreaseNum;
-		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
-		{
-			// 투사체 갯수 증가
-			bUpgradesApplied = true;
-			NumPoints = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
-		}
+		IPlayerInterface::Execute_HideMagicCircle(GetAvatarActorFromActorInfo());
+	}
+	
+	// 데미지 입힘 종료
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ShardSpawnTimer);
 	}
 
-	return bUpgradesApplied;
+	// 포인트 컬렉션이 아직도 파괴되지 않았으면 파괴
+	if (IsValid(PointCollection))
+		PointCollection->Destroy();
+}
+
+void UArcaneShards::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+{
+	const auto& Tags = FAuraGameplayTags::Get();
+
+	// 업그레이드 태그 검증
+	// (1) 투사체 갯수 증가 태그
+	FGameplayTag IncreaseNum = Tags.Upgrades_Arcane_ArcaneShards_IncreaseNum;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
+	{
+		// 투사체 갯수 증가
+		AdditionalShards = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+		NumPoints += AdditionalShards;
+	}
+
+	FGameplayTag FirstLargeShard = Tags.Upgrades_Arcane_ArcaneShards_FirstLargeShard;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), FirstLargeShard))
+	{
+		// 첫번째 기둥 크기 증가
+		bIsFirstShardLarge = true;
+	}
+}
+
+void UArcaneShards::ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle)
+{
+	if (!TargetDataHandle.IsValid(0))
+		return;
+
+	const FGameplayAbilityTargetData* TargetData = TargetDataHandle.Get(0);
+	const FHitResult* HitResult = TargetData->GetHitResult();
+
+	// 마우스 히트 정보를 멤버 변수로 만듬
+	CurrentMouseLocation = HitResult->ImpactPoint;
+	NumPoints = GetAbilityLevel();
+
+	GroundPoints.Empty();
+
+	// 어빌리티 업그레이드 확인
+	CheckAbilityUpgrades(FAuraGameplayTags::Get().Abilities_Arcane_ArcaneShards);
+	
+	FTransform PointCollectionTransform;
+	PointCollectionTransform.SetLocation(CurrentMouseLocation);
+
+	PointCollection = GetWorld()->SpawnActorDeferred<APointCollection>(
+		PointCollectionClass,
+		PointCollectionTransform,
+		GetAvatarActorFromActorInfo(),
+		nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	PointCollection->FinishSpawning(PointCollectionTransform);
+
+	GroundPoints = PointCollection->GetGroundPoints(FMath::Min(NumPoints, MaxNumShards));
+}
+
+void UArcaneShards::ReadyToSpawnShards()
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+
+	// 범위 표시기 제거
+	if (AvatarActor->Implements<UPlayerInterface>())
+	{
+		IPlayerInterface::Execute_HideMagicCircle(AvatarActor);
+	}
+
+	// UI 범위기 메시지 제거
+	RemoveRangeSpellHelpMessage(AvatarActor);
+	
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(ShardSpawnTimer, this, &UArcaneShards::SpawnShards,SpawnShardsDeltaTime, true);
+	}
+
+	// 쿨다운, 코스트 적용
+	CommitAbility(GetCurrentAbilitySpecHandle(),
+		GetCurrentActorInfo(),
+		GetCurrentActivationInfo());
+}
+
+void UArcaneShards::SpawnShards()
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	
+	if (Idx < GroundPoints.Num())
+	{
+		// 파편 위치 계산
+		ShardSpawnLocation = GroundPoints[Idx]->GetComponentTransform().GetLocation();
+		ShardSpawnRotation = GroundPoints[Idx]->GetComponentTransform().GetRotation().Rotator();
+
+		TArray<AActor*> OutOverlappingActors;
+		OutOverlappingActors.Empty();
+		
+		FGameplayCueParameters CueParams;
+
+		if (bIsFirstShardLarge && Idx == 0)
+		{
+			int32 Stacks = GetUpgradeStackCount(AvatarActor, FAuraGameplayTags::Get().Upgrades_Arcane_ArcaneShards_FirstLargeShard);
+			float SizeMultiplier = Stacks * UpgradeFirstShardSizeMultiplier;
+
+			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius + SizeMultiplier);
+
+			// 아케인 파편 기둥 이펙트 생성
+			CueParams.Location = ShardSpawnLocation;
+			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
+			CueParams.RawMagnitude = SizeMultiplier / 100.f;
+		}
+		else
+		{
+			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius);
+		
+			// 아케인 파편 기둥 이펙트 생성
+			CueParams.Location = ShardSpawnLocation;
+			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
+			CueParams.RawMagnitude = 1.f;
+		}
+		
+		K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+	}
+	
+	if (Idx >= GroundPoints.Num())
+		EndSpawnShards();
+	else
+		Idx++;
+}
+
+void UArcaneShards::EndSpawnShards()
+{
+	PointCollection->Destroy();
+
+	EndAbility(
+		GetCurrentAbilitySpecHandle(),
+		GetCurrentActorInfo(),
+		GetCurrentActivationInfo(),
+		true, false);
+}
+
+void UArcaneShards::ApplyRadialDamage(TArray<AActor*>& OutOverlappingActors, float OuterRadius)
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Empty();
+	ActorsToIgnore.Add(AvatarActor);
+
+	// 데미지 입힐 플레이어 계산
+	UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(
+		AvatarActor,
+		OutOverlappingActors,
+		ActorsToIgnore,
+		OuterRadius,
+		ShardSpawnLocation);
+
+	for (AActor* DamagedActor : OutOverlappingActors)
+	{
+		if (!IsValid(DamagedActor))
+			continue;
+
+		// 아군이라면 건너뛰기
+		if (!UAuraAbilitySystemLibrary::IsNotFriend(DamagedActor, AvatarActor))
+		{
+			continue;
+		}
+
+		// 클래스 디폴트를 이용하여 데미지 이펙트 파라미터 생성
+		FVector DirectionOverride = DamagedActor->GetActorLocation() - ShardSpawnLocation;
+		FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults(
+			DamagedActor,
+			ShardSpawnLocation,
+			true,
+			DirectionOverride,
+			true,
+			DirectionOverride,
+			true,
+			45.f);
+
+		// 데미지 적용
+		UAuraAbilitySystemLibrary::ApplyDamageEffect(Params);
+	}
 }

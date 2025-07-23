@@ -10,6 +10,11 @@ void UAbilityUpgradeInfo::PostLoad()
 {
 	Super::PostLoad();
 
+	RebuildUpgradeInfoMaps();
+}
+
+void UAbilityUpgradeInfo::RebuildUpgradeInfoMaps()
+{
 	// 로드된 이후에 한 번만 호출
 	UpgradeInfosByEffectTag.Empty();
 	for (const auto& Pair : AbilityUpgrades)
@@ -25,11 +30,32 @@ void UAbilityUpgradeInfo::PostLoad()
 	}
 }
 
+void UAbilityUpgradeInfo::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	if (PropertyChangedEvent.Property != nullptr)
+	{
+		RebuildUpgradeInfoMaps();
+	}
+}
+
 FAuraAbilityUpgradeInfoArray UAbilityUpgradeInfo::GetUpgradesForAbility(const FGameplayTag& AbilityTag)
 {
 	if (FAuraAbilityUpgradeInfoArray* FoundInfoArray = AbilityUpgrades.Find(AbilityTag))
 	{
 		return *FoundInfoArray;
+	}
+
+	{
+		FGameplayTagContainer ParentTags = AbilityTag.GetGameplayTagParents();
+		ParentTags.RemoveTag(AbilityTag);
+
+		if (FAuraAbilityUpgradeInfoArray* AnotherInfoArray = AbilityUpgrades.Find(ParentTags.First()))
+		{
+			return *AnotherInfoArray;
+		}
+		
 	}
 	return FAuraAbilityUpgradeInfoArray();
 }
@@ -39,8 +65,6 @@ FAuraAbilityUpgradeInfo UAbilityUpgradeInfo::GetUpgradeInfoForUpgradeTag(const F
 	if (!UpgradeTag.IsValid())
 		return FAuraAbilityUpgradeInfo();
 	
-	// return UpgradeInfosByEffectTag.FindChecked(UpgradeTag);
-
 	const FAuraAbilityUpgradeInfo* FoundInfo = UpgradeInfosByEffectTag.Find(UpgradeTag);
 
 	if (FoundInfo)
@@ -58,7 +82,7 @@ FAuraAbilityUpgradeInfo UAbilityUpgradeInfo::GetUpgradeInfoForUpgradeTag(const F
 
 FGameplayTag UAbilityUpgradeInfo::GetRandomUpgradeTagForAbility(const FGameplayTag& AbilityTag)
 {
-	auto AuraTags = FAuraGameplayTags::Get();
+	auto& AuraTags = FAuraGameplayTags::Get();
 	
 	FAuraAbilityUpgradeInfoArray UpgradeInfoArray = GetUpgradesForAbility(AbilityTag);
 	if (UpgradeInfoArray.UpgradeInfos.IsEmpty())
@@ -68,4 +92,63 @@ FGameplayTag UAbilityUpgradeInfo::GetRandomUpgradeTagForAbility(const FGameplayT
 	int32 RandValue = UKismetMathLibrary::RandomIntegerInRange(0, ArrayNum - 1);
 
 	return UpgradeInfoArray.UpgradeInfos[RandValue].UpgradeEffectTag;
+}
+
+TArray<FAuraAbilityUpgradeInfo> UAbilityUpgradeInfo::GetAvailableUpgradeInfo(
+	const TArray<FAuraAbilityUpgradeInfo>& InUpgradeInfos, EUpgradeRarity InRarity)
+{
+	TArray<FAuraAbilityUpgradeInfo> OutInfos;
+	OutInfos.Empty();
+	
+	// 활성화 된 어빌리티 배열을 받았다고 가정
+	for (auto Info : InUpgradeInfos)
+	{
+		if (Info.Rarity == InRarity)
+			OutInfos.AddUnique(Info);
+	}
+
+	return OutInfos;
+}
+
+TArray<FAuraAbilityUpgradeInfo> UAbilityUpgradeInfo::GetAvailableUpgradeInfoForTag(
+	const TArray<FGameplayTag>& InUpgradeTags, EUpgradeRarity InRarity)
+{
+	TArray<FAuraAbilityUpgradeInfo> OutInfos;
+	OutInfos.Empty();
+	
+	// 활성화 된 어빌리티 태그를 받았다고 가정
+	for (auto Tag : InUpgradeTags)
+	{
+		const FAuraAbilityUpgradeInfoArray& AbilityUpgrade = AbilityUpgrades[Tag];
+		for (int i = 0; i < AbilityUpgrade.UpgradeInfos.Num(); i++)
+		{
+			if (AbilityUpgrade.UpgradeInfos[i].Rarity == InRarity)
+			{
+				OutInfos.AddUnique(AbilityUpgrade.UpgradeInfos[i]);
+			}
+		}
+	}
+
+	return OutInfos;
+}
+
+float UAbilityUpgradeInfo::GetProbabilityForUpgradeTag(const FGameplayTag& UpgradeTag)
+{
+	auto& Info = UpgradeInfosByEffectTag[UpgradeTag];
+	return UpgradeProbability[Info.Rarity];
+}
+
+TArray<FAuraAbilityUpgradeInfo> UAbilityUpgradeInfo::GetUpgradeInfoArrayForProbability(EUpgradeRarity Rarity)
+{
+	TArray<FAuraAbilityUpgradeInfo> OutUpgradeInfos;
+	OutUpgradeInfos.Empty();
+
+	for (const auto& UpgradeInfo : UpgradeInfosByEffectTag)
+	{
+		if (UpgradeInfo.Value.Rarity == Rarity)
+		{
+			OutUpgradeInfos.AddUnique(UpgradeInfo.Value);
+		}
+	}
+	return OutUpgradeInfos;
 }

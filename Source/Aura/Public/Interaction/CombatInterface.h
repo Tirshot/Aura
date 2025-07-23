@@ -6,8 +6,10 @@
 #include "UObject/Interface.h"
 #include "GameplayTagContainer.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
+#include "Actor/AbilityRangeIndicator.h"
 #include "CombatInterface.generated.h"
 
+enum class ERangeShape : uint8;
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UNiagaraSystem;
@@ -49,7 +51,6 @@ class AURA_API ICombatInterface
 {
 	GENERATED_BODY()
 
-	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	UFUNCTION(BlueprintNativeEvent)
 	int32 GetCharacterLevel();
@@ -111,4 +112,10 @@ public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void ShowDamageNumber(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void HideRangeIndicator() const;
 };

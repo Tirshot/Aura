@@ -59,7 +59,7 @@ private:
 	float FollowRadius = 600.f;
 	
 	UPROPERTY(EditDefaultsOnly)
-	float DamageRadius = 300.f;
+	float DamageRadius = 200.f;
 
 	UPROPERTY(EditDefaultsOnly)
 	float SpinDegreePerSecond = -360.f;

@@ -40,6 +40,7 @@ public:
 	void AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities);
 	void AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
 	bool bStartupAbilitiesGiven = false;
+	void AddCharacterAbility(const FGameplayTag& AbilityTag);
 
 	// 어빌리티 입력
 	void AbilityInputTagPressed(const FGameplayTag& InputTag);
@@ -68,7 +69,7 @@ public:
 	void UpdateAbilityStatus(int32 Level);
 
 	UFUNCTION(Server, Reliable)
-	void ServerSpendSpellPoint(const FGameplayTag& AbilityTag);
+	void ServerSpendSpellPoint(const FGameplayTag& AbilityTag, bool bNotSpendPoint = false);
 
 	UFUNCTION(Server, Reliable)
 	void ServerEquipAbility(const FGameplayTag& AbilityTag, const FGameplayTag& Slot);

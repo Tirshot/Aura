@@ -50,4 +50,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Beam")
 	int32 MaxNumShockTargets = 5;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Beam")
+	int32 AdditionalTargets = 0;
 };

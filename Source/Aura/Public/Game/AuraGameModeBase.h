@@ -68,6 +68,9 @@ public:
 	UFUNCTION()
 	void HandlePlayerStateInitialized(AAuraPlayerState* InitializedPlayerState);
 	
+	UFUNCTION()
+	TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three(AAuraPlayerState* AuraPS);
+	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Character Class Default")
 	TObjectPtr<UCharacterClassInfo> CharacterClassInfo;

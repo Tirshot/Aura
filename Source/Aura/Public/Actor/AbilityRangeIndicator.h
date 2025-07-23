@@ -7,12 +7,15 @@
 #include "AbilityRangeIndicator.generated.h"
 
 UENUM(BlueprintType)
-enum class ERangeShape
+enum class ERangeShape : uint8
 {
 	ERS_Circle = 0, // 원형
 	ERS_Rectangle, // 직사각형
 	ERS_Cone, // 부채꼴
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_NineParams(FOnIndicatorInitialized, AActor*, AvatarActor, ERangeShape, RangeShape, const FVector&, Location, float, Width, float, Height, float, Radius, float, Red, float, Green, float, Blue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIndicatorRemoved, AActor*, AvatarActor);
 
 UCLASS()
 class AURA_API AAbilityRangeIndicator : public AActor
@@ -40,6 +43,13 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UMaterialInterface> BaseMaterial;
+
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnIndicatorInitialized IndicatorInitialized;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnIndicatorRemoved RemoveIndicator;
 	
 private:
 	// 원형, 부채꼴

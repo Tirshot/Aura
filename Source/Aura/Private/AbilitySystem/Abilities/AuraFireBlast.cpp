@@ -88,31 +88,20 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 	return FireBalls;
 }
 
-bool UAuraFireBlast::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraFireBlast::CheckAbilityUpgrades(FGameplayTag AbilityTag)
 {
-	bool bUpgradesApplied = false;
-	
-	TArray<FAuraAbilityUpgradeInfo> Upgrades = GetAbilityUpgradeForTag(GetAvatarActorFromActorInfo(), AbilityTag);
-	if (Upgrades.IsEmpty())
-		return false;
-	
 	const auto& Tags = FAuraGameplayTags::Get();
-
-	for (const auto& Upgrade : Upgrades)
+	
+	// (1) 투사체 갯수 증가 체크
+	FGameplayTag IncreaseNum = Tags.Upgrades_Fire_FireBlast_IncreaseNum;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
 	{
-		// (1) 투사체 갯수 증가 체크
-		FGameplayTag IncreaseNum = Tags.Upgrades_Fire_FireBlast_IncreaseNum;
-		if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
-		{
-			// 투사체 갯수 증가
-			int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
-			int32 Magnification = 2;
+		// 투사체 갯수 증가
+		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+		int32 Magnification = 2;
 
-			// 갯수 2개 씩 증가
-			NumFireBalls = BaseNumFireBalls + (StackCount * Magnification);
-			bUpgradesApplied = true;
-		}
+		// 갯수 2개 씩 증가
+		NumFireBalls = BaseNumFireBalls + (StackCount * Magnification);
+			
 	}
-
-	return bUpgradesApplied;
 }

@@ -7,7 +7,9 @@
 #include "MVVMViewModelBase.h"
 #include "MVVM_AbilityCard.generated.h"
 
+struct FAuraAbilityUpgradeInfo;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeSelected, FGameplayTag, SelectedUpgradeTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeInfoSelected, TArray<FAuraAbilityUpgradeInfo>&, SelectedUpgradeInfos);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeTagAssigned, const FGameplayTag&, UpgradeTag);
 
 struct FGameplayTag;
@@ -26,16 +28,18 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnUpgradeTagAssigned OnUpgradeTagAssignedDelegate;
+
+	FOnUpgradeInfoSelected OnUpgradeInfoSelectedDelegate;
 	
 public:
 	FGameplayTag GetUpgradeTag() const { return UpgradeTag; }
 	FString GetUpgradeName() const { return UpgradeName; }
-	FString GetUpgradeDescription() const { return UpgradeDescription; }
+	FText GetUpgradeDescription() const { return UpgradeDescription; }
 	int32 GetUpgradeMaxLevel() const { return UpgradeMaxLevel; }
 
 	void SetUpgradeTag(FGameplayTag InGameplayTag);
 	void SetUpgradeName(FString InUpgradeName);
-	void SetUpgradeDescription(FString InUpgradeDescription);
+	void SetUpgradeDescription(FText InUpgradeDescription);
 	void SetUpgradeMaxLevel(int32 InUpgradeMaxLevel);
 
 	UFUNCTION(BlueprintCallable)
@@ -50,7 +54,7 @@ private:
 	FString UpgradeName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
-	FString UpgradeDescription;
+	FText UpgradeDescription;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	int32 UpgradeMaxLevel;

@@ -7,6 +7,7 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
+struct FAuraAbilityUpgradeInfo;
 class UMVVM_LoadScreen;
 class ULoadScreenWidget;
 class UMVVM_CardSelection;
@@ -19,18 +20,6 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 struct FWidgetControllerParams;
 class USpellMenuWidgetController;
-
-// GameMode 초기화 이후 호출
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInitializeGameMode);
-
-// PlayerController 초기화 이후 호출
-DECLARE_MULTICAST_DELEGATE(FOnInitializePlayerController);
-
-// GameMode에게 업그레이드 카드 요청
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnInitializeCards, APlayerController*);
-
-// GameMode에게서 업그레이드 카드 받음
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnInitializeCardsReceived, FGameplayTag, FGameplayTag, FGameplayTag);
 
 UCLASS()
 class AURA_API AAuraHUD : public AHUD
@@ -47,24 +36,22 @@ public:
 	
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
-public:
-	UPROPERTY(BlueprintCallable)
-	FOnInitializeGameMode CreateCardSelectionUIDelegate;
-	FOnInitializePlayerController OnInitializePlayerControllerDelegate;
-	FOnInitializeCards InitializeCardsDelegate;
-	FOnInitializeCardsReceived ReceivedCardsDelegate;
+protected:
+	virtual void BeginPlay() override;
 	
 public:
+	UFUNCTION()
+	void OnPlayerStateCardsOninitialized(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
+	
+public:	
 	void CreateSaveProgressWidget();
 	void RemoveSaveProgressWidget();
 
 	UFUNCTION()
-	void OnInitializePlayerController();
-	
-	UFUNCTION()
-	void InitializeCardSelectionUI();
-	
 	void HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1, FGameplayTag UpgradeTag2);
+
+	UFUNCTION()
+	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
 	
 private:
 	UPROPERTY()
