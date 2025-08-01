@@ -152,3 +152,18 @@ TArray<FAuraAbilityUpgradeInfo> UAbilityUpgradeInfo::GetUpgradeInfoArrayForProba
 	}
 	return OutUpgradeInfos;
 }
+
+FGameplayTag UAbilityUpgradeInfo::GetAbilityTagForUpgradeTag(FGameplayTag UpgradeTag)
+{
+	for (auto UpgradeInfo : AbilityUpgrades)
+	{
+		for ( auto Upgrade: UpgradeInfo.Value.UpgradeInfos)
+		{
+			if (Upgrade.UpgradeEffectTag == UpgradeTag)
+			{
+				return UpgradeInfo.Key;
+			}
+		}
+	}
+	return FGameplayTag::EmptyTag;
+}

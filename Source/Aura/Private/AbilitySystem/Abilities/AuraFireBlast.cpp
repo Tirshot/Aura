@@ -7,6 +7,7 @@
 #include "Actor/AuraFireBall.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Actor/AbilityRangeIndicator.h"
 
 UAuraFireBlast::UAuraFireBlast()
 {
@@ -88,7 +89,7 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 	return FireBalls;
 }
 
-void UAuraFireBlast::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraFireBlast::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 	

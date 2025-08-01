@@ -20,7 +20,7 @@ FString UAuraSpawnElectroSphere::GetNextLevelDescription(int32 Level, const UObj
 	return Super::GetNextLevelDescription(Level, WorldContextObject);
 }
 
-void UAuraSpawnElectroSphere::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraSpawnElectroSphere::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 

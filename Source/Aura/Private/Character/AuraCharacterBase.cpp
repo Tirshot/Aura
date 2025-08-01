@@ -243,8 +243,7 @@ FOnDamageSignature& AAuraCharacterBase::GetOnDamageDelegate()
 	return OnDamageDelegate;
 }
 
-void AAuraCharacterBase::ShowRangeIndicator_Implementation(ERangeShape RangeShape, const FVector& Location, float Width,
-	float Height, float Radius, float Red, float Green, float Blue)
+void AAuraCharacterBase::ShowRangeIndicator_Implementation(bool bAttachToActor, ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, const FVector& RGB)
 {
 	if (IsLocallyControlled() == false)
 		return;
@@ -252,7 +251,7 @@ void AAuraCharacterBase::ShowRangeIndicator_Implementation(ERangeShape RangeShap
 	AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
 	if (AuraPC)
 	{
-		AuraPC->ShowRangeIndicator(RangeShape, Location, Width, Height, Radius, Red, Green, Blue);
+		AuraPC->ShowRangeIndicator(RangeShape, Location, Radius, Width, Height, RGB);
 	}
 }
 

@@ -29,3 +29,8 @@ UMVVM_AbilityCard* UMVVM_CardSelection::GetCardViewModelByIndex(int32 Index)
 {
 	return AbilityCards.FindChecked(Index);
 }
+
+void UMVVM_CardSelection::RerollButtonClicked()
+{
+	OnRerollSelectedDelegate.Broadcast();
+}

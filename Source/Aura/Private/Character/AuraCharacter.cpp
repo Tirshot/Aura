@@ -221,7 +221,7 @@ int32 AAuraCharacter::GetSpellPoints_Implementation() const
     return AuraPlayerState->GetSpellPoints();
 }
 
-void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial) const
+void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial, float InRange , float InRadius) const
 {
     if (IsLocallyControlled() == false)
         return;
@@ -229,7 +229,7 @@ void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMat
     AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController());
     if (AuraPC)
     {
-        AuraPC->ShowMagicCircle(DecalMaterial);
+        AuraPC->ShowMagicCircle(DecalMaterial, InRange, InRadius);
         AuraPC->bShowMouseCursor = false;
     }
 }

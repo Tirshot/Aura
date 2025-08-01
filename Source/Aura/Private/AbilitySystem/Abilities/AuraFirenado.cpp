@@ -6,6 +6,9 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraFireTornado.h"
+#include "Interaction/CombatInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 
 FString UAuraFirenado::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -48,7 +51,7 @@ FString UAuraFirenado::GetNextLevelDescription(int32 Level, const UObject* World
 	);
 }
 
-void UAuraFirenado::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraFirenado::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 
@@ -63,32 +66,25 @@ void UAuraFirenado::CheckAbilityUpgrades(FGameplayTag AbilityTag)
 	}
 }
 
-AAuraFireTornado* UAuraFirenado::SpawnTornado()
+void UAuraFirenado::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	const FVector Forward = GetAvatarActorFromActorInfo()->GetActorForwardVector();
-	const FVector Location = GetAvatarActorFromActorInfo()->GetActorLocation();
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	FTransform SpawnTransform;
-	SpawnTransform.SetLocation(Location);
-
-	// 월드에 파이어볼 생성
-	AAuraFireTornado* Tornado = GetWorld()->SpawnActorDeferred<AAuraFireTornado>(
-		FireTornadoClass,
-		SpawnTransform,
-		GetOwningActorFromActorInfo(),
-		CurrentActorInfo->PlayerController->GetPawn(),
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-	Tornado->SetDamageDeltaSecond(DamageDeltaSecond);
-	Tornado->SetFollowRadius(FollowRadius);
-	Tornado->SetDamageRadius(DamageRadius);
+	StopAutoRun();
 	
-	Tornado->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
-	Tornado->SetOwner(GetAvatarActorFromActorInfo());
+}
 
-	Tornado->FinishSpawning(SpawnTransform);
+void UAuraFirenado::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                               const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
-	return Tornado;
+	// 매직 서클, 범위 표시기 숨기기
+	HideMagicCircleAndRangeIndicator();
+	StopAutoRun();
+
+	GetWorld()->GetTimerManager().ClearTimer(DestroyTimer);
 }
 
 AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
@@ -104,6 +100,17 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 		CurrentActorInfo->PlayerController->GetPawn(),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+	if (UWorld* World = GetWorld())
+	{
+		FHitResult HitResult;
+		FVector HitStart = Location + FVector(0.f, 0.f, 500.f);
+		FVector HitEnd = Location + FVector(0.f, 0.f, -500.f);
+		
+		World->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility);
+
+		Tornado->SetActorLocation(HitResult.ImpactPoint);
+	}
+
 	Tornado->SetDamageDeltaSecond(DamageDeltaSecond);
 	Tornado->SetFollowRadius(FollowRadius);
 	Tornado->SetDamageRadius(DamageRadius);
@@ -113,5 +120,42 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 
 	Tornado->FinishSpawning(SpawnTransform);
 
+	// 파괴 타이머 설정
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(DestroyTimer, this, &UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility, SpawnTime, false);
+	}
+	
+	FireTornado = Tornado;
+
+	HideMagicCircleAndRangeIndicator();
+	StopAutoRun();
+	
 	return Tornado;
+}
+
+void UAuraFirenado::StoreMouseLocation()
+{
+	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
+	{
+		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
+		{
+			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
+			{
+				MouseLocation = AuraPC->GetMagicCircleLocation();
+			}
+		}
+	}
+}
+
+void UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility()
+{
+	// 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, DestroySound, FireTornado->GetActorLocation());
+
+	FireTornado->Destroy();
+
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
+
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
 }

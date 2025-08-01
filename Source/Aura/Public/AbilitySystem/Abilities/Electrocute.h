@@ -17,5 +17,5 @@ public:
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
 };

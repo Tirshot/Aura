@@ -6,6 +6,8 @@
 #include "Abilities/Tasks/AbilityTask.h"
 #include "MoveToAbilityRange.generated.h"
 
+class AAuraCharacter;
+class AAuraPlayerController;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReachedAbilityRange);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMoveFailed);
 
@@ -22,10 +24,11 @@ public:
 		UGameplayAbility* OwningAbility,
 		const FVector TargetLocation,
 		float AbilityRange,
-		AActor* AvatarActor = nullptr,
-		AActor* TargetActor = nullptr);
+		AActor* AvatarActor = nullptr);
 
+	virtual void Activate() override;
 	virtual void TickTask(float DeltaTime) override;
+	virtual void OnDestroy(bool bInOwnerFinished) override;
 
 	void RangeCheck();
 	void MoveToTargetLocation();
@@ -45,7 +48,12 @@ protected:
 
 	UPROPERTY()
 	TWeakObjectPtr<AActor> AvatarActor;
-	
+
 	UPROPERTY()
-	TWeakObjectPtr<AActor> TargetActor;
+	TWeakObjectPtr<AAuraCharacter> AuraCharacter;
+
+	UPROPERTY()
+	TWeakObjectPtr<AAuraPlayerController> AuraPC;
+	
+	
 };

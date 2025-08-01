@@ -7,6 +7,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Character/AuraCharacter.h"
 #include "Interaction/CombatInterface.h"
+#include "Player/AuraPlayerController.h"
 
 void UAuraDamageGameplayAbility::CauseDamage(AActor* TargetActor)
 {
@@ -23,6 +24,20 @@ void UAuraDamageGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Han
                                             bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UAuraDamageGameplayAbility::StopAutoRun()
+{
+	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
+	{
+		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
+		{
+			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
+			{
+				AuraPC->StopAutoRun();
+			}
+		}
+	}
 }
 
 FDamageEffectParams UAuraDamageGameplayAbility::MakeDamageEffectParamsFromClassDefaults(AActor* TargetActor, FVector InRadialDamageOrigin, bool bOverrideKnockbackDirection, FVector InKnockbackDirectionOverride, bool bOverrideDeathImpulse, FVector DeathImpulseDirectionOverride, bool bOverridePitch, float PitchOverride) const
@@ -148,6 +163,75 @@ void UAuraDamageGameplayAbility::RemoveRangeSpellHelpMessage(AActor* AvatarActor
 		return;
 
 	AuraASC->MessageRemove(FGameplayTag::RequestGameplayTag("GameplayCue.Message.WaitForExecute"));
+}
+
+void UAuraDamageGameplayAbility::ShowMagicCircle(float MagicCircleRadius)
+{
+	// 매직 서클
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+		return;
+
+	if (AvatarActor->Implements<UPlayerInterface>())
+	{
+		IPlayerInterface::Execute_ShowMagicCircle(AvatarActor, nullptr, AbilityRange, MagicCircleRadius);
+	}
+}
+
+void UAuraDamageGameplayAbility::ShowRangeIndicator(ERangeShape Shape, float Width)
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+		return;
+	
+	// 범위 표시기
+	if (AvatarActor->Implements<UCombatInterface>())
+	{
+		ICombatInterface::Execute_ShowRangeIndicator(
+			AvatarActor,
+			true,
+			Shape,
+			AvatarActor->GetActorUpVector(),
+			AbilityRange,
+			Width,
+			AbilityRange / 2,
+			FVector(3,3,3));
+	}
+}
+
+void UAuraDamageGameplayAbility::HideMagicCircleAndRangeIndicator()
+{
+	// 매직 서클 숨기기
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+		return;
+
+	RemoveRangeSpellHelpMessage(AvatarActor);
+	
+	if (AvatarActor->Implements<UPlayerInterface>())
+	{
+		IPlayerInterface::Execute_HideMagicCircle(AvatarActor);
+	}
+
+	// 범위 표시기 숨기기
+	if (AvatarActor->Implements<UCombatInterface>())
+	{
+		ICombatInterface::Execute_HideRangeIndicator(AvatarActor);
+	}
+}
+
+AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(const FVector& Location, bool bAttachToActor, ERangeShape RangeShape, float Radius, float Width, float Height, const FVector& RGB, float LifeSpan)
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+		return nullptr;
+        
+	auto* RangeIndicator = GetWorld()->SpawnActor<AAbilityRangeIndicator>();
+	RangeIndicator->SetOwner(AvatarActor);
+	RangeIndicator->SetLifeSpan(LifeSpan);
+	RangeIndicator->IndicatorInitialized.Broadcast(AvatarActor, bAttachToActor, RangeShape, Location, Radius, Width, Height, 0.f, RGB);
+
+	return RangeIndicator;
 }
 
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const

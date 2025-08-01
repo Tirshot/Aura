@@ -21,7 +21,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget);
 
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)

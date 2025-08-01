@@ -23,7 +23,7 @@ public:
 	TArray<AAuraFireBall*> SpawnFireBalls();
 
 public:
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FireBlast")
@@ -31,6 +31,12 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FireBlast")
 	int32 NumFireBalls = 0;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bSpawnFireBallDelayed = false;
+	
+	UPROPERTY(EditDefaultsOnly)
+	float ShardFireBallDelay = 0.5f;
 
 private:
 	UPROPERTY(EditDefaultsOnly)

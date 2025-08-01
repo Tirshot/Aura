@@ -19,6 +19,8 @@ public:
 	AMagicCircle();
 	virtual void Tick(float DeltaTime) override;
 
+	void KeepMagicCircleInRange();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UDecalComponent> MagicCircleDecal;
 
@@ -27,6 +29,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnCircleInitialized RemoveCircle;
+
+	UPROPERTY(EditAnywhere)
+	float CircleRange = 0.f;
+	
+	UPROPERTY(EditAnywhere)
+	float Radius = 256.f;
 	
 protected:
 	virtual void BeginPlay() override;

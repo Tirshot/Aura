@@ -8,6 +8,7 @@
 
 class UMVVM_AbilityCard;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnableSelectButton, bool, bEnable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRerollSelected);
 
 UCLASS()
 class AURA_API UMVVM_CardSelection : public UMVVMViewModelBase
@@ -23,6 +24,11 @@ public:
 
 	int32 GetNumCards() { return AbilityCards.Num(); }
 	
+	FOnRerollSelected OnRerollSelectedDelegate;
+	
+	UFUNCTION(BlueprintCallable)
+	void RerollButtonClicked();
+
 public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_AbilityCard> AbilityCardViewModelClass;

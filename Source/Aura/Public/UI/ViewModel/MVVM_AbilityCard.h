@@ -5,11 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "MVVMViewModelBase.h"
+#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "MVVM_AbilityCard.generated.h"
 
 struct FAuraAbilityUpgradeInfo;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeSelected, FGameplayTag, SelectedUpgradeTag);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeInfoSelected, TArray<FAuraAbilityUpgradeInfo>&, SelectedUpgradeInfos);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeTagAssigned, const FGameplayTag&, UpgradeTag);
 
 struct FGameplayTag;
@@ -28,23 +28,23 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnUpgradeTagAssigned OnUpgradeTagAssignedDelegate;
-
-	FOnUpgradeInfoSelected OnUpgradeInfoSelectedDelegate;
 	
 public:
 	FGameplayTag GetUpgradeTag() const { return UpgradeTag; }
 	FString GetUpgradeName() const { return UpgradeName; }
 	FText GetUpgradeDescription() const { return UpgradeDescription; }
 	int32 GetUpgradeMaxLevel() const { return UpgradeMaxLevel; }
+	EUpgradeRarity GetUpgradeRarity() const { return UpgradeRarity; }
 
 	void SetUpgradeTag(FGameplayTag InGameplayTag);
 	void SetUpgradeName(FString InUpgradeName);
 	void SetUpgradeDescription(FText InUpgradeDescription);
 	void SetUpgradeMaxLevel(int32 InUpgradeMaxLevel);
+	void SetUpgradeRarity(EUpgradeRarity InRarity){ UpgradeRarity = InRarity; }
 
 	UFUNCTION(BlueprintCallable)
 	void UpgradeButtonClicked();
-
+	
 private:
 	/*필드 노티파이*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
@@ -58,4 +58,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	int32 UpgradeMaxLevel;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	EUpgradeRarity UpgradeRarity = EUpgradeRarity::Common;
 };

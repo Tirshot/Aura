@@ -29,7 +29,7 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable)
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) {};
+	virtual void CheckAbilityUpgrades() {};
 	
 	UFUNCTION(BlueprintCallable)
 	static TArray<FAuraAbilityUpgradeInfo> GetAbilityUpgradeForTag(AActor* AvatarActor, FGameplayTag AbilityTag);

@@ -388,16 +388,17 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 		// 주어진 어빌리티 태그에 대해 랜덤한 업그레이드 태그 뽑기
 		if (UAbilityUpgradeInfo* Info = AbilityUpgradeInfo)
 		{
-			int CommonProbability = Info->UpgradeProbability[Common];
-			int RareProbability = Info->UpgradeProbability[Rare];
-			int UniqueProbability = Info->UpgradeProbability[Unique];
-			int LegendaryProbability = Info->UpgradeProbability[Legendary];
+			int CommonProbability = Info->UpgradeProbability[EUpgradeRarity::Common];
+			int RareProbability = Info->UpgradeProbability[EUpgradeRarity::Rare];
+			int UniqueProbability = Info->UpgradeProbability[EUpgradeRarity::Unique];
+			int LegendaryProbability = Info->UpgradeProbability[EUpgradeRarity::Legendary];
 			int SumProbability = CommonProbability + RareProbability + UniqueProbability + LegendaryProbability;
 
 			int RandProbability = FMath::RandRange(0, SumProbability);
 
 			if (RandProbability <= CommonProbability)
 			{
+				// 일반
 				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, EUpgradeRarity::Common);
     		
 				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
@@ -414,7 +415,8 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 			}
 			else if (RandProbability <= CommonProbability + RareProbability)
 			{
-				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Rare);
+				// 레어
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, EUpgradeRarity::Rare);
     		
 				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
 				if (AvailableUpgrades.Num() > 0)
@@ -431,7 +433,7 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 			else if (RandProbability <= SumProbability - LegendaryProbability)
 			{
 				// 유니크 등급 카드
-				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Unique);
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, EUpgradeRarity::Unique);
     		
 				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
 				if (AvailableUpgrades.Num() > 0)
@@ -448,7 +450,7 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 			else if (RandProbability <= SumProbability)
 			{
 				// 전설 등급 카드
-				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, Legendary);
+				TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActivatedAbilityTags, EUpgradeRarity::Legendary);
     		
 				int RandInt = FMath::RandRange(0, AvailableUpgrades.Num() - 1);
 				if (AvailableUpgrades.Num() > 0)

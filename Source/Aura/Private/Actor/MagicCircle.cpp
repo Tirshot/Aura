@@ -13,17 +13,48 @@ AMagicCircle::AMagicCircle()
 	RootComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 
 	MagicCircleDecal = CreateDefaultSubobject<UDecalComponent>("MagicCircleDecal");
+	MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);
 	MagicCircleDecal->SetupAttachment(RootComponent);
 }
 
 void AMagicCircle::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AMagicCircle::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);
+}
 
+void AMagicCircle::KeepMagicCircleInRange()
+{
+	if (CircleRange > 0.f)
+	{
+		FVector OwnerLocation = GetOwner()->GetActorLocation();
+		FVector CurrentCircleLocation = GetActorLocation();
+
+		float Distance = FVector::Dist(OwnerLocation, CurrentCircleLocation);
+
+		if (Distance >= CircleRange)
+		{
+			FVector Direction = (CurrentCircleLocation - OwnerLocation).GetSafeNormal();
+			FVector NewTargetLocation = OwnerLocation + (Direction * CircleRange);
+
+			SetActorLocation(NewTargetLocation);
+
+			FHitResult HitResult;
+			FVector TraceStart = NewTargetLocation + FVector(0, 0, 500.f);
+			FVector TraceEnd = NewTargetLocation + FVector(0, 0, -500.f);
+
+			GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility); 
+
+			if (HitResult.bBlockingHit)
+			{
+				SetActorLocation(HitResult.Location);
+			}
+		}
+	}
 }

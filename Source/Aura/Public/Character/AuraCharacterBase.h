@@ -51,7 +51,7 @@ public:
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	virtual UAttributeSet* GetAttributeSet_Implementation() override;
 	virtual FOnDamageSignature& GetOnDamageDelegate() override;
-	virtual void ShowRangeIndicator_Implementation(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue) override;
+	virtual void ShowRangeIndicator_Implementation(bool bAttachToActor, ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, const FVector& RGB) override;
 	virtual void HideRangeIndicator_Implementation() const override;
 	/** Combat Interface 끝 **/
 

@@ -17,18 +17,33 @@ public:
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
 
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 	UFUNCTION(BlueprintCallable)
-	AAuraFireTornado* SpawnTornado();
+	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
 
 	UFUNCTION(BlueprintCallable)
-	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
+	void StoreMouseLocation();
+
+	UFUNCTION(BlueprintCallable)
+	void DestroyTornadoAndCommitCooldownEndAbility();
 	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraFireTornado> FireTornadoClass;
 
+	UPROPERTY()
+	TObjectPtr<AAuraFireTornado> FireTornado;
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USoundBase> DestroySound;
+	
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	FVector MouseLocation = FVector::ZeroVector;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float DamageDeltaSecond = 0.2f;
 
@@ -38,6 +53,8 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	float FollowRadius = 600.f;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float DamageRadius = 300.f;
+
+	FTimerHandle DestroyTimer;
 };

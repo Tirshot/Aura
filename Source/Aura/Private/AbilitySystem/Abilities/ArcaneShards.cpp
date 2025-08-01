@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Abilities/ArcaneShards.h"
 
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
@@ -10,6 +11,7 @@
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Player/AuraPlayerController.h"
 
 FString UArcaneShards::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
@@ -52,11 +54,7 @@ void UArcaneShards::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
-	auto* AvatarActor = GetAvatarActorFromActorInfo();
-	if (AvatarActor->Implements<UPlayerInterface>())
-	{
-		IPlayerInterface::Execute_HideMagicCircle(GetAvatarActorFromActorInfo());
-	}
+	HideMagicCircleAndRangeIndicator();
 	
 	// 데미지 입힘 종료
 	if (UWorld* World = GetWorld())
@@ -69,7 +67,7 @@ void UArcaneShards::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		PointCollection->Destroy();
 }
 
-void UArcaneShards::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UArcaneShards::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 
@@ -100,16 +98,28 @@ void UArcaneShards::ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandl
 	const FHitResult* HitResult = TargetData->GetHitResult();
 
 	// 마우스 히트 정보를 멤버 변수로 만듬
-	CurrentMouseLocation = HitResult->ImpactPoint;
+	CurrentTargetLocation = HitResult->ImpactPoint;
+
+	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
+	{
+		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
+		{
+			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
+			{
+				CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
+			}
+		}
+	}
+}
+
+void UArcaneShards::CreatePointCollection()
+{
 	NumPoints = GetAbilityLevel();
 
 	GroundPoints.Empty();
-
-	// 어빌리티 업그레이드 확인
-	CheckAbilityUpgrades(FAuraGameplayTags::Get().Abilities_Arcane_ArcaneShards);
 	
 	FTransform PointCollectionTransform;
-	PointCollectionTransform.SetLocation(CurrentMouseLocation);
+	PointCollectionTransform.SetLocation(CurrentTargetLocation);
 
 	PointCollection = GetWorld()->SpawnActorDeferred<APointCollection>(
 		PointCollectionClass,
@@ -145,9 +155,27 @@ void UArcaneShards::ReadyToSpawnShards()
 	CommitAbility(GetCurrentAbilitySpecHandle(),
 		GetCurrentActorInfo(),
 		GetCurrentActivationInfo());
+
+	StopAutoRun();
 }
 
 void UArcaneShards::SpawnShards()
+{
+	if (Idx < GroundPoints.Num())
+	{
+		// 파편 위치 계산
+		ShardSpawnLocation = GroundPoints[Idx]->GetComponentTransform().GetLocation();
+		ShardSpawnRotation = GroundPoints[Idx]->GetComponentTransform().GetRotation().Rotator();
+		
+		SpawnCueAndApplyDamage();
+		
+		Idx++;
+	}
+	else
+		EndSpawnShards();
+}
+
+void UArcaneShards::SpawnCueAndApplyDamage()
 {
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	
@@ -166,31 +194,28 @@ void UArcaneShards::SpawnShards()
 		{
 			int32 Stacks = GetUpgradeStackCount(AvatarActor, FAuraGameplayTags::Get().Upgrades_Arcane_ArcaneShards_FirstLargeShard);
 			float SizeMultiplier = Stacks * UpgradeFirstShardSizeMultiplier;
-
-			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius + SizeMultiplier);
-
+			
 			// 아케인 파편 기둥 이펙트 생성
 			CueParams.Location = ShardSpawnLocation;
 			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
 			CueParams.RawMagnitude = SizeMultiplier / 100.f;
+
+			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+
+			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius + SizeMultiplier);
 		}
 		else
 		{
-			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius);
-		
 			// 아케인 파편 기둥 이펙트 생성
 			CueParams.Location = ShardSpawnLocation;
 			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
 			CueParams.RawMagnitude = 1.f;
-		}
 		
-		K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+		
+			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius);
+		}
 	}
-	
-	if (Idx >= GroundPoints.Num())
-		EndSpawnShards();
-	else
-		Idx++;
 }
 
 void UArcaneShards::EndSpawnShards()

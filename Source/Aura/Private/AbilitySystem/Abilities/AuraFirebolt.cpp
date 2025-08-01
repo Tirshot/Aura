@@ -108,6 +108,7 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 		
 		// 투사체 유도
 		// 대상이 몬스터인지 확인
+		// 사거리 체크
 		if (HomingTarget && HomingTarget->Implements<UCombatInterface>())
 		{
 			if (Distance <= AbilityRange)
@@ -120,9 +121,13 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 				NormalVector.Normalize();
 				
 				FVector NewVector = SocketLocation + (NormalVector * AbilityRange);
+
+				FHitResult HitResult;
+
+				GetWorld()->LineTraceSingleByChannel(HitResult, NewVector, NewVector + FVector(0,0,-300.f), ECollisionChannel::ECC_Visibility);
 				
 				Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
-				Projectile->HomingTargetSceneComponent->SetWorldLocation(NewVector);
+				Projectile->HomingTargetSceneComponent->SetWorldLocation(HitResult.Location);
 				Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
 			}
 		}
@@ -143,8 +148,12 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 				
 				FVector NewVector = SocketLocation + (NormalVector * AbilityRange);
 				
+				FHitResult HitResult;
+
+				GetWorld()->LineTraceSingleByChannel(HitResult, NewVector, NewVector + FVector(0,0,-300.f), ECollisionChannel::ECC_Visibility);
+				
 				Projectile->HomingTargetSceneComponent = NewObject<USceneComponent>(USceneComponent::StaticClass());
-				Projectile->HomingTargetSceneComponent->SetWorldLocation(NewVector);
+				Projectile->HomingTargetSceneComponent->SetWorldLocation(HitResult.Location);
 				Projectile->ProjectileMovement->HomingTargetComponent = Projectile->HomingTargetSceneComponent;
 			}
 		}
@@ -156,7 +165,7 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 	}
 }
 
-void UAuraFirebolt::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UAuraFirebolt::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 

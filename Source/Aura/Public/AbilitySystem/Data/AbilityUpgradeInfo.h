@@ -8,7 +8,7 @@
 #include "AbilityUpgradeInfo.generated.h"
 
 UENUM(BlueprintType)
-enum EUpgradeRarity
+enum class EUpgradeRarity : uint8
 {
 	Common = 0,
 	Rare,
@@ -28,7 +28,7 @@ struct FAuraAbilityUpgradeInfo
 	FText UpgradeDescription;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TEnumAsByte<EUpgradeRarity> Rarity = Common;
+	EUpgradeRarity Rarity = EUpgradeRarity::Common;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 UpgradeMaxLevel = 1;
@@ -93,10 +93,13 @@ public:
 	// 레어도에 따른 업그레이드 배열
 	UFUNCTION()
 	TArray<FAuraAbilityUpgradeInfo> GetUpgradeInfoArrayForProbability(EUpgradeRarity Rarity);
-	
+
+	UFUNCTION(BlueprintCallable)
+	FGameplayTag GetAbilityTagForUpgradeTag(FGameplayTag UpgradeTag);
+
 	// 각 레어도에 따른 확률
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TMap<TEnumAsByte<EUpgradeRarity>, float> UpgradeProbability;
+	TMap<EUpgradeRarity, float> UpgradeProbability;
 	
 	// 어빌리티 태그, 업그레이드 정보의 배열 키-값 쌍
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

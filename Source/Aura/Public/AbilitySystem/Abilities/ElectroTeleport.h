@@ -22,7 +22,7 @@ public:
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
 	
 public:
 	UFUNCTION(BlueprintCallable)

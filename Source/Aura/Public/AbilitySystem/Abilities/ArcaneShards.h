@@ -20,11 +20,14 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 public:
-	virtual void CheckAbilityUpgrades(FGameplayTag AbilityTag) override;
+	virtual void CheckAbilityUpgrades() override;
 
 	UFUNCTION(BlueprintCallable)
 	void ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
 
+	UFUNCTION(BlueprintCallable)
+	void CreatePointCollection();
+	
 	UFUNCTION(BlueprintCallable)
 	void ReadyToSpawnShards();
 
@@ -32,50 +35,59 @@ public:
 	void SpawnShards();
 
 	UFUNCTION(BlueprintCallable)
+	void SpawnCueAndApplyDamage();
+
+	UFUNCTION(BlueprintCallable)
 	void EndSpawnShards();
 
 	UFUNCTION(BlueprintCallable)
 	void ApplyRadialDamage(TArray<AActor*>& OutOverlappingActors, float OuterRadius);
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(EditAnywhere)
 	TSubclassOf<APointCollection> PointCollectionClass = nullptr;
 
-	UPROPERTY(BlueprintReadWrite)
+protected:
+	UPROPERTY(BlueprintReadOnly)
 	TArray<USceneComponent*> GroundPoints;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	UPROPERTY()
 	TObjectPtr<APointCollection> PointCollection = nullptr;
 	
-protected:
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	int32 NumPoints = 0;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	int32 AdditionalShards = 0;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	int32 MaxNumShards = 10;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY()
 	bool bIsFirstShardLarge = false;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY()
 	float UpgradeFirstShardSizeMultiplier = 150.f;
 
 	UPROPERTY(BlueprintReadWrite)
-	FVector CurrentMouseLocation = FVector::ZeroVector;
+	FVector CurrentTargetLocation = FVector::ZeroVector;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadOnly)
 	FVector ShardSpawnLocation = FVector::ZeroVector;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	FRotator ShardSpawnRotation = FRotator::ZeroRotator;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	FTimerHandle ShardSpawnTimer;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly)
 	float SpawnShardsDeltaTime = 0.2f;
+	
+	UPROPERTY(EditDefaultsOnly)
+	bool bSpawnShardDelayed = false;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float ShardSpawnDelay = 0.5f;
 
 	int32 Idx = 0;
 };

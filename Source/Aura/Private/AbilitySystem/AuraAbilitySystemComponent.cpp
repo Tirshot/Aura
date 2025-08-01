@@ -93,17 +93,23 @@ void UAuraAbilitySystemComponent::AddCharacterAbility(const FGameplayTag& Abilit
 {
     // 게임플레이 어빌리티 스펙 생성
     auto AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this)->FindAbilityInfoForTag(AbilityTag);
-    if (const auto& Ability = AbilityInfo.Ability)
+    if (auto Ability = AbilityInfo.Ability)
     {
         int AbilityLevel = GetAbilityLevelByTag(AbilityTag);
-
+        
         // 이미 가지고 있는 어빌리티
         if (AbilityLevel > 0)
         {
             FScopedAbilityListLock ActiveScopeLoc(*this);
             for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
             {
-                AbilitySpec.Level += 1;
+                // 활성화 된 모든 어빌리티 스펙에서 태그와 일치하는 스펙 찾기
+                if (AbilitySpec.Ability->GetAssetTags().HasTagExact(AbilityTag))
+                {
+                    // 어빌리티 레벨업
+                    AbilitySpec.Level += 1;
+                    break;
+                }
             }
         }
         else

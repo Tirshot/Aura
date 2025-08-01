@@ -14,7 +14,7 @@ enum class ERangeShape : uint8
 	ERS_Cone, // 부채꼴
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_NineParams(FOnIndicatorInitialized, AActor*, AvatarActor, ERangeShape, RangeShape, const FVector&, Location, float, Width, float, Height, float, Radius, float, Red, float, Green, float, Blue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_NineParams(FOnIndicatorInitialized, AActor*, AvatarActor, bool, bAttachToActor, ERangeShape, RangeShape, const FVector&, Location, float, Radius, float, Width, float, Height, float, Angle, const FVector&, RGB);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIndicatorRemoved, AActor*, AvatarActor);
 
 UCLASS()
@@ -31,8 +31,13 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
-	void ShowIndicator(ERangeShape Shape, const FVector& Location, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f);
+	UFUNCTION()
+	void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& Location, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
 
+	ERangeShape GetRangeShape() const { return RangeShape; }
+	float GetWidth() const { return Width; }
+	float GetHeight() const { return Height; }
+	
 protected:
 	// 범위 표시기 모양
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -41,11 +46,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UDecalComponent> DecalComponent;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UMaterialInstance> CircleMaterial;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UMaterialInstance> RectMaterial;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<UMaterialInterface> BaseMaterial;
+	TObjectPtr<UMaterialInstanceDynamic> DynamicMI;
 
 public:
-	UPROPERTY(BlueprintAssignable)
+	UPROPERTY()
 	FOnIndicatorInitialized IndicatorInitialized;
 
 	UPROPERTY(BlueprintAssignable)
@@ -61,4 +72,7 @@ private:
 
 	// 부채꼴 각도
 	float ConeAngle = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess = true))
+	ERangeShape RangeShape;
 };

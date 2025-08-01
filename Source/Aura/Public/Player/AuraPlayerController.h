@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameplayTagContainer.h"
 #include "Actor/AbilityRangeIndicator.h"
+#include "Actor/MagicCircle.h"
 #include "AuraPlayerController.generated.h"
 
 class AAbilityRangeIndicator;
@@ -48,14 +49,17 @@ public:
 
 	// 범위 지정 데칼
 	UFUNCTION(BlueprintCallable)
-	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr);
+	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr, float InRange = 0.f, float InRadius = 200.f);
 
 	UFUNCTION(BlueprintCallable)
 	void HideMagicCircle();
 
+	UFUNCTION(BlueprintCallable)
+	const FVector GetMagicCircleLocation() { return MagicCircle->GetActorLocation(); }
+	
 	// 범위 데칼
 	UFUNCTION(BlueprintCallable)
-	void ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue);
+	void ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, FVector RGB);
 
 	UFUNCTION(BlueprintCallable)
 	void HideRangeIndicator();
@@ -66,6 +70,7 @@ public:
 	void SetAutoRunning(bool bInAuto){bAutoRunning = bInAuto;}
 
 	bool IsShiftKeyDown() { return bShiftKeyDown; }
+	FHitResult& GetHitResult() {return CursorHit;}
 
 	
 public:
@@ -85,8 +90,15 @@ public:
 	UFUNCTION()
 	void HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpgradeInfo>& SelectedUpgradeInfo);
 
+	// 리롤 버튼 클릭
+	UFUNCTION()
+	void HandleAbilityCardRerollSelected();
+	
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_CreateCardSelection(AActor* InteractedActor);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_RemoveCardSelection(AActor* InteractedActor);
 	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
@@ -149,9 +161,11 @@ private:
 
 	void AutoRun();
 
+public:
 	UFUNCTION(BlueprintCallable)
 	void StopAutoRun();
 
+private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;
 
@@ -168,4 +182,5 @@ private:
 	TObjectPtr<AAbilityRangeIndicator> RangeIndicator;
 	
 	void UpdateMagicCircleLocation();
+	void UpdateRangeIndicatorRotation();
 };

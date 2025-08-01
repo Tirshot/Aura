@@ -61,7 +61,7 @@ FString UElectrocute::GetNextLevelDescription(int32 Level, const UObject* WorldC
 		);
 }
 
-void UElectrocute::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UElectrocute::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 

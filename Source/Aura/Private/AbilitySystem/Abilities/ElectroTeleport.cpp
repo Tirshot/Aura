@@ -56,7 +56,7 @@ void UElectroTeleport::InputPressed(const FGameplayAbilitySpecHandle Handle, con
 	}
 }
 
-void UElectroTeleport::CheckAbilityUpgrades(FGameplayTag AbilityTag)
+void UElectroTeleport::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();
 	

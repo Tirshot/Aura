@@ -60,4 +60,7 @@ public:
 
 	FAuraAbilityInfo FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound = false) const;
 	FName GetAbilityNameForTag(const FGameplayTag& AbilityTag);
+
+	UFUNCTION(BlueprintCallable)
+	const UTexture2D* GetIconForTag(const FGameplayTag& AbilityTag);
 };

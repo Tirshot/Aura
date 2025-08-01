@@ -95,6 +95,9 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 
     // 범위 지정 데칼
     UpdateMagicCircleLocation();
+
+    //
+    UpdateRangeIndicatorRotation();
 }
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed)
@@ -153,10 +156,48 @@ void AAuraPlayerController::UpdateMagicCircleLocation()
         {
             MagicCircle->SetActorHiddenInGame(false);
             MagicCircle->SetActorLocation(CursorHit.ImpactPoint);
+            MagicCircle->KeepMagicCircleInRange();
         }
         else
         {
             MagicCircle->SetActorHiddenInGame(true);
+        }
+    }
+}
+
+void AAuraPlayerController::UpdateRangeIndicatorRotation()
+{
+    if (IsValid(RangeIndicator))
+    {
+        // 원형이 아닐 때
+        if (RangeIndicator->GetRangeShape() != ERangeShape::ERS_Circle)
+        {
+            if (!CursorHit.bBlockingHit)
+                return;
+            
+            if (AActor* RangeIndicatorOwner = RangeIndicator->Owner)
+            {
+                FVector StartPoint = RangeIndicatorOwner->GetActorLocation();
+                float OwnerCapsuleHeight = RangeIndicatorOwner->GetSimpleCollisionCylinderExtent().Z;
+                StartPoint.Z -= OwnerCapsuleHeight;
+                
+                FVector EndPoint = CursorHit.ImpactPoint;
+
+                FVector Direction = EndPoint - StartPoint;
+                Direction.Z = 0.f;
+
+                Direction.Normalize();
+
+                float Length = RangeIndicator->GetHeight();
+
+                FVector NewLocation = StartPoint + (Direction * Length);
+                RangeIndicator->SetActorLocation(NewLocation);
+                FRotator TargetRotation = Direction.ToOrientationRotator();
+                TargetRotation.Pitch = 0.f;
+                TargetRotation.Roll = 0.f;
+
+                RangeIndicator->SetActorRotation(TargetRotation);
+            }
         }
     }
 }
@@ -177,7 +218,7 @@ void AAuraPlayerController::UnHighlightActor(AActor* InActor)
     }
 }
 
-void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial)
+void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial, float InRange,  float InRadius)
 {
     // 생성
     if (IsValid(MagicCircle) == false)
@@ -187,6 +228,9 @@ void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial)
             return;
         
         MagicCircle = GetWorld()->SpawnActor<AMagicCircle>(MagicCircleClass);
+        MagicCircle->CircleRange = InRange;
+        MagicCircle->Radius = InRadius;
+        MagicCircle->SetOwner(AvatarActor);
         MagicCircle->CircleInitialized.Broadcast(AvatarActor);
         
         if (DecalMaterial)
@@ -209,7 +253,7 @@ void AAuraPlayerController::HideMagicCircle()
     }
 }
 
-void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue)
+void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, FVector RGB)
 {
     // 생성
     if (IsValid(RangeIndicator) == false)
@@ -219,7 +263,11 @@ void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVe
             return;
         
         RangeIndicator = GetWorld()->SpawnActor<AAbilityRangeIndicator>(RangeIndicatorClass);
-        RangeIndicator->IndicatorInitialized.Broadcast(AvatarActor, RangeShape, Location, Width, Height, Radius, Red, Green, Blue);
+        RangeIndicator->SetOwner(AvatarActor);
+        RangeIndicator->IndicatorInitialized.Broadcast(
+            AvatarActor, true, RangeShape, Location,
+            Radius, Width, Height, 0.f,
+            RGB);
     }
 }
 
@@ -247,6 +295,10 @@ void AAuraPlayerController::HandleCardSelectionInitialized()
     {
         if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
         {
+            // 리롤 버튼
+            if (!CardSelectionViewModel->OnRerollSelectedDelegate.IsBound())
+                CardSelectionViewModel->OnRerollSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardRerollSelected);
+            
             for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
             {
                 if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
@@ -281,6 +333,11 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
     }
 }
 
+void AAuraPlayerController::HandleAbilityCardRerollSelected()
+{
+    Server_CreateCardSelection(GetPawn());
+}
+
 void AAuraPlayerController::Server_CreateCardSelection_Implementation(AActor* InteractedActor)
 {
     if (!HasAuthority())
@@ -298,6 +355,26 @@ void AAuraPlayerController::Server_CreateCardSelection_Implementation(AActor* In
             }
         }
     }
+}
+
+void AAuraPlayerController::Server_RemoveCardSelection_Implementation(AActor* InteractedActor)
+{
+    if (!HasAuthority())
+        return;
+    
+    // 게임 모드에게 카드 뽑기를 요청
+    if (AAuraGameModeBase* GameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        if (APawn* InteractedPawn = Cast<APawn>(InteractedActor))
+        {
+            if (APlayerController* PC = Cast<APlayerController>(InteractedPawn->GetController()))
+            {
+                // GameMode의 카드 뽑기 로직 호출
+                GameMode->HandleInitializeCards(PC);
+            }
+        }
+    }
+    
 }
 
 void AAuraPlayerController::Server_RemoveUpgrade_Implementation(FGameplayTag RemoveTag)
@@ -413,7 +490,7 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
-        bAutoRunning = false;
+        StopAutoRun();
         return;
     }
 
@@ -435,7 +512,7 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
         GetASC()->AbilityInputTagPressed(InputTag);
     }
     
-    bAutoRunning = false;
+    StopAutoRun();
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
@@ -443,7 +520,7 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
     {
-        bAutoRunning = false;
+        StopAutoRun();
         return;
     }
     

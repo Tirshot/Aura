@@ -34,3 +34,15 @@ FName UAbilityInfo::GetAbilityNameForTag(const FGameplayTag& AbilityTag)
 
 	return FName();
 }
+
+const UTexture2D* UAbilityInfo::GetIconForTag(const FGameplayTag& AbilityTag)
+{
+	for (auto Ability : AbilityInformation)
+	{
+		if (Ability.AbilityTag == AbilityTag)
+		{
+			return Ability.Icon.Get();
+		}
+	}
+	return nullptr;
+}

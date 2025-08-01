@@ -7,6 +7,9 @@
 #include "AuraAbilityTypes.h"
 #include "AuraDamageGameplayAbility.generated.h"
 
+class AAbilityRangeIndicator;
+enum class ERangeShape : uint8;
+
 UENUM(BlueprintType)
 enum ESpellType : uint8
 {
@@ -28,6 +31,9 @@ public:
 
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	UFUNCTION(BlueprintCallable)
+	void StopAutoRun();
+	
 	UFUNCTION(BlueprintPure)
 	FDamageEffectParams MakeDamageEffectParamsFromClassDefaults(
 		AActor* TargetActor = nullptr,
@@ -46,6 +52,18 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RemoveRangeSpellHelpMessage(AActor* AvatarActor);
 	
+	UFUNCTION(BlueprintCallable)
+	void ShowMagicCircle(float MagicCircleRadius);
+	
+	UFUNCTION(BlueprintCallable)
+	void ShowRangeIndicator(ERangeShape Shape, float Width = 0.f);
+	
+	UFUNCTION(BlueprintCallable)
+	void HideMagicCircleAndRangeIndicator();
+
+	UFUNCTION(BlueprintCallable)
+	AAbilityRangeIndicator* SpawnRangeIndicator(const FVector& Location, bool bAttachToActor,ERangeShape RangeShape, float Radius, float Width, float Height, const FVector& RGB, float LifeSpan);
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
@@ -58,10 +76,6 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
 	FScalableFloat MagicPowerCoefficient;
-	
-	// 테이블 내 특정 커브 선택
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Scaling", meta = (GetOptions = "GetRowNames"))
-	FName CurveRowName;
 	
 	UPROPERTY(EditDefaultsOnly, category = "Damage")
 	float DebuffChance = 20.f;

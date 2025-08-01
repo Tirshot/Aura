@@ -114,7 +114,7 @@ public:
 	void ShowDamageNumber(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Width, float Height, float Radius, float Red, float Green, float Blue);
+	void ShowRangeIndicator(bool bAttachToActor, ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, const FVector& RGB);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void HideRangeIndicator() const;

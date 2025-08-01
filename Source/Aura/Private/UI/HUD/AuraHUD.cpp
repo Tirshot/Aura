@@ -158,10 +158,13 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         return;
     
     // 뷰 생성
-    CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
-    CardSelectionWidget->AddToViewport();
+    if (!IsValid(CardSelectionWidget))
+    {
+        CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
+        CardSelectionWidget->AddToViewport();
 
-    CardSelectionWidget->BlueprintInitializeWidget();
+        CardSelectionWidget->BlueprintInitializeWidget();
+    }
     
     auto* CardViewModel_0 = CardSelectionViewModel->GetCardViewModelByIndex(0);
     if (CardViewModel_0)
@@ -172,6 +175,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_0->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_0->SetUpgradeName(Upgrade.UpgradeName);
         CardViewModel_0->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_0->SetUpgradeRarity(Upgrade.Rarity);
 
         CardViewModel_0->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag0);
     }
@@ -185,6 +189,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_1->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_1->SetUpgradeName(Upgrade.UpgradeName);
         CardViewModel_1->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_1->SetUpgradeRarity(Upgrade.Rarity);
         
         CardViewModel_1->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag1);
     }
@@ -198,6 +203,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_2->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_2->SetUpgradeName(Upgrade.UpgradeName);
         CardViewModel_2->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_2->SetUpgradeRarity(Upgrade.Rarity);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag2);
     }
@@ -206,10 +212,13 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
 void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos)
 {
     // 뷰 생성
-    CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
-    CardSelectionWidget->AddToViewport();
+    if (!IsValid(CardSelectionWidget))
+    {
+        CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
+        CardSelectionWidget->AddToViewport();
 
-    CardSelectionWidget->BlueprintInitializeWidget();
+        CardSelectionWidget->BlueprintInitializeWidget();
+    }
     
     auto* CardViewModel_0 = CardSelectionViewModel->GetCardViewModelByIndex(0);
     if (CardViewModel_0)
@@ -218,6 +227,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_0->SetUpgradeDescription(UpgradeInfos[0].UpgradeDescription);
         CardViewModel_0->SetUpgradeName(UpgradeInfos[0].UpgradeName);
         CardViewModel_0->SetUpgradeMaxLevel(UpgradeInfos[0].UpgradeMaxLevel);
+        CardViewModel_0->SetUpgradeRarity(UpgradeInfos[0].Rarity);
 
         CardViewModel_0->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[0].UpgradeEffectTag);
     }
@@ -229,6 +239,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_1->SetUpgradeDescription(UpgradeInfos[1].UpgradeDescription);
         CardViewModel_1->SetUpgradeName(UpgradeInfos[1].UpgradeName);
         CardViewModel_1->SetUpgradeMaxLevel(UpgradeInfos[1].UpgradeMaxLevel);
+        CardViewModel_1->SetUpgradeRarity(UpgradeInfos[1].Rarity);
         
         CardViewModel_1->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[1].UpgradeEffectTag);
     }
@@ -240,6 +251,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_2->SetUpgradeDescription(UpgradeInfos[2].UpgradeDescription);
         CardViewModel_2->SetUpgradeName(UpgradeInfos[2].UpgradeName);
         CardViewModel_2->SetUpgradeMaxLevel(UpgradeInfos[2].UpgradeMaxLevel);
+        CardViewModel_2->SetUpgradeRarity(UpgradeInfos[2].Rarity);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[2].UpgradeEffectTag);
     }
