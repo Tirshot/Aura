@@ -5,6 +5,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "Player/AuraPlayerState.h"
+#include "UI/HUD/AuraHUD.h"
 
 void USpellMenuWidgetController::BroadcastInitialValues()
 {
@@ -209,7 +210,6 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	SpellGlobeReassignedDelegate.Broadcast(AbilityTag);
 	GlobeDeselect();
 }
-
 void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& AbilityStatus, int32 SpellPoints, bool& bEnableSpellPointsButton, bool& bEnableEquipButton)
 {
 	// ���� �Ҹ����� ������ ������ ���̹Ƿ� �Ҹ����� ������ ����Ѵ�.

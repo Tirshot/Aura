@@ -13,6 +13,8 @@
 #include "AI/AuraAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "Character/AuraBossMonster.h"
+#include "Game/AuraGameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -52,13 +54,25 @@ void AAuraEnemy::PossessedBy(AController* NewController)
     if (!HasAuthority())
         return;
 
+    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        AuraGameMode->AddMonsterToArray(this);
+    }
+
     AuraAIController = Cast<AAuraAIController>(NewController);
 
     // 블랙보드 초기화
     AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
-    
-    // 비헤이비어 트리 작동
-    AuraAIController->RunBehaviorTree(BehaviorTree);
+
+    if (AAuraBossMonster* BossCharacter = Cast<AAuraBossMonster>(this))
+    {
+        // 보스 몬스터는 몽타주 이벤트 이후에 비헤이비어 트리 활성화
+    }
+    else
+    {
+        // 비헤이비어 트리 작동
+        AuraAIController->RunBehaviorTree(BehaviorTree);
+    }
 
     // 블랙보드 키 기본값 설정
     AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
@@ -91,6 +105,14 @@ int32 AAuraEnemy::GetCharacterLevel_Implementation()
 
 void AAuraEnemy::Die(const FVector& DeathImpulse)
 {
+    // 랙돌 효과와 무기 드랍
+    Super::Die(DeathImpulse);
+    
+    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        AuraGameMode->RemoveMonsterFromArray(this);
+    }
+
     // 수명 설정
     SetLifeSpan(LifeSpan);
 
@@ -102,9 +124,6 @@ void AAuraEnemy::Die(const FVector& DeathImpulse)
 
     // 아이템 드랍
     SpawnLoot();
-
-    // 랙돌 효과와 무기 드랍
-    Super::Die(DeathImpulse);
 }
 
 void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)

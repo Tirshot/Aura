@@ -9,6 +9,7 @@
 #include "Player/AuraPlayerState.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
+#include "UI/ViewModel/MVVM_UpgradeMenu.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "UI/Widget/LoadScreenWidget.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
@@ -16,6 +17,7 @@
 #include "UI/WidgetController/SpellMenuWidgetController.h"
 #include "UI/WidgetController/GameOverWidgetController.h"
 #include "UI/WidgetController/SaveProgressWidgetController.h"
+#include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 UOverlayWidgetController *AAuraHUD::GetOverlayWidgetController(const FWidgetControllerParams &WCParams)
 {
@@ -51,6 +53,18 @@ USpellMenuWidgetController* AAuraHUD::GetSpellMenuWidgetController(const FWidget
     }
 
     return SpellMenuWidgetController;
+}
+
+USpellUpgradesWidgetController* AAuraHUD::GetSpellUpgradesWidgetController(const FWidgetControllerParams& WCParams)
+{
+    if (SpellUpgradesWidgetController == nullptr)
+    {   // 없으면 생성
+        SpellUpgradesWidgetController = NewObject<USpellUpgradesWidgetController>(this, SpellUpgradesWidgetControllerClass);
+        SpellUpgradesWidgetController->SetWidgetControllerParams(WCParams);
+        SpellUpgradesWidgetController->BindCallbacksToDependencies();
+    }
+
+    return SpellUpgradesWidgetController;
 }
 
 UGameOverWidgetController* AAuraHUD::GetGameOverWidgetController(const FWidgetControllerParams& WCParams)
@@ -103,6 +117,11 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
 
     // 저장중 위젯 컨트롤러 생성 및 연결
     SaveProgressWidgetController = GetSaveProgressWidgetController(WidgetControllerParams);
+
+    // 스펠 업그레이드 위젯 컨트롤러 생성
+    SpellUpgradesWidgetController = GetSpellUpgradesWidgetController(WidgetControllerParams);
+    UpgradeMenuViewModel = NewObject<UMVVM_UpgradeMenu>(this, UpgradeMenuViewModelClass);
+    UpgradeMenuViewModel->InitializeView();
 
     // 카드 선택 UI 뷰 모델 생성
     CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
@@ -255,4 +274,14 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[2].UpgradeEffectTag);
     }
+}
+
+void AAuraHUD::ShowOverlay()
+{
+    OverlayWidgetController->ShowOverlayWidget();
+}
+
+void AAuraHUD::HideOverlay()
+{
+    OverlayWidgetController->HideOverlayWidget();
 }

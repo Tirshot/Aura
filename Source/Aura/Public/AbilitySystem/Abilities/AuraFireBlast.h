@@ -15,6 +15,9 @@ class AURA_API UAuraFireBlast : public UAuraProjectileSpell
 	
 public:
 	UAuraFireBlast();
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;

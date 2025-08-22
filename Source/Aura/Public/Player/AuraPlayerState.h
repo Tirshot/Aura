@@ -18,6 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitialized, AAuraPlay
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLevelChanged, int32/*Level*/, bool /*bLevelUp*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardsInitialized, TArray<FAuraAbilityUpgradeInfo>&, InitializedCards);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAbilityUpgradeTagsChanged, FGameplayTag, UpgradeTag, int32, Stack);
 
 UCLASS()
 class AURA_API AAuraPlayerState : public APlayerState, public IAbilitySystemInterface
@@ -51,6 +52,9 @@ public:
 
 	UPROPERTY()
 	FOnCardsInitialized OnUpgradeCardsInitializedDelegate;
+
+	UPROPERTY()
+	FOnAbilityUpgradeTagsChanged OnAbilityUpgradeTagsChangedDelegate;
 	
 	FORCEINLINE int32 GetCharacterLevel() const { return Level; }
 	FORCEINLINE int32 GetXP() const { return XP; }
@@ -59,7 +63,11 @@ public:
 	void SetXP(int32 GainedXP);
 	void AddToXP(int32 GainedXP);
 	void SetLevel(int32 InLevel);
+
+	UFUNCTION(BlueprintCallable)
+	void AddToLevelOne();
 	void AddToLevel(int32 InLevel);
+	
 	void SetAttributePoints(int32 InAP);
 	void AddToAttributePoints(int32 InAP);
 	void SetSpellPoints(int32 InSP);
@@ -70,19 +78,22 @@ public:
 
 	void SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>& NewCard);
 
-	FGameplayTagContainer& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
-	void SetAbilityUpgradeTagContainer(const FGameplayTagContainer& InTagContainer);
+	TMap<FGameplayTag, int32>& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
+	void SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer);
 	
 public:
 	// 어빌리티 업그레이드
-	UPROPERTY(ReplicatedUsing = OnRep_AbilityUpgradeTags)
-	FGameplayTagContainer OwnedAbilityUpgradeTags;
+	UPROPERTY()
+	TMap<FGameplayTag, int32> OwnedAbilityUpgradeTags;
 
 	UFUNCTION(Server, Reliable)
 	void Server_AddAbilityUpgradeTag(FGameplayTag UpgradeTag);
 	
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveAbilityUpgradeTag(FGameplayTag UpgradeTag);
+
+	void AddUpgradeTag(const FGameplayTag& Tag);
+	void RemoveUpgradeTag(const FGameplayTag& Tag);
 
 	UPROPERTY(ReplicatedUsing = OnRep_UpgradeCardInfo)
 	TArray<FAuraAbilityUpgradeInfo> ReplicatedCardInfo;
@@ -151,8 +162,8 @@ private:
 	UFUNCTION()
 	void OnRep_SpellPoint(int32 OldSpellPoint);
 
-	UFUNCTION()
-	void OnRep_AbilityUpgradeTags();
+	// UFUNCTION()
+	// void OnRep_AbilityUpgradeTags();
 
 	UFUNCTION()
 	void OnRep_UpgradeCardInfo();

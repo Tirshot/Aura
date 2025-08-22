@@ -17,6 +17,7 @@
 #include "UI/HUD/AuraHUD.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "Engine/OverlapResult.h"
+#include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD)
 {
@@ -73,6 +74,19 @@ USpellMenuWidgetController* UAuraAbilitySystemLibrary::GetSpellMenuWidgetControl
 	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
 	{
 		return AuraHUD->GetSpellMenuWidgetController(WCParams);
+	}
+	return nullptr;
+}
+
+USpellUpgradesWidgetController* UAuraAbilitySystemLibrary::GetSpellUpgradesWidgetController(
+	const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AAuraHUD* AuraHUD = nullptr;
+
+	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
+	{
+		return AuraHUD->GetSpellUpgradesWidgetController(WCParams);
 	}
 	return nullptr;
 }
@@ -397,6 +411,18 @@ UAbilityUpgradeInfo* UAuraAbilitySystemLibrary::GetAbilityUpgradeInfo(const UObj
 		return nullptr;
 
 	return AuraGameMode->AbilityUpgradeInfo;
+}
+
+FAuraAbilityUpgradeInfo UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(const UObject* WorldContextObject, const FGameplayTag& UpgradeTag)
+{
+	auto* AllUpgradeInfo = GetAbilityUpgradeInfo(WorldContextObject);
+	if (!AllUpgradeInfo)
+		return FAuraAbilityUpgradeInfo();
+
+	if (!UpgradeTag.IsValid())
+		return FAuraAbilityUpgradeInfo();
+
+	return AllUpgradeInfo->GetUpgradeInfoForUpgradeTag(UpgradeTag);
 }
 
 ULootTiers* UAuraAbilitySystemLibrary::GetLootTiers(const UObject* WorldContextObject)

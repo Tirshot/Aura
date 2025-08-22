@@ -320,6 +320,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("MindControl Ability")
 	);
 
+	GameplayTags.Abilities_Arcane_ArcaneOrbit = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Arcane.ArcaneOrbit"),
+		FString("ArcaneOrbit Ability")
+	);
+
 	GameplayTags.Abilities_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.HitReact"),
 		FString("HitReact Ability")
@@ -365,6 +370,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.Abilities_Status_Equipped = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Status.Equipped"),
 		FString("Ability Status Equipped")
+	);
+
+	GameplayTags.Abilities_Status_Activated = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Status.Activated"),
+		FString("Ability Status Activating")
 	);
 
 	/* 
@@ -421,6 +431,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.Upgrades_Arcane_ArcaneShards_FirstLargeShard = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Arcane.ArcaneShards.FirstLargeShard"),
 	FString("Increase Size of First Shard")
+	);
+	
+	GameplayTags.Upgrades_Arcane_ArcaneOrbit_IncreaseRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneOrbit.IncreaseRange"),
+	FString("Increase Range of ArcaneOrbit")
 	);
 	
 	GameplayTags.Upgrades_Lightning_Increase10PercentDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -582,7 +597,8 @@ void FAuraGameplayTags::InitializeAbilitiesTagsArray()
 	// 어빌리티 태그 - 액티브
 	GameplayTags.GameplayAbilitiesTags.Empty();
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneShards);
-	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_MindControl);
+	//GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_MindControl);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneOrbit);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBolt);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBlast);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_Firenado);

@@ -20,6 +20,20 @@ FString UAuraSpawnElectroSphere::GetNextLevelDescription(int32 Level, const UObj
 	return Super::GetNextLevelDescription(Level, WorldContextObject);
 }
 
+void UAuraSpawnElectroSphere::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UAuraSpawnElectroSphere::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 void UAuraSpawnElectroSphere::CheckAbilityUpgrades()
 {
 	const auto& Tags = FAuraGameplayTags::Get();

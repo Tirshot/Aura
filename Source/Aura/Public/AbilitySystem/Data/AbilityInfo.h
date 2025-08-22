@@ -47,6 +47,16 @@ struct FAuraAbilityInfo
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayAbility> Ability;
+
+	bool operator==(const FAuraAbilityInfo& Other) const
+	{
+		return AbilityTag == Other.AbilityTag;
+	}
+	
+	bool operator==(const FGameplayTag& OtherTag) const
+	{
+		return AbilityTag == OtherTag;
+	}
 };
 
 UCLASS()

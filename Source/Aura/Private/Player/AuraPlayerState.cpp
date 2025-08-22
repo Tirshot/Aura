@@ -5,11 +5,14 @@
 
 #include "AbilitySystemGlobals.h"
 #include "AuraGameplayTags.h"
+#include "SNodePanel.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "UI/HUD/AuraHUD.h"
+#include "UI/ViewModel/MVVM_UpgradeMenu.h"
 
 
 AAuraPlayerState::AAuraPlayerState()
@@ -70,6 +73,12 @@ void AAuraPlayerState::SetLevel(int32 InLevel)
     OnLevelChangedDelegate.Broadcast(Level, false);
 }
 
+void AAuraPlayerState::AddToLevelOne()
+{
+    Level += 1;
+    OnLevelChangedDelegate.Broadcast(Level, true);
+}
+
 void AAuraPlayerState::AddToLevel(int32 InLevel)
 {
     Level += InLevel;
@@ -122,9 +131,67 @@ void AAuraPlayerState::SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>&
     OnUpgradeCardsInitializedDelegate.Broadcast(ReplicatedCardInfo);
 }
 
-void AAuraPlayerState::SetAbilityUpgradeTagContainer(const FGameplayTagContainer& InTagContainer)
+void AAuraPlayerState::SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer)
 {
     OwnedAbilityUpgradeTags = InTagContainer;
+}
+
+void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
+{
+    // 태그 추가
+    int32& CountRef = OwnedAbilityUpgradeTags.FindOrAdd(Tag);
+
+    // 값 1 증가
+    CountRef++;
+
+    if (CountRef > 0)
+    {
+        // OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, CountRef);
+        if (AAuraHUD* AuraHUD = GetPlayerController()->GetHUD<AAuraHUD>())
+        {
+            auto* ViewModel = AuraHUD->GetUpgradeMenuViewModel();
+            if (!ViewModel)
+                return;
+
+            auto InfoStruct = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(this, Tag);
+            FString UpgradeName = InfoStruct.UpgradeName;
+            
+            ViewModel->OnUpgradeInfoReceived.Broadcast(UpgradeName, CountRef);
+        }
+    }
+}
+
+void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
+{
+    // 태그 제거
+    int32* Count = OwnedAbilityUpgradeTags.Find(Tag);
+
+    if (Count != nullptr)
+    {
+        // 중첩 갯수 감소
+        *Count -= 1;
+
+        // 중첩 갯수가 0이 되면 제거
+        if (*Count < 1)
+        {
+            OwnedAbilityUpgradeTags.Remove(Tag);
+            OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, 0);
+            return;
+        }
+        
+        // OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, *Count);
+        if (AAuraHUD* AuraHUD = GetPlayerController()->GetHUD<AAuraHUD>())
+        {
+            auto* ViewModel = AuraHUD->GetUpgradeMenuViewModel();
+            if (!ViewModel)
+                return;
+
+            auto InfoStruct = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(this, Tag);
+            FString UpgradeName = InfoStruct.UpgradeName;
+            
+            ViewModel->OnUpgradeInfoReceived.Broadcast(UpgradeName, *Count);
+        }
+    }
 }
 
 int32 AAuraPlayerState::GetUpgradeTagCount(FGameplayTag UpgradeTag)
@@ -134,18 +201,14 @@ int32 AAuraPlayerState::GetUpgradeTagCount(FGameplayTag UpgradeTag)
     if (!UpgradeTag.IsValid())
         return 0;
 
-    for (auto& OwnedTag : OwnedAbilityUpgradeTags)
-    {
-        if (OwnedTag.MatchesTagExact(UpgradeTag))
-            TagCount += 1;
-    }
+    TagCount = *OwnedAbilityUpgradeTags.Find(UpgradeTag);
     
     return TagCount;
 }
 
 bool AAuraPlayerState::HasUpgradeTag(FGameplayTag UpgradeTag)
 {
-    return OwnedAbilityUpgradeTags.HasTag(UpgradeTag);
+    return OwnedAbilityUpgradeTags.Find(UpgradeTag) ? true : false;
 }
 
 void AAuraPlayerState::HandleAbilitiesSet()
@@ -253,21 +316,25 @@ void AAuraPlayerState::Server_AddAbilityUpgradeTag_Implementation(FGameplayTag U
         return;
     
     // 보유중인 어빌리티 업그레이드 배열에 추가
-    OwnedAbilityUpgradeTags.AddTag(UpgradeTag);
+    AddUpgradeTag(UpgradeTag);
 }
 
 void AAuraPlayerState::Server_RemoveAbilityUpgradeTag_Implementation(FGameplayTag UpgradeTag)
 {
-
+    // if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+    // {
+    //     AuraASC->RemoveCharacterAbility(UpgradeTag);
+    // }
     
     // 보유중인 어빌리티 업그레이드 배열에서 제거
-    OwnedAbilityUpgradeTags.RemoveTag(UpgradeTag);
+    RemoveUpgradeTag(UpgradeTag);
 }
 
-void AAuraPlayerState::OnRep_AbilityUpgradeTags()
-{
-    // OnAbilityUpgradeTagsChangedDelegate.Broadcast();
-}
+// void AAuraPlayerState::OnRep_AbilityUpgradeTags()
+// {
+//     // 업그레이드 목록 UI로 전송
+//     OnAbilityUpgradeTagsChangedDelegate.Broadcast(OwnedAbilityUpgradeTags);
+// }
 
 void AAuraPlayerState::OnRep_UpgradeCardInfo()
 {

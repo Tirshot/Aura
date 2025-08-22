@@ -24,7 +24,7 @@ struct FAuraAbilityUpgradeInfo
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FString UpgradeName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(MultiLine = true))
 	FText UpgradeDescription;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

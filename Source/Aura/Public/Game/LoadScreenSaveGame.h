@@ -153,7 +153,12 @@ public:
 	TArray<FSavedMap> SavedMaps;
 
 	UPROPERTY()
-	FGameplayTagContainer SavedAbilityUpgrades;
+	TMap<FGameplayTag, int32> SavedAbilityUpgrades;
+
+	// 1회용 액터
+	UPROPERTY()
+	TMap<FGuid, bool> OneTimeUseActors;
+	TMap<FGuid, bool> GetOneTimeUseActors(){return OneTimeUseActors;}
 
 	FSavedMap GetSavedMapWithMapName(const FString& InMapName);
 	bool HasMap(const FString& InMapName);

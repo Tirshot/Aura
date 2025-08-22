@@ -103,6 +103,16 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
     }
 }
 
+void UOverlayWidgetController::ShowOverlayWidget()
+{
+    OnOverlayVisibilityChanged.Broadcast(true);
+}
+
+void UOverlayWidgetController::HideOverlayWidget()
+{
+    OnOverlayVisibilityChanged.Broadcast(false);
+}
+
 void UOverlayWidgetController::OnXPChanged(int32 NewXP)
 {
     // 레벨업 정보 가져옴

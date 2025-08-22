@@ -13,3 +13,9 @@ AAuraAIController::AAuraAIController()
 	BehaviorTreeComponent = CreateDefaultSubobject<UBehaviorTreeComponent>("BehaviorTreeComponent");
 	check(BehaviorTreeComponent);
 }
+
+void AAuraAIController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+}

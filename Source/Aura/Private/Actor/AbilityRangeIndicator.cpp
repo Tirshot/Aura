@@ -17,7 +17,7 @@ AAbilityRangeIndicator::AAbilityRangeIndicator()
 	DecalComponent = CreateDefaultSubobject<UDecalComponent>("DecalComponent");
 	DecalComponent->SetWorldRotation(FRotator(90.f, 0.f, 0.f));
 
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialAsset(TEXT("/Game/Blueprints/Actor/M_RangeIndicatorOutline.M_RangeIndicatorOutline"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialAsset(TEXT("/Game/Blueprints/Actor/RangeIndicator/M_RangeIndicatorOutline.M_RangeIndicatorOutline"));
 	if (MaterialAsset.Succeeded())
 	{
 		DecalComponent->SetMaterial(0, MaterialAsset.Object);
@@ -26,14 +26,14 @@ AAbilityRangeIndicator::AAbilityRangeIndicator()
 	DecalComponent->SetupAttachment(RootComponent);
 
 	CircleMaterial = CreateDefaultSubobject<UMaterialInstance>("CircleMaterial");
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> CircleMI(TEXT("/Game/Blueprints/Actor/MI_RangeIndicatorOutline_Inst.MI_RangeIndicatorOutline_Inst"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> CircleMI(TEXT("/Game/Blueprints/Actor/RangeIndicator/MI_RangeIndicatorOutline_Inst.MI_RangeIndicatorOutline_Inst"));
 	if (CircleMI.Succeeded())
 	{
 		CircleMaterial = CircleMI.Object;
 	}
 
 	RectMaterial = CreateDefaultSubobject<UMaterialInstance>("RectMaterial");
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> RectMI(TEXT("/Game/Blueprints/Actor/MI_RangeIndicatorOutline_Rect.MI_RangeIndicatorOutline_Rect"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> RectMI(TEXT("/Game/Blueprints/Actor/RangeIndicator/MI_RangeIndicatorOutline_Rect.MI_RangeIndicatorOutline_Rect"));
 	if (RectMI.Succeeded())
 	{
 		RectMaterial = RectMI.Object;

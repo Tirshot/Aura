@@ -26,10 +26,10 @@ protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void CheckPointReached(UMaterialInstanceDynamic* DynamicMI);
+	void CheckPointReached(UMaterialInstanceDynamic* DynamicMI, AActor* InteractedActor);
 
 	UFUNCTION(BlueprintCallable)
-	void HandleGlowEffects();
+	void HandleGlowEffects(AActor* InteractedActor = nullptr);
 	
 public:
 	/* HighlightInterface 오버라이드*/
@@ -51,11 +51,19 @@ public:
 	UPROPERTY(BlueprintReadWrite, SaveGame)
 	bool bReached = false;
 
+	// 접촉 시 힐링 여부
+	UPROPERTY(EditDefaultsOnly)
+	bool bHealing = true;
+
+	// 게임 세이브 여부
+	UPROPERTY(EditDefaultsOnly)
+	bool bSaveGame = true;
+	
 	UPROPERTY(EditAnywhere)
 	bool bBindOverlapCallback = true;
 
 public:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<class UGameplayEffect> AuraHeal;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

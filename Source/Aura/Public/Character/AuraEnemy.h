@@ -45,7 +45,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnMaxHealthChanged;
 
-	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	virtual void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
 	virtual void BeingShockedTagChanged() override;
 	

@@ -40,6 +40,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
@@ -164,6 +165,24 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	void StopAutoRun();
+
+public:
+	// 보스 이벤트 바인딩
+	UFUNCTION()
+	void OnBossEventStart(AActor* BossActor);
+
+	UFUNCTION()
+	void OnBossEventEnd(AActor* BossActor);
+	
+	UFUNCTION()
+	void OnBossDead(AActor* BossActor);
+
+	// 카메라 전환
+	void ChangeCameraToBossActor(AActor* BossActor, float BlendTime, float ReturnTime);
+	void ChangeCameraToOwn(float BlendTime);
+
+	// 인풋 모드 변경
+	void SetPlayerInputEnable(bool bEnable);
 
 private:
 	UPROPERTY(EditDefaultsOnly)

@@ -7,6 +7,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Character/AuraCharacter.h"
+#include "CheckPoint/AbilityUpgradeChest.h"
 #include "Components/SphereComponent.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/PlayerInterface.h"
@@ -64,34 +65,39 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 	if (OtherActor->Implements<UPlayerInterface>())
 	{
 		bReached = true;
-
-		// 월드 상태 저장
-		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
-		{
-			const UWorld* World = GetWorld();
-			FString MapName = World->GetMapName();
-			MapName.RemoveFromStart(World->StreamingLevelsPrefix);
-			
-			AuraGM->SaveWorldState(GetWorld(), MapName);
-		}
 		
 		// 체력 회복
-		if (AAuraCharacter* AvatarActor = Cast<AAuraCharacter>(OtherActor))
+		if (bHealing)
 		{
-			if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AvatarActor->GetAbilitySystemComponent()))
+			if (AAuraCharacter* AvatarActor = Cast<AAuraCharacter>(OtherActor))
 			{
-				FGameplayEffectContextHandle ContextHandle = AuraASC->MakeEffectContext();
-				ContextHandle.AddSourceObject(AvatarActor);
+				if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AvatarActor->GetAbilitySystemComponent()))
+				{
+					FGameplayEffectContextHandle ContextHandle = AuraASC->MakeEffectContext();
+					ContextHandle.AddSourceObject(AvatarActor);
 				
-				FGameplayEffectSpecHandle SpecHandle = AuraASC->MakeOutgoingSpec(AuraHeal, 1.f, ContextHandle);
-				AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+					FGameplayEffectSpecHandle SpecHandle = AuraASC->MakeOutgoingSpec(AuraHeal, 1.f, ContextHandle);
+					AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				}
 			}
 		}
 
 		// 저장
-		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
+		if (bSaveGame)
+		{
+			// 월드 상태 저장
+			if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+			{
+				const UWorld* World = GetWorld();
+				FString MapName = World->GetMapName();
+				MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+			
+				AuraGM->SaveWorldState(GetWorld(), MapName);
+			}
+			IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
+		}
 
-		HandleGlowEffects();
+		HandleGlowEffects(OtherActor);
 	}
 }
 
@@ -103,7 +109,7 @@ void ACheckPoint::BeginPlay()
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACheckPoint::OnSphereOverlap);
 }
 
-void ACheckPoint::HandleGlowEffects()
+void ACheckPoint::HandleGlowEffects(AActor* InteractedActor)
 {
 	// 콜리전 끄기
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -115,5 +121,5 @@ void ACheckPoint::HandleGlowEffects()
 	CheckpointMesh->SetMaterial(0, DynamicMI);
 
 	// 블루프린트로 전달
-	CheckPointReached(DynamicMI);
+	CheckPointReached(DynamicMI, InteractedActor);
 }

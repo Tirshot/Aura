@@ -12,10 +12,16 @@ UCLASS()
 class AURA_API UAuraSpawnElectroSphere : public UAuraDamageGameplayAbility
 {
 	GENERATED_BODY()
+	
 public:
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
 
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+	
 	virtual void CheckAbilityUpgrades() override;
 	
 	UFUNCTION(BlueprintCallable)

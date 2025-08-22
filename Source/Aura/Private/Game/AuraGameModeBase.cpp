@@ -8,6 +8,7 @@
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraBossMonster.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 #include "Kismet/GameplayStatics.h"
@@ -282,6 +283,30 @@ FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetNam
 	return FString();
 }
 
+void AAuraGameModeBase::AddMonsterToArray(AAuraEnemy* Enemy)
+{
+	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
+	{
+		BossCharacters.Add(Boss);
+	}
+	else if (AAuraEnemy* Monster = Cast<AAuraEnemy>(Enemy))
+	{
+		EnemyCharacters.Add(Enemy);
+	}
+}
+
+void AAuraGameModeBase::RemoveMonsterFromArray(AAuraEnemy* Enemy)
+{
+	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
+	{
+		BossCharacters.Remove(Boss);
+	}
+	else if (AAuraEnemy* Monster = Cast<AAuraEnemy>(Enemy))
+	{
+		EnemyCharacters.Remove(Enemy);
+	}
+}
+
 void AAuraGameModeBase::PlayerDied(ACharacter* DeadCharacter, float RemainingTime)
 {
 	if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(DeadCharacter->GetController()))
@@ -372,9 +397,9 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
     RandomUpgradeInfos.Empty();
 
     // 글로벌 업그레이드 할당
-    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Fire"));
-    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Arcane"));
-    ActivatedAbilityTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Lightning"));
+    ActivatedAbilityTags.AddUnique(FGameplayTag::RequestGameplayTag("Abilities.Fire"));
+    ActivatedAbilityTags.AddUnique(FGameplayTag::RequestGameplayTag("Abilities.Arcane"));
+    ActivatedAbilityTags.AddUnique(FGameplayTag::RequestGameplayTag("Abilities.Lightning"));
 
     // 어빌리티 습득 또는 레벨업 업그레이드 할당
     TArray<FGameplayTag> AllAbilitiesTags = FAuraGameplayTags::Get().GameplayAbilitiesTags;
@@ -383,7 +408,7 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
         InActivatedAbilityTags.AddUnique(AbilityTag);
     }
 
-	while (RandomUpgradeInfos.Num() <= 3)
+	while (RandomUpgradeInfos.Num() < 3)
 	{
 		// 주어진 어빌리티 태그에 대해 랜덤한 업그레이드 태그 뽑기
 		if (UAbilityUpgradeInfo* Info = AbilityUpgradeInfo)
@@ -465,6 +490,15 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 				}
 			}
 		}
+
+		for (auto It = RandomUpgradeInfos.CreateIterator(); It; ++It)
+		{
+			if (It->UpgradeEffectTag == FGameplayTag::EmptyTag)
+			{
+				It.RemoveCurrent();
+			}
+		}	
+		
 	}
     return RandomUpgradeInfos;
 }

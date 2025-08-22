@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Data/CharacterClassInfo.h"
+#include "UI/WidgetController/SpellUpgradesWidgetController.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
 class UGameOverWidgetController;
@@ -41,6 +42,9 @@ public:
 	static USpellMenuWidgetController* GetSpellMenuWidgetController(const UObject* WorldContextObject);
 	
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static USpellUpgradesWidgetController* GetSpellUpgradesWidgetController(const UObject* WorldContextObject);
+	
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UGameOverWidgetController* GetGameOverWidgetController(const UObject* WorldContextObject);
 
 	/*
@@ -70,6 +74,10 @@ public:
 	// 어빌리티 업그레이드 정보 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))
 	static UAbilityUpgradeInfo* GetAbilityUpgradeInfo(const UObject* WorldContextObject);
+
+	// 태그로 어빌리티 업그레이드 정보 가져오기
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))
+	static FAuraAbilityUpgradeInfo GetAbilityUpgradeInfoForUpgradeTag(const UObject* WorldContextObject, const FGameplayTag& UpgradeTag);
 
 	// 드랍 아이템 정보 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|AbilityInfo", meta = (DefaultToSelf = "WorldContextObject"))

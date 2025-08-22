@@ -97,6 +97,7 @@ public:
 	FGameplayTag Abilities_Lightning_SpawnElectroSphere;
 	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_Arcane_MindControl;
+	FGameplayTag Abilities_Arcane_ArcaneOrbit;
 	FGameplayTag Abilities_HitReact;
 	
 	// 패시브 어빌리티
@@ -109,6 +110,7 @@ public:
 	FGameplayTag Abilities_Status_Eligible;
 	FGameplayTag Abilities_Status_Unlocked;
 	FGameplayTag Abilities_Status_Equipped;
+	FGameplayTag Abilities_Status_Activated; // 실행 중인 액티브 스펠
 
 	// 어빌리티 태그
 	FGameplayTag Abilities_Type_Offensive;
@@ -129,6 +131,8 @@ public:
 	FGameplayTag Upgrades_Arcane_ArcaneShards_Temp;
 	FGameplayTag Upgrades_Arcane_ArcaneShards_IncreaseNum;
 	FGameplayTag Upgrades_Arcane_ArcaneShards_FirstLargeShard;
+	
+	FGameplayTag Upgrades_Arcane_ArcaneOrbit_IncreaseRange;
 	
 	FGameplayTag Upgrades_Lightning_Increase10PercentDamage;
 	FGameplayTag Upgrades_Lightning_Electrocute_AdditionalTarget;

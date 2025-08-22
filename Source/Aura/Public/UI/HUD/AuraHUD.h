@@ -7,6 +7,8 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
+class UMVVM_UpgradeMenu;
+class USpellUpgradesWidgetController;
 struct FAuraAbilityUpgradeInfo;
 class UMVVM_LoadScreen;
 class ULoadScreenWidget;
@@ -30,9 +32,11 @@ public:
 	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
 	UAttributeMenuWidgetController* GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams);
 	USpellMenuWidgetController* GetSpellMenuWidgetController(const FWidgetControllerParams& WCParams);
+	USpellUpgradesWidgetController* GetSpellUpgradesWidgetController(const FWidgetControllerParams& WCParams);
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
+	UMVVM_UpgradeMenu* GetUpgradeMenuViewModel() {return UpgradeMenuViewModel;}
 	
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
@@ -52,6 +56,12 @@ public:
 
 	UFUNCTION()
 	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
+
+	UFUNCTION()
+	void ShowOverlay();
+	
+	UFUNCTION()
+	void HideOverlay();
 	
 private:
 	UPROPERTY()
@@ -91,6 +101,12 @@ private:
 	TSubclassOf<USpellMenuWidgetController> SpellMenuWidgetControllerClass;
 
 	UPROPERTY()
+	TObjectPtr<USpellUpgradesWidgetController> SpellUpgradesWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USpellUpgradesWidgetController> SpellUpgradesWidgetControllerClass;
+
+	UPROPERTY()
 	TObjectPtr<UGameOverWidgetController> GameOverWidgetController;
 
 	UPROPERTY(EditAnywhere)
@@ -109,5 +125,11 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_CardSelection> CardSelectionViewModel;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UMVVM_UpgradeMenu> UpgradeMenuViewModelClass;
+	
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UMVVM_UpgradeMenu> UpgradeMenuViewModel;
 
 };

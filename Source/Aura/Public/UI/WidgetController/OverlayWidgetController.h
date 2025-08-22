@@ -48,6 +48,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLevelChangedSignature, int32, Ne
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageWidgetRowSignature, FUIWidgetRow, Row);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMessageRemoveSignature, const FGameplayTag&, MessageTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityActivatedSignature, bool, bAbilityActivated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOverlayVisibilityChangedSignature, bool, bVisibility);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController
@@ -82,6 +84,13 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
 	FOnMessageRemoveSignature OnMessageRemoved;
+
+	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
+	FOnOverlayVisibilityChangedSignature OnOverlayVisibilityChanged;
+
+public:
+	void ShowOverlayWidget();
+	void HideOverlayWidget();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")

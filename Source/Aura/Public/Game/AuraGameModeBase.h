@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+class AAuraBossMonster;
+class AAuraEnemy;
 class AAuraPlayerController;
 struct FGameplayTagContainer;
 class AAuraPlayerState;
@@ -99,4 +101,18 @@ public:
 	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
 
 	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
+
+public:
+	void AddMonsterToArray(AAuraEnemy* Enemy);
+	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
+
+	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
+
+private:
+	// 액터 배열
+	UPROPERTY()
+	TArray<TSoftObjectPtr<AAuraEnemy>> EnemyCharacters;
+
+	UPROPERTY()
+	TArray<TSoftObjectPtr<AAuraBossMonster>> BossCharacters;
 };

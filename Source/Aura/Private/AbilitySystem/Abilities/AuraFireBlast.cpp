@@ -13,7 +13,19 @@ UAuraFireBlast::UAuraFireBlast()
 {
 	SpellType = ESpellType::Projectile;
 	MaxNumProjectiles = 18;
-	NumFireBalls = BaseNumFireBalls;
+}
+
+void UAuraFireBlast::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UAuraFireBlast::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 FString UAuraFireBlast::GetDescription(int32 Level, const UObject* WorldContextObject)
@@ -29,7 +41,7 @@ FString UAuraFireBlast::GetDescription(int32 Level, const UObject* WorldContextO
 		Level,
 		ManaCost,
 		Cooldown,
-		NumFireBalls,
+		NumFireBalls + Level,
 		ScaledDamage + MagicPowerDamage
 	);
 } 
@@ -47,7 +59,7 @@ FString UAuraFireBlast::GetNextLevelDescription(int32 Level, const UObject* Worl
 		Level,
 		ManaCost,
 		Cooldown,
-		NumFireBalls,
+		NumFireBalls + Level,
 		ScaledDamage + MagicPowerDamage
 	);
 }
@@ -55,6 +67,8 @@ FString UAuraFireBlast::GetNextLevelDescription(int32 Level, const UObject* Worl
 TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 {
 	TArray<AAuraFireBall*> FireBalls;
+
+	NumFireBalls = BaseNumFireBalls + GetAbilityLevel();
 
 	const FVector Forward = GetAvatarActorFromActorInfo()->GetActorForwardVector();
 	const FVector Location = GetAvatarActorFromActorInfo()->GetActorLocation();
@@ -75,13 +89,14 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 			GetOwningActorFromActorInfo(),
 			GetAvatarActorFromActorInfo()->GetInstigatorController()->GetPawn(),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
-		FireBall->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
-		FireBall->ReturnToActor = GetAvatarActorFromActorInfo();
+		
 		FireBall->SetOwner(GetAvatarActorFromActorInfo());
-		FireBall->ExplosionDamageParams = MakeDamageEffectParamsFromClassDefaults();
 
 		// 클래스 디폴트의 데미지 값 적용
+		FireBall->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
+		FireBall->ReturnToActor = GetAvatarActorFromActorInfo();
+		FireBall->ExplosionDamageParams = MakeDamageEffectParamsFromClassDefaults();
+
 		FireBalls.Add(FireBall);
 
 		FireBall->FinishSpawning(SpawnTransform);

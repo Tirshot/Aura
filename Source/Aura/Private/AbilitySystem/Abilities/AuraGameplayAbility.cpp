@@ -62,7 +62,7 @@ bool UAuraGameplayAbility::HasUpgradeTag(AActor* AvatarActor, FGameplayTag Tag)
     {
         if (AAuraPlayerState* AuraPlayerState = AuraPC->GetPlayerState<AAuraPlayerState>())
         {
-            return AuraPlayerState->OwnedAbilityUpgradeTags.HasTag(Tag);
+            return AuraPlayerState->HasUpgradeTag(Tag);
         }
     }
     
