@@ -7,6 +7,7 @@
 #include "Interaction/PlayerInterface.h"
 #include "AuraCharacter.generated.h"
 
+class UBoxComponent;
 class UNiagaraComponent;
 
 UCLASS()
@@ -16,7 +17,8 @@ class AURA_API AAuraCharacter : public AAuraCharacterBase, public IPlayerInterfa
 	
 public:
 	AAuraCharacter();
-	
+
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -43,7 +45,11 @@ public:
 	virtual void Die(const FVector& DeathImpulse) override;
 	virtual void ShowDamageNumber_Implementation(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed) override;
 	// 전투 인터페이스 끝
-	
+
+public:
+	TObjectPtr<class USpringArmComponent> GetSpringArmComponent(){return SpringArm;}
+	TObjectPtr<UBoxComponent> GetBoxComponent(){return Box;}
+public:
 	UPROPERTY(EditDefaultsOnly)
 	float DeathTime = 5.f;
 	
@@ -51,7 +57,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UNiagaraComponent> LevelUpNiagaraComponent;
-	
+
+public:
 	virtual void OnRep_Stunned() override;
 	virtual void OnRep_Burned() override;
 
@@ -69,6 +76,13 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category="Camera")
 	TObjectPtr<class UCameraComponent> Camera;
+
+	UPROPERTY(VisibleAnywhere, Category="Camera")
+	TObjectPtr<UBoxComponent> Box;
+
+	// 미니맵
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap", meta=(AllowPrivateAccess = true))
+	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture;
 
 private:
 	virtual void InitAbilityActorInfo() override;

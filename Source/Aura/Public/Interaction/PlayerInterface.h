@@ -62,7 +62,7 @@ public:
 	/ ���� ���� ��Į
 	*/
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr, float InRange = 0.f, float InRadius = 200.f) const;
+	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr, float InRange = 100.f, float InRadius = 200.f) const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void HideMagicCircle() const;

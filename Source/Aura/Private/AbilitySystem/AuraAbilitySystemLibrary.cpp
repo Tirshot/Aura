@@ -9,6 +9,7 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AttributeInfo.h"
 #include "Character/AuraCharacter.h"
+#include "Character/AuraEnemy.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/CombatInterface.h"
@@ -782,7 +783,7 @@ void UAuraAbilitySystemLibrary::SetEffectParamsTargetAbilitySystemComponent(UPAR
 	DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
 }
 
-float UAuraAbilitySystemLibrary::GetAttributeValue(const UObject* WorldContextObject, const FGameplayTag& AttributeTag)
+float UAuraAbilitySystemLibrary::GetAttributeValue(const UObject* WorldContextObject, const FGameplayTag& AttributeTag, bool bIsBaseValue)
 {
 	float Value = 0.f;
 	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
@@ -800,10 +801,43 @@ float UAuraAbilitySystemLibrary::GetAttributeValue(const UObject* WorldContextOb
 			if (AuraAttributeSet && AuraAttributeSet->TagsToAttributes.Contains(AttributeTag))
 			{
 				FGameplayAttribute Attribute = AuraAttributeSet->TagsToAttributes[AttributeTag]();
-				Value = AuraASC->GetNumericAttributeChecked(Attribute);
+
+				if (bIsBaseValue)
+				{
+					Value = AuraASC->GetNumericAttributeBase(Attribute);
+				}
+				else
+				{
+					Value = AuraASC->GetNumericAttributeChecked(Attribute);
+				}
 			}
 		}
 	}
+
+	// 몬스터라면
+	if (const AAuraEnemy* Enemy = Cast<AAuraEnemy>(WorldContextObject))
+	{
+		UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(Enemy->GetAbilitySystemComponent());
+		UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(Enemy->GetAttributeSet());
+
+		if (AuraASC && AuraAS)
+		{
+			if (AuraAS->TagsToAttributes.Contains(AttributeTag))
+			{
+				FGameplayAttribute Attribute = AuraAS->TagsToAttributes[AttributeTag]();
+				
+				if (bIsBaseValue)
+				{
+					Value = AuraASC->GetNumericAttributeBase(Attribute);
+				}
+				else
+				{
+					Value = AuraASC->GetNumericAttributeChecked(Attribute);
+				}
+			}
+		}
+	}
+		
 	return Value;
 }
 

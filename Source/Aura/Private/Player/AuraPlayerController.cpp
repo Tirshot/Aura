@@ -14,14 +14,17 @@
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraFunctionLibrary.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "SWarningOrErrorBox.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/AbilityRangeIndicator.h"
 #include "Actor/MagicCircle.h"
 #include "Components/DecalComponent.h"
 #include "Aura/Aura.h"
 #include "Character/AuraBossMonster.h"
+#include "Character/AuraCharacter.h"
+#include "Components/BoxComponent.h"
 #include "Game/AuraGameModeBase.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Interaction/CombatInterface.h"
 #include "Interaction/HighlightInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -98,6 +101,7 @@ void AAuraPlayerController::SetupInputComponent()
     AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
     AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
     AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
+    AuraInputComponent->BindAction(WheelAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Zoom);
     
     // 어빌리티와 입력 액션 바인딩
     AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
@@ -279,7 +283,6 @@ void AAuraPlayerController::UpdateMagicCircleLocation()
         {
             MagicCircle->SetActorHiddenInGame(false);
             MagicCircle->SetActorLocation(CursorHit.ImpactPoint);
-            MagicCircle->KeepMagicCircleInRange();
         }
         else
         {
@@ -351,14 +354,14 @@ void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial, f
             return;
         
         MagicCircle = GetWorld()->SpawnActor<AMagicCircle>(MagicCircleClass);
-        MagicCircle->CircleRange = InRange;
-        MagicCircle->Radius = InRadius;
+        MagicCircle->SetCircleRange(InRange);
+        MagicCircle->SetDecalSize(InRadius);
         MagicCircle->SetOwner(AvatarActor);
         MagicCircle->CircleInitialized.Broadcast(AvatarActor);
         
         if (DecalMaterial)
         {
-            MagicCircle->MagicCircleDecal->SetMaterial(0, DecalMaterial);
+            MagicCircle->SetDecalMaterial(DecalMaterial);
         }
     }
 }
@@ -374,6 +377,17 @@ void AAuraPlayerController::HideMagicCircle()
         MagicCircle->RemoveCircle.Broadcast(AvatarActor);
         MagicCircle->Destroy();
     }
+}
+
+const FVector AAuraPlayerController::GetMagicCircleLocation()
+{
+    if (!IsValid(MagicCircle))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("MagicCircle is InValid!!!"));
+            return FVector();
+        }
+    
+    return MagicCircle->GetActorLocation();
 }
 
 void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, FVector RGB)
@@ -558,6 +572,56 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
         ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
     }
 
+}
+
+void AAuraPlayerController::Zoom(const struct FInputActionValue& InputActionValue)
+{
+    // 입력 상태 태그 확인
+    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    {
+        return;
+    }
+
+    const float InputAxisValue = InputActionValue.Get<float>();
+
+    if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetPawn<APawn>()))
+    {
+        if (auto* SpringArm = AuraCharacter->GetSpringArmComponent().Get())
+        {
+            // 카메라 길이
+            float NewArmLength = SpringArm->TargetArmLength - (100.f * InputAxisValue);
+            float ClampingLength = FMath::Clamp(NewArmLength, 200, 1000);
+
+            SpringArm->TargetArmLength = ClampingLength;
+
+            // 카메라 회전
+            float Pitch = SpringArm->GetRelativeRotation().Pitch;
+            float NewPitch = Pitch + (5.f * InputAxisValue);
+            float ClampedPitch = FMath::Clamp(NewPitch, -45.f, 0.f);
+            
+            FRotator Rotator = SpringArm->GetRelativeRotation();
+            Rotator.Pitch = ClampedPitch;
+
+            // 휠을 올리면 점점 0으로 가야함(+ 방향)
+            SpringArm->SetRelativeRotation(Rotator);
+
+            // FadeActor 감지 박스
+            if (auto* Box = AuraCharacter->GetBoxComponent().Get())
+            {
+                // 확대하면 X축 상대 스케일이 점점 줄어들어야함
+                FVector BoxLocation(SpringArm->TargetArmLength / 2, 0.f, 0.f);
+                Box->SetRelativeLocation(BoxLocation);
+                
+                FVector CurrentBoxScale = Box->GetRelativeScale3D();
+                float NewBoxScale_X = CurrentBoxScale.X - 0.8375f * InputAxisValue;
+                float ClampBoxScale_X = FMath::Clamp(NewBoxScale_X, 1.675f, 10.05f);
+
+                CurrentBoxScale.X = ClampBoxScale_X;
+                
+                Box->SetRelativeScale3D(CurrentBoxScale);
+            }
+        }
+    }
 }
 
 void AAuraPlayerController::CursorTrace()

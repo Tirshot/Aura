@@ -3,6 +3,8 @@
 
 #include "UI/WidgetController/SpellMenuWidgetController.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Abilities/AuraPassiveAbility.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -26,9 +28,34 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 
 				bool bEnableSpendPoints = false;
 				bool bEnableEquip = false;
-
+				
 				// 버튼 활성화 확인
-				ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip);
+				// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
+				if (AbilityTag.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+				{
+					if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(AbilityTag))
+					{
+						int32 MaxLevel = 1;
+						if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
+						{
+							MaxLevel = Passive->GetMaxLevel();
+						}
+						
+						int32 CurrentLevel = Spec->Level;
+						if (CurrentLevel >= MaxLevel)
+						{
+							ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
+						}
+						else
+						{
+							ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+						}
+					}
+				}
+				else
+				{
+					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+				}
 
 				FString Description;
 				FString NextLevelDescription;
@@ -58,9 +85,34 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 
 			bool bEnableSpendPoints = false;
 			bool bEnableEquip = false;
-
-			ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip);
-
+		
+			// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
+			if (SelectedAbility.Ability.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+			{
+				if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(SelectedAbility.Ability))
+				{
+					int32 MaxLevel = 1;
+					if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
+					{
+						MaxLevel = Passive->GetMaxLevel();
+					}
+									
+					int32 CurrentLevel = Spec->Level;
+					if (CurrentLevel >= MaxLevel)
+					{
+						ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
+					}
+					else
+					{
+						ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+					}
+				}
+			}
+			else
+			{
+				ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+			}
+		
 			// �����Ƽ ����
 			FString Description;
 			FString NextLevelDescription;
@@ -112,8 +164,33 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 	bool bEnableSpendPoints = false;
 	bool bEnableEquip = false;
 
-	ShouldEnableButtons(AbilityStatus, SpellPoints, bEnableSpendPoints, bEnableEquip);
-
+	// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
+	if (AbilityTag.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+	{
+		if (Spec)
+		{
+			int32 MaxLevel = 1;
+			if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
+			{
+				MaxLevel = Passive->GetMaxLevel();
+			}
+						
+			int32 CurrentLevel = Spec->Level;
+			if (CurrentLevel >= MaxLevel)
+			{
+				ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
+			}
+			else
+			{
+				ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+			}
+		}
+	}
+	else
+	{
+		ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+	}
+	
 	// �����Ƽ ����
 	FString Description;
 	FString NextLevelDescription;
@@ -210,7 +287,7 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	SpellGlobeReassignedDelegate.Broadcast(AbilityTag);
 	GlobeDeselect();
 }
-void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& AbilityStatus, int32 SpellPoints, bool& bEnableSpellPointsButton, bool& bEnableEquipButton)
+void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& AbilityStatus, int32 SpellPoints, bool& bEnableSpellPointsButton, bool& bEnableEquipButton, bool bIsPassiveLevelExceeded)
 {
 	// ���� �Ҹ����� ������ ������ ���̹Ƿ� �Ҹ����� ������ ����Ѵ�.
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
@@ -224,7 +301,14 @@ void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& Ability
 		bEnableEquipButton = true;
 		if (SpellPoints > 0)
 		{
-			bEnableSpellPointsButton = true;
+			if (bIsPassiveLevelExceeded)
+			{
+				bEnableSpellPointsButton = false;
+			}
+			else
+			{
+				bEnableSpellPointsButton = true;
+			}
 		}
 	}
 	else if (AbilityStatus.MatchesTagExact(GameplayTags.Abilities_Status_Eligible))
@@ -232,7 +316,14 @@ void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& Ability
 		bEnableEquipButton = false;
 		if (SpellPoints > 0)
 		{
-			bEnableSpellPointsButton = true;
+			if (bIsPassiveLevelExceeded)
+			{
+				bEnableSpellPointsButton = false;
+			}
+			else
+			{
+				bEnableSpellPointsButton = true;
+			}
 		}
 	}
 	else if (AbilityStatus.MatchesTagExact(GameplayTags.Abilities_Status_Unlocked))
@@ -240,7 +331,14 @@ void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& Ability
 		bEnableEquipButton = true;
 		if (SpellPoints > 0)
 		{
-			bEnableSpellPointsButton = true;
+			if (bIsPassiveLevelExceeded)
+			{
+				bEnableSpellPointsButton = false;
+			}
+			else
+			{
+				bEnableSpellPointsButton = true;
+			}
 		}
 	}
 	else if (AbilityStatus.MatchesTagExact(GameplayTags.Abilities_Status_Locked))
@@ -248,7 +346,14 @@ void USpellMenuWidgetController::ShouldEnableButtons(const FGameplayTag& Ability
 		bEnableEquipButton = false;
 		if (SpellPoints > 0)
 		{
-			bEnableSpellPointsButton = false;
+			if (bIsPassiveLevelExceeded)
+			{
+				bEnableSpellPointsButton = false;
+			}
+			else
+			{
+				bEnableSpellPointsButton = true;
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@
 #include "Components/CapsuleComponent.h"
 #include "AuraGameplayTags.h"
 #include "NiagaraSystem.h"
+#include "AbilitySystem/AuraAttributeSet.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
@@ -114,12 +115,24 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& Deat
 void AAuraCharacterBase::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	bIsStunned = NewCount > 0;
-	GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : BaseWalkSpeed;
+
+	if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+	{
+		GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : AuraAS->GetMovementSpeed();
+	}
+}
+
+void AAuraCharacterBase::StackStunTagChanged(const FGameplayEffectSpecHandle SpecHandle, int32 NewStack, int32 OldStack)
+{
+	
 }
 
 void AAuraCharacterBase::BeingShockedTagChanged()
 {
-	GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : BaseWalkSpeed;
+	if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+	{
+		GetCharacterMovement()->MaxWalkSpeed = bIsStunned ? 0.f : AuraAS->GetMovementSpeed();
+	}
 }
 
 void AAuraCharacterBase::OnRep_Stunned()

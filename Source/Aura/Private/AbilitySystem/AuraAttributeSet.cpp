@@ -12,6 +12,11 @@
 #include "Player/AuraPlayerController.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AuraAbilityTypes.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AbilitySystem/Abilities/LifeSiphon.h"
+#include "AbilitySystem/Abilities/ManaSiphon.h"
+#include "Character/AuraCharacterBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -36,6 +41,7 @@ UAuraAttributeSet::UAuraAttributeSet()
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_ManaRegeneration, GetManaRegenerationAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxHealth, GetMaxHealthAttribute);
     TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MaxMana, GetMaxManaAttribute);
+    TagsToAttributes.Add(GameplayTags.Attributes_Secondary_MovementSpeed, GetMovementSpeedAttribute);
 
     // 바이탈 속성
     TagsToAttributes.Add(GameplayTags.Attributes_Vital_Health, GetHealthAttribute);
@@ -78,6 +84,7 @@ void UAuraAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, CriticalHitResistance, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, HealthRegeneration, COND_None, REPNOTIFY_Always);
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, ManaRegeneration, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
 
     // 속성 저항
     DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, FireResistance, COND_None, REPNOTIFY_Always);
@@ -100,6 +107,10 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute & Attribute,
     if (Attribute == GetManaAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxMana());
+    }
+    if (Attribute == GetMovementSpeedAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.f, 1000.f);
     }
 }
 
@@ -150,6 +161,14 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
         SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
     }
 
+    if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
+    {
+        if (AAuraCharacterBase* AuraCharacter = Cast<AAuraCharacterBase>(Data.Target.GetAvatarActor()))
+        {
+            AuraCharacter->GetCharacterMovement()->MaxWalkSpeed = GetMovementSpeed();
+        }
+    }
+
     // 데미지 판단
     if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
     {
@@ -182,20 +201,28 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             return;
         
         // Life Siphon 검증
-        if (Props.SourceASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon))
+        const FGameplayTag& LifeSiphonTag = FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon;
+        if (Props.SourceASC->HasMatchingGameplayTag(LifeSiphonTag))
         {
             // 유저의 속성 세트를 가져와 체력 설정
             if (Props.SourceCharacter->Implements<UCombatInterface>())
             {
                 UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
-                if (AuraAS)
+                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(Props.SourceASC);
+                if (AuraAS && AuraASC)
                 {
-                    const float SourceHealth = AuraAS->GetHealth();
-                    const float SourceMaxHealth = AuraAS->GetMaxHealth();
-                    float HealAmount = 0.2f * LocalIncomingDamage;
+                    if (FGameplayAbilitySpec* LifeSiphonSpec = AuraASC->GetSpecFromAbilityTag(LifeSiphonTag))
+                    {
+                        if (ULifeSiphon* LifeSiphonAbility = Cast<ULifeSiphon>(LifeSiphonSpec->Ability))
+                        {
+                            const float SourceHealth = AuraAS->GetHealth();
+                            const float SourceMaxHealth = AuraAS->GetMaxHealth();
+                            float HealAmount = LifeSiphonAbility->CalculateLifeHealAmount(LifeSiphonSpec->Level, LocalIncomingDamage);
 
-                    AuraAS->SetHealth(FMath::Clamp(SourceHealth + HealAmount, 0, SourceMaxHealth));
-                    ShowFloatingText(Props, HealAmount, false, false, true);
+                            AuraAS->SetHealth(FMath::Clamp(SourceHealth + HealAmount, 0, SourceMaxHealth));
+                            ShowFloatingText(Props, HealAmount, false, false, true);
+                        }
+                    }
                 }
             }
         }
@@ -204,18 +231,27 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
         SetHealth(FMath::Clamp(NewHealth, 0, GetMaxHealth()));
 
         // Mana Siphon 검증
-        if (Props.SourceASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Abilities_Passive_ManaSiphon))
+        const FGameplayTag& ManaSiphonTag = FAuraGameplayTags::Get().Abilities_Passive_ManaSiphon;
+        if (Props.SourceASC->HasMatchingGameplayTag(ManaSiphonTag))
         {
             // 유저의 속성 세트를 가져와 체력 설정
             if (Props.SourceCharacter->Implements<UCombatInterface>())
             {
                 UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
-                if (AuraAS)
+                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(Props.SourceASC);
+                if (AuraAS && AuraASC)
                 {
-                    const float SourceMana = AuraAS->GetMana();
-                    const float SourceMaxMana = AuraAS->GetMaxMana();
-                    float ManaHealAmount = 0.2f * LocalIncomingDamage;
-                    AuraAS->SetMana(FMath::Clamp(SourceMana + ManaHealAmount, 0, SourceMaxMana));
+                    if (FGameplayAbilitySpec* ManaSiphonSpec = AuraASC->GetSpecFromAbilityTag(ManaSiphonTag))
+                    {
+                        if (UManaSiphon* ManaSiphonAbility = Cast<UManaSiphon>(ManaSiphonSpec->Ability))
+                        {
+                            const float SourceMana = AuraAS->GetMana();
+                            const float SourceMaxMana = AuraAS->GetMaxMana();
+                            float ManaHealAmount = ManaSiphonAbility->CalculateManaHealAmount(ManaSiphonSpec->Level, LocalIncomingDamage);
+                            
+                            AuraAS->SetMana(FMath::Clamp(SourceMana + ManaHealAmount, 0, SourceMaxMana));
+                        }
+                    }
                 }
             }
         }
@@ -566,6 +602,12 @@ void UAuraAttributeSet::OnRep_PhysicalResistance(const FGameplayAttributeData& O
 {
     // Notify 매크로
     GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, PhysicalResistance, OldPhysicalResistance);
+}
+
+void UAuraAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed) const
+{
+    // Notify 매크로
+    GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, MovementSpeed, OldMovementSpeed);
 }
 
 void UAuraAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData & Data, FEffectProperties& Props) const

@@ -16,6 +16,8 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
@@ -38,13 +40,33 @@ AAuraCharacter::AAuraCharacter()
     SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
     SpringArm->SetUsingAbsoluteRotation(true);
     SpringArm->bDoCollisionTest = false;
+    SpringArm->TargetArmLength = 1000.f;
     SpringArm->SetupAttachment(RootComponent);
+
+    // FadeActor용
+    Box = CreateDefaultSubobject<UBoxComponent>("Box");
+    Box->SetupAttachment(SpringArm);
+    Box->SetRelativeScale3D(FVector(10.05f,2.8f,2.8f));
+    Box->SetRelativeLocation(FVector(SpringArm->TargetArmLength, 0, 0));
 
     Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
     Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
     Camera->bUsePawnControlRotation = false;
 
+    MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("MiniMapCapture");
+    MiniMapCapture->SetupAttachment(RootComponent);
+
     CharacterClass = ECharacterClass::Elementalist;
+}
+
+void AAuraCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+    {
+        GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
+    }
 }
 
 void AAuraCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)

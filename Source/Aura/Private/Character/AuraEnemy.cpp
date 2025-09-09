@@ -33,8 +33,6 @@ AAuraEnemy::AAuraEnemy()
     bUseControllerRotationYaw = false;
     GetCharacterMovement()->bUseControllerDesiredRotation = true;
 
-    BaseWalkSpeed = 250.f;
-
     AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
@@ -150,7 +148,10 @@ void AAuraEnemy::SetIsBeingShocked_Implementation(bool bInShock)
 void AAuraEnemy::BeginPlay()
 {
     Super::BeginPlay();
-    GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
+
+    // 이동 속도는 어트리뷰트를 사용함
+    // GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
+    
     InitAbilityActorInfo();
     if (HasAuthority())
     {
@@ -183,6 +184,9 @@ void AAuraEnemy::BeginPlay()
             &AAuraEnemy::HitReactTagChanged
         );
 
+        // 이동속도 설정
+        GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
+
         OnHealthChanged.Broadcast(AuraAS->GetHealth());
         OnMaxHealthChanged.Broadcast(AuraAS->GetMaxHealth());
     }
@@ -190,14 +194,17 @@ void AAuraEnemy::BeginPlay()
 
 void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
-    // 태그가 있을 때만 작동
-    bHitReacting = NewCount > 0;
-    GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
-    
-    if (AuraAIController && AuraAIController->GetBlackboardComponent())
+    if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
     {
-        // 블랙보드 키 설정
-        AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
+        // 태그가 있을 때만 작동
+        bHitReacting = NewCount > 0;
+        GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : AuraAS->GetMovementSpeed();
+    
+        if (AuraAIController && AuraAIController->GetBlackboardComponent())
+        {
+            // 블랙보드 키 설정
+            AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
+        }
     }
 }
 
@@ -237,7 +244,6 @@ void AAuraEnemy::InitAbilityActorInfo()
 
     // 스턴 태그 대기
     AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::Get().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraEnemy::StunTagChanged);
-
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

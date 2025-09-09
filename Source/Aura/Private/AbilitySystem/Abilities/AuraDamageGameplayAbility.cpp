@@ -245,6 +245,30 @@ AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(const FV
 	return RangeIndicator;
 }
 
+FVector UAuraDamageGameplayAbility::ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle)
+{
+	if (!TargetDataHandle.IsValid(0))
+		return FVector();
+
+	const FGameplayAbilityTargetData* TargetData = TargetDataHandle.Get(0);
+	const FHitResult* HitResult = TargetData->GetHitResult();
+
+	// 마우스 히트 정보를 멤버 변수로 만듬
+	CurrentTargetLocation = HitResult->ImpactPoint;
+
+	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
+	{
+		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
+		{
+			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
+			{
+				return CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
+			}
+		}
+	}
+	return FVector();
+}
+
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const
 {
 	if (TaggedMontages.Num() > 0)

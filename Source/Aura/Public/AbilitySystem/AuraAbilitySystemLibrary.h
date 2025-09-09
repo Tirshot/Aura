@@ -196,7 +196,7 @@ public:
 	*/
 	// 속성 값 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static float GetAttributeValue(const UObject* WorldContextObject, const FGameplayTag& AttributeTag);
+	static float GetAttributeValue(const UObject* WorldContextObject, const FGameplayTag& AttributeTag, bool bIsBaseValue = false);
 
 	// 범위 공격
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")

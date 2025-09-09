@@ -4,20 +4,56 @@
 #include "AbilitySystem/Abilities/AuraSpawnElectroSphere.h"
 
 #include "AuraGameplayTags.h"
-#include "FileCache.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraElectroSphere.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "Interaction/CombatInterface.h"
 
 FString UAuraSpawnElectroSphere::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
-	return Super::GetDescription(Level, WorldContextObject);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
+	const float ManaCost = FMath::Abs(GetManaCost(Level));
+	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+
+	const float RealDamage = ScaledDamage + MagicPowerDamage;
+	
+	return FString::Printf(TEXT(
+		"<Title>전기 구체 소환</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>지정한 범위에 </><Num>%.1f</><Default>초 동안 매 </><Num>%.1f</><Default>초 마다 주위 </><Num>%d</><Default>명의 대상에게 </><Damage>%.1f</><Default>의 피해를 입히는 전기 구체를 소환합니다.</>\n<Small>전기 구체는 </><Num>%1.f</><Small>의 속도로 움직이며, 물체와 접촉하면 반사됩니다.</>"),
+		Level,
+		ManaCost,
+		Cooldown,
+		AbilityRange,
+		SpawnTime,
+		DamageDeltaSecond,
+		NumAdditionalTargets,
+		RealDamage,
+		MovementSpeed
+	);
 }
 
 FString UAuraSpawnElectroSphere::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
 {
-	return Super::GetNextLevelDescription(Level, WorldContextObject);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
+	const float ManaCost = FMath::Abs(GetManaCost(Level));
+	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+
+	const float RealDamage = ScaledDamage + MagicPowerDamage;
+	
+	return FString::Printf(TEXT(
+	"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>지정한 범위에 </><Num>%.1f</><Default>초 동안 매 </><Num>%.1f</><Default>초 마다 주위 </><Num>%d</><Default>명의 대상에게 </><Damage>%.1f</><Default>의 피해를 입히는 전기 구체를 소환합니다.</>\n<Small>전기 구체는 </><Num>%1.f</><Small>의 속도로 움직이며, 물체와 접촉하면 반사됩니다.</>"),
+		Level,
+		ManaCost,
+		Cooldown,
+		AbilityRange,
+		SpawnTime,
+		DamageDeltaSecond,
+		NumAdditionalTargets,
+		RealDamage,
+		MovementSpeed
+	);
 }
 
 void UAuraSpawnElectroSphere::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -80,21 +116,28 @@ AAuraElectroSphere* UAuraSpawnElectroSphere::SpawnElectroSphere(const FVector& L
 		CurrentActorInfo->PlayerController->GetPawn(),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+	// 바닥에서 크기만큼 띄우기
+	const float AdditionalHeight = Sphere->GetSphereRadius() * 2;
+	Sphere->SetActorLocation(Location + FVector(0.f, 0.f, AdditionalHeight));
+
+	// 진행 속도 설정
 	Sphere->ProjectileMovement->SetVelocityInLocalSpace(FVector(RelativeVector.X * MovementSpeed, RelativeVector.Y * MovementSpeed, 0));
 	
+	// 파라미터 설정
 	Sphere->SetDamageDeltaSecond(DamageDeltaSecond);
 	Sphere->SetMovementSpeed(MovementSpeed);
 	Sphere->SetTraceRadius(TraceRadius);
 	Sphere->SetDamageRadius(DamageRadius);
 	Sphere->SetFollowToTarget(bFollowTarget);
 
-	Sphere->SetAdditionalTargets(AdditionalTargets);
-	Sphere->SetMaxNumShockTargets(MaxNumShockTargets);
+	// 데미지 타겟 설정
+	Sphere->SetNumAdditionalTargets(NumAdditionalTargets);
 	
 	Sphere->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 	Sphere->SetOwner(GetAvatarActorFromActorInfo());
 
 	Sphere->FinishSpawning(SpawnTransform);
+	
 	ElectroSphere = Sphere;
 	
 	return Sphere;

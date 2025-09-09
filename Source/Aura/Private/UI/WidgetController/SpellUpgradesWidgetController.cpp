@@ -5,7 +5,6 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Player/AuraPlayerState.h"
-#include "UI/HUD/AuraHUD.h"
 
 void USpellUpgradesWidgetController::BroadcastInitialValues()
 {
@@ -26,12 +25,5 @@ void USpellUpgradesWidgetController::BroadcastInitialValues()
 
 void USpellUpgradesWidgetController::BindCallbacksToDependencies()
 {
-	// 업그레이드 태그 컨테이너 변화
-	//GetAuraPS()->OnAbilityUpgradeTagsChangedDelegate.AddDynamic(this, &USpellUpgradesWidgetController::RecievedUpgradeTags);
-}
 
-void USpellUpgradesWidgetController::ReceivedUpgradeTags(FGameplayTag UpgradeTag, int32 Stack)
-{
-	// 위젯으로 메시지 전송
-	//OnReceivedUpgradeTags.Broadcast(UpgradeTag, Stack);
 }

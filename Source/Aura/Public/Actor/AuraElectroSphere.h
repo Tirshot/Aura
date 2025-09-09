@@ -30,6 +30,9 @@ protected:
 	void HomingNearestTarget();
 	
 public:
+	float GetSphereRadius();
+	TObjectPtr<UStaticMeshComponent> GetMesh() {return Mesh;}
+	
 	void SetDamageDeltaSecond(float InTime) {DamageDeltaSecond = InTime;}
 	void SetDamageRadius(float InDamageRadius) {DamageRadius = InDamageRadius;}
 	void SetMovementSpeed(float InSpeed);
@@ -37,9 +40,7 @@ public:
 	void SetTraceRadius(float InTraceRadius) {TraceRadius = InTraceRadius;}
 	void SetFollowToTarget(bool bFollow) {bHomingTarget = bFollow;}
 
-	void SetAdditionalTargets(int32 InNum) {AdditionalTargets = InNum;}
-	void SetMaxNumShockTargets(int32 InNum) {MaxNumShockTargets = InNum;}
-
+	void SetNumAdditionalTargets(int32 InNum) {NumAdditionalTargets = InNum;}
 	void SetHomingTarget(bool bHoming) {bHomingTarget = bHoming;}
 
 protected:
@@ -48,10 +49,7 @@ protected:
 	
 private:
 	UPROPERTY(EditDefaultsOnly)
-	int32 AdditionalTargets = 2;
-	
-	UPROPERTY(EditDefaultsOnly)
-	int32 MaxNumShockTargets = 5;
+	int32 NumAdditionalTargets = 2;
 	
 	UPROPERTY(EditDefaultsOnly)
 	float MovementSpeed = 500.f;

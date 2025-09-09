@@ -56,7 +56,7 @@ public:
 	void HideMagicCircle();
 
 	UFUNCTION(BlueprintCallable)
-	const FVector GetMagicCircleLocation() { return MagicCircle->GetActorLocation(); }
+	const FVector GetMagicCircleLocation();
 	
 	// 범위 데칼
 	UFUNCTION(BlueprintCallable)
@@ -117,8 +117,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> ShiftAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> WheelAction;
 
 	void Move(const struct FInputActionValue& InputActionValue);
+	void Zoom(const struct FInputActionValue& InputActionValue);
 	void ShiftPressed() { bShiftKeyDown = true; }
 	void ShiftReleased() { bShiftKeyDown = false; }
 	bool bShiftKeyDown = false;

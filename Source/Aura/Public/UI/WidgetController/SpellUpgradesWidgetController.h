@@ -20,9 +20,6 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 	
-	UFUNCTION()
-	void ReceivedUpgradeTags(FGameplayTag UpgradeTag, int32 Stack);
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
 	TObjectPtr<UAbilityUpgradeInfo> AbilityUpgradeInfo;
 

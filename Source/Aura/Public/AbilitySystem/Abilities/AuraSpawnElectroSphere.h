@@ -23,18 +23,23 @@ protected:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 	virtual void CheckAbilityUpgrades() override;
-	
+
+protected:
+	// 메인 로직
 	UFUNCTION(BlueprintCallable)
 	AAuraElectroSphere* SpawnElectroSphere(const FVector& Location);
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void AdditionalTargetDied(AActor* DeadActor);
 	
+protected:
+	void ShowMagicCircleAndRangeIndicator();
+
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraElectroSphere> ElectroSphereClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	TObjectPtr<AAuraElectroSphere> ElectroSphere;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -56,8 +61,5 @@ private:
 	float DamageRadius = 300.f;
 	
 	UPROPERTY(EditDefaultsOnly)
-	int32 AdditionalTargets = 2;
-	
-	UPROPERTY(EditDefaultsOnly)
-	int32 MaxNumShockTargets = 6;
+	int32 NumAdditionalTargets = 2;
 };

@@ -22,10 +22,7 @@ public:
 	
 public:
 	virtual void CheckAbilityUpgrades() override;
-
-	UFUNCTION(BlueprintCallable)
-	void ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
-
+	
 	UFUNCTION(BlueprintCallable)
 	void CreatePointCollection();
 	
@@ -68,9 +65,6 @@ protected:
 
 	UPROPERTY()
 	float UpgradeFirstShardSizeMultiplier = 150.f;
-
-	UPROPERTY(BlueprintReadWrite)
-	FVector CurrentTargetLocation = FVector::ZeroVector;
 	
 	UPROPERTY(BlueprintReadOnly)
 	FVector ShardSpawnLocation = FVector::ZeroVector;

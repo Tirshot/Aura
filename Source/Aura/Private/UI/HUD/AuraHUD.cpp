@@ -5,11 +5,9 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-#include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
-#include "UI/ViewModel/MVVM_UpgradeMenu.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "UI/Widget/LoadScreenWidget.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
@@ -118,11 +116,12 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     // 저장중 위젯 컨트롤러 생성 및 연결
     SaveProgressWidgetController = GetSaveProgressWidgetController(WidgetControllerParams);
 
+    // 스펠 메뉴 위젯 컨트롤러 생성
+    SpellMenuWidgetController = GetSpellMenuWidgetController(WidgetControllerParams);
+    
     // 스펠 업그레이드 위젯 컨트롤러 생성
     SpellUpgradesWidgetController = GetSpellUpgradesWidgetController(WidgetControllerParams);
-    UpgradeMenuViewModel = NewObject<UMVVM_UpgradeMenu>(this, UpgradeMenuViewModelClass);
-    UpgradeMenuViewModel->InitializeView();
-
+    
     // 카드 선택 UI 뷰 모델 생성
     CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
     CardSelectionViewModel->InitializeSlot();

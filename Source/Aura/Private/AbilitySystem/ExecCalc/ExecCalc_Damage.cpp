@@ -9,6 +9,8 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Interaction/CombatInterface.h"
 #include "AuraAbilityTypes.h"
+#include "AbilitySystem/AuraAbilitySystemGlobals.h"
+#include "AbilitySystem/Abilities/HaloOfProtection.h"
 #include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerState.h"
 
@@ -229,10 +231,11 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// 데미지 비율 계산
 	Damage *= (100 - EffectiveArmor * EffectiveArmorCoefficient) / 100.f;
 
-	// Halo Of Protection 적용중이면 20퍼센트의 데미지 감소 - 하드코딩, 레벨에 비례해야함
+	// Halo Of Protection 적용
 	if (TargetASC->HasMatchingGameplayTag(GameplayTags.Abilities_Passive_HaloOfProtection))
 	{
-		Damage = Damage - (Damage / 5.f);
+		float ReducedDamage = CalculateDamageReduction(TargetAvatar, Damage);
+		Damage -= ReducedDamage;
 	}
 
 	// 치명타 계산
@@ -345,4 +348,22 @@ void UExecCalc_Damage::DetermineDebuff(const FGameplayEffectCustomExecutionParam
 			}
 		}
 	}
+}
+
+float UExecCalc_Damage::CalculateDamageReduction(AActor* TargetActor, float BaseDamage) const
+{
+	if (AAuraCharacterBase* AuraCharacterBase = Cast<AAuraCharacterBase>(TargetActor))
+	{
+		if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraCharacterBase->GetAbilitySystemComponent()))
+		{
+			FGameplayTag HaloTag = FAuraGameplayTags::Get().Abilities_Passive_HaloOfProtection;
+			if (UHaloOfProtection* HaloAbility = Cast<UHaloOfProtection>(AuraASC->GetSpecFromAbilityTag(HaloTag)->Ability.Get()))
+			{
+				// 데미지 감소율 및 계산식은 어빌리티에서 수정
+				int32 level = AuraASC->GetSpecFromAbilityTag(HaloTag)->Level;
+				return BaseDamage * HaloAbility->CalculateDamageReduce(level);
+			}
+		}
+	}
+	return 0.f;
 }

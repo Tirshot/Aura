@@ -5,14 +5,11 @@
 
 #include "AbilitySystemGlobals.h"
 #include "AuraGameplayTags.h"
-#include "SNodePanel.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Net/UnrealNetwork.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "UI/HUD/AuraHUD.h"
-#include "UI/ViewModel/MVVM_UpgradeMenu.h"
 
 
 AAuraPlayerState::AAuraPlayerState()
@@ -143,22 +140,6 @@ void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
 
     // 값 1 증가
     CountRef++;
-
-    if (CountRef > 0)
-    {
-        // OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, CountRef);
-        if (AAuraHUD* AuraHUD = GetPlayerController()->GetHUD<AAuraHUD>())
-        {
-            auto* ViewModel = AuraHUD->GetUpgradeMenuViewModel();
-            if (!ViewModel)
-                return;
-
-            auto InfoStruct = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(this, Tag);
-            FString UpgradeName = InfoStruct.UpgradeName;
-            
-            ViewModel->OnUpgradeInfoReceived.Broadcast(UpgradeName, CountRef);
-        }
-    }
 }
 
 void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
@@ -177,19 +158,6 @@ void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
             OwnedAbilityUpgradeTags.Remove(Tag);
             OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, 0);
             return;
-        }
-        
-        // OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, *Count);
-        if (AAuraHUD* AuraHUD = GetPlayerController()->GetHUD<AAuraHUD>())
-        {
-            auto* ViewModel = AuraHUD->GetUpgradeMenuViewModel();
-            if (!ViewModel)
-                return;
-
-            auto InfoStruct = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(this, Tag);
-            FString UpgradeName = InfoStruct.UpgradeName;
-            
-            ViewModel->OnUpgradeInfoReceived.Broadcast(UpgradeName, *Count);
         }
     }
 }

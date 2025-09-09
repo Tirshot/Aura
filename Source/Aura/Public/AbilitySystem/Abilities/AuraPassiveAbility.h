@@ -18,4 +18,10 @@ public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 	void ReceiveDeactivate(const FGameplayTag& AbilityTag);
+
+	int32 GetMaxLevel() const {return MaxLevel;}
+
+protected:
+	UPROPERTY(EditDefaultsOnly);
+	int32 MaxLevel = 5;
 };

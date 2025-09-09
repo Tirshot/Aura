@@ -7,6 +7,7 @@
 #include "Interaction/CombatInterface.h"
 #include "AuraCharacterBase.generated.h"
 
+struct FGameplayEffectSpecHandle;
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
@@ -66,9 +67,6 @@ public:
 	UPROPERTY(EditAnywhere, category="Combat")
 	TArray<FTaggedMontage> AttackMontages;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
-	float BaseWalkSpeed = 600.f;
-
 	// 상태 이상
 	UPROPERTY(ReplicatedUsing=OnRep_Stunned, BlueprintReadOnly)
 	bool bIsStunned = false;
@@ -80,6 +78,7 @@ public:
 	bool bIsBeingShock = false;
 
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+	virtual void StackStunTagChanged(const FGameplayEffectSpecHandle SpecHandle, int32 NewStack, int32 OldStack);
 	virtual void BeingShockedTagChanged();
 
 	void SetCharacterClass(ECharacterClass InClass) {CharacterClass = InClass;}
@@ -133,8 +132,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> InitializeRegenAttributes;
 
-protected:
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
+	
+protected:
 	virtual void InitializeDefaultAttributes() const;
 
 	// ������ ����Ʈ

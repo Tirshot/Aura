@@ -130,8 +130,6 @@ void AAuraElectroSphere::DetectAdditionalTargets(TArray<AActor*> ActorsToIgnore)
 		GetActorLocation());
 
 	// 액터로부터 가장 가까운 어빌리티의 추가 타겟 갯수 만큼만 공격 
-	int32 NumAdditionalTargets = FMath::Min(AdditionalTargets, MaxNumShockTargets);
-
 	TArray<AActor*> CurrentClosestTargets;
 	UAuraAbilitySystemLibrary::GetClosestTargets(
 		NumAdditionalTargets,
@@ -217,6 +215,14 @@ void AAuraElectroSphere::HomingNearestTarget()
 	ProjectileMovement->HomingAccelerationMagnitude = 600.f;
 }
 
+float AAuraElectroSphere::GetSphereRadius()
+{
+	if (!IsValid(Sphere))
+		return 0.f;
+
+	return Sphere->GetScaledSphereRadius();
+}
+
 void AAuraElectroSphere::SetMovementSpeed(float InSpeed)
 {
 	MovementSpeed = InSpeed;
@@ -226,6 +232,8 @@ void AAuraElectroSphere::SetMovementSpeed(float InSpeed)
 	FVector NewVelocity = CurrentDirection * MovementSpeed;
 	
 	ProjectileMovement->SetVelocityInLocalSpace(NewVelocity);
+	ProjectileMovement->MaxSpeed = InSpeed;
+	ProjectileMovement->InitialSpeed = InSpeed;
 }
 
 void AAuraElectroSphere::AddMovementSpeed(float InSpeed)

@@ -20,4 +20,5 @@ public:
 	virtual void Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutexecutionOutput) const override;
 	float CalculateRadialDamage(const AActor* TargetActor, float BaseDamage, const FVector& Origin, float InnerRadius, float OuterRadius, float DamageFalloff) const;
 	void DetermineDebuff(const FGameplayEffectCustomExecutionParameters& ExecutionParams, const FGameplayEffectSpec& EffectSpec, FAggregatorEvaluateParameters EvalParams, const TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition>& InTagsToDefs) const;
+	float CalculateDamageReduction(AActor* TargetActor, float BaseDamage) const;
 };

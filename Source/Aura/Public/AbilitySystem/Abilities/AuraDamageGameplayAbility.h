@@ -26,6 +26,9 @@ class AURA_API UAuraDamageGameplayAbility : public UAuraGameplayAbility
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GameplayAbility")
+	float AbilityRange = 300.f;
+
 	UFUNCTION(BlueprintCallable)
 	void CauseDamage(AActor* TargetActor);
 
@@ -65,6 +68,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AAbilityRangeIndicator* SpawnRangeIndicator(const FVector& Location, bool bAttachToActor,ERangeShape RangeShape, float Radius, float Width, float Height, const FVector& RGB, float LifeSpan);
 	
+	UFUNCTION(BlueprintCallable)
+	FVector ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
@@ -108,6 +114,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category = "Damage")
 	float RadialDamageOuterRadius = 0.f;
 
+	UPROPERTY(BlueprintReadWrite)
+	FVector CurrentTargetLocation = FVector::ZeroVector;
+	
 	UFUNCTION(BlueprintPure)
 	FTaggedMontage GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const;
 

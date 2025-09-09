@@ -11,7 +11,6 @@
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Player/AuraPlayerController.h"
 
 FString UArcaneShards::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
@@ -22,10 +21,11 @@ FString UArcaneShards::GetDescription(int32 Level, const UObject* WorldContextOb
 	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
 	
 	return FString::Printf(TEXT(
-		"<Title>아케인 파편</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 중심에 최대 </><Damage>%d</><Default>의 피해를 입히는 아케인 파편 기둥을 </><Num>%d개</> 소환합니다.\n<Small>데미지는 대상과 각 기둥 사이의 거리에 비례합니다.</>"),
+		"<Title>아케인 파편</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>지정한 범위 중심에 최대 </><Damage>%d</><Default>의 피해를 입히는 아케인 파편 기둥을 </><Num>%d개</> 소환합니다.\n<Small>데미지는 대상과 각 기둥 사이의 거리에 비례합니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
+		AbilityRange,
 		ScaledDamage + MagicPowerDamage,
 		Level
 	);
@@ -40,10 +40,11 @@ FString UArcaneShards::GetNextLevelDescription(int32 Level, const UObject* World
 	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
 	
 	return FString::Printf(TEXT(
-		"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Default>지정한 범위 중심에 최대 </><Damage>%d</><Default>의 피해를 입히는 아케인 파편 기둥을 </><Num>%d개</> 소환합니다.\n<Small>데미지는 대상과 각 기둥 사이의 거리에 비례합니다.</>"),
+		"<Title>다음 레벨: </>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>지정한 범위 중심에 최대 </><Damage>%d</><Default>의 피해를 입히는 아케인 파편 기둥을 </><Num>%d개</> 소환합니다.\n<Small>데미지는 대상과 각 기둥 사이의 거리에 비례합니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
+		AbilityRange,
 		ScaledDamage + MagicPowerDamage,
 		Level
 	);
@@ -92,29 +93,6 @@ void UArcaneShards::CheckAbilityUpgrades()
 	{
 		// 첫번째 기둥 크기 증가
 		bIsFirstShardLarge = true;
-	}
-}
-
-void UArcaneShards::ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle)
-{
-	if (!TargetDataHandle.IsValid(0))
-		return;
-
-	const FGameplayAbilityTargetData* TargetData = TargetDataHandle.Get(0);
-	const FHitResult* HitResult = TargetData->GetHitResult();
-
-	// 마우스 히트 정보를 멤버 변수로 만듬
-	CurrentTargetLocation = HitResult->ImpactPoint;
-
-	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
-	{
-		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
-		{
-			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
-			{
-				CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
-			}
-		}
 	}
 }
 

@@ -50,4 +50,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	float OrbitSpeed = 100.f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float MissileLifeSpan = 10.f;
 };

@@ -9,12 +9,46 @@
 
 FString UAuraArcaneOrbit::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
-	return Super::GetDescription(Level, WorldContextObject);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
+	const float ManaCost = FMath::Abs(GetManaCost(Level));
+	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+
+	const float RealDamage = ScaledDamage + MagicPowerDamage;
+	
+	return FString::Printf(TEXT(
+		"<Title>아케인 궤도</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
+		Level,
+		ManaCost,
+		Cooldown,
+		AbilityRange,
+		MissileLifeSpan,
+		NumMissiles,
+		RealDamage
+	);
 }
 
 FString UAuraArcaneOrbit::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
 {
-	return Super::GetNextLevelDescription(Level, WorldContextObject);
+	const int32 ScaledDamage = Damage.GetValueAtLevel(Level);
+	const float ManaCost = FMath::Abs(GetManaCost(Level));
+	const float Cooldown = GetCoolDown(Level);
+	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
+	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
+
+	const float RealDamage = ScaledDamage + MagicPowerDamage;
+	
+	return FString::Printf(TEXT(
+		"<Title>다음 레벨:</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
+		Level,
+		ManaCost,
+		Cooldown,
+		AbilityRange,
+		MissileLifeSpan,
+		NumMissiles,
+		RealDamage
+	);
 }
 
 void UAuraArcaneOrbit::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -81,14 +115,17 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 			GetAvatarActorFromActorInfo()->GetInstigatorController()->GetPawn(),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-		// 클래스 디폴트의 데미지 값 적용
+		// 파라미터 전달
 		ArcaneMissile->InitialAngle = Angle;
 		ArcaneMissile->OrbitRadius = OrbitRadius;
 		ArcaneMissile->OrbitSpeed = OrbitSpeed;
 		ArcaneMissile->FollowRadius = AbilityRange;
+		ArcaneMissile->SetLifeSpan(MissileLifeSpan);
 
+		// 소유 어빌리티 지정
 		ArcaneMissile->SetOwnedAbility(this);
 		
+		// 클래스 디폴트의 데미지 값 적용
 		ArcaneMissile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 		ArcaneMissile->ExplosionDamageParams = MakeDamageEffectParamsFromClassDefaults();
 		ArcaneMissile->SetOwner(GetAvatarActorFromActorInfo());

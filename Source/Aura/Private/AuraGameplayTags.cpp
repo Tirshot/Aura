@@ -87,8 +87,13 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.Attributes_Secondary_MaxMana = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Attributes.Secondary.MaxMana"),
 		FString("Max Mana Attribute")
+		);
+
+	GameplayTags.Attributes_Secondary_MovementSpeed = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Attributes.Secondary.MovementSpeed"),
+		FString("Movement Speed")
 	);
-	
+
 	/*
 	*  바이탈 속성
 	*/
@@ -207,7 +212,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FName("Attributes.Resistance.Physical"),
 		FString("Physical Resistance")
 	);
-
+	
 	// 디버프
 	GameplayTags.Debuff_Burn = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Debuff.Burn"),
@@ -325,6 +330,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("ArcaneOrbit Ability")
 	);
 
+	GameplayTags.Abilities_Arcane_ArcaneArea = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Arcane.ArcaneArea"),
+		FString("ArcaneArea Ability")
+	);
+
 	GameplayTags.Abilities_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.HitReact"),
 		FString("HitReact Ability")
@@ -333,6 +343,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	/*
 	/	패시브 어빌리티
 	*/
+	GameplayTags.Abilities_Passive = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Passive"),
+		FString("Passive Ability")
+	);
+
 	GameplayTags.Abilities_Passive_LifeSiphon = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Passive.LifeSiphon"),
 		FString("LifeSiphon Ability")
@@ -599,11 +614,13 @@ void FAuraGameplayTags::InitializeAbilitiesTagsArray()
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneShards);
 	//GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_MindControl);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneOrbit);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Arcane_ArcaneArea);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBolt);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_FireBlast);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Fire_Firenado);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Electrocute);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Teleport);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_SpawnElectroSphere);
 
 	// 어빌리티 태그 - 패시브
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Passive_HaloOfProtection);

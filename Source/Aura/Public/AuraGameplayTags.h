@@ -40,6 +40,7 @@ public:
 	FGameplayTag Attributes_Secondary_ManaRegeneration;
 	FGameplayTag Attributes_Secondary_MaxHealth;
 	FGameplayTag Attributes_Secondary_MaxMana;
+	FGameplayTag Attributes_Secondary_MovementSpeed;
 
 	FGameplayTag Attributes_Vital_Health;
 	FGameplayTag Attributes_Vital_Mana;
@@ -98,9 +99,11 @@ public:
 	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_Arcane_MindControl;
 	FGameplayTag Abilities_Arcane_ArcaneOrbit;
+	FGameplayTag Abilities_Arcane_ArcaneArea;
 	FGameplayTag Abilities_HitReact;
 	
 	// 패시브 어빌리티
+	FGameplayTag Abilities_Passive;
 	FGameplayTag Abilities_Passive_HaloOfProtection;
 	FGameplayTag Abilities_Passive_LifeSiphon;
 	FGameplayTag Abilities_Passive_ManaSiphon;

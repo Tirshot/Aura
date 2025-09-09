@@ -24,7 +24,8 @@ FString UAuraGameplayAbility::GetNextLevelDescription(int32 Level, const UObject
 FString UAuraGameplayAbility::GetLockedDescription(int32 Level, const UObject* WorldContextObject, const FGameplayTag& InferiorAbilityTag)
 {
     // 빈 태그
-    if (InferiorAbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.None")))
+    if (InferiorAbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.None"))
+        || InferiorAbilityTag.MatchesTag(FGameplayTag::EmptyTag))
         return FString::Printf(TEXT("<Default>캐릭터 레벨 </><Level>%d</><Default>부터 습득 가능합니다.</>"), Level);
 
     // 하위 어빌리티 태그 받음

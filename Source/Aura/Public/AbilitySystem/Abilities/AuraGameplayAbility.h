@@ -19,9 +19,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	FGameplayTag StartupInputTag;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GameplayAbility")
-	float AbilityRange = 300.f;
-
 	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject);
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject);
 

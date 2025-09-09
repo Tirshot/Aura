@@ -13,7 +13,6 @@ AMagicCircle::AMagicCircle()
 	RootComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 
 	MagicCircleDecal = CreateDefaultSubobject<UDecalComponent>("MagicCircleDecal");
-	MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);
 	MagicCircleDecal->SetupAttachment(RootComponent);
 }
 
@@ -27,6 +26,9 @@ void AMagicCircle::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	
 	MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);
+
+	// 일정 범위 내에 갇히게 하기
+	KeepMagicCircleInRange();
 }
 
 void AMagicCircle::KeepMagicCircleInRange()

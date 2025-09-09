@@ -7,7 +7,6 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
-class UMVVM_UpgradeMenu;
 class USpellUpgradesWidgetController;
 struct FAuraAbilityUpgradeInfo;
 class UMVVM_LoadScreen;
@@ -36,8 +35,7 @@ public:
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
-	UMVVM_UpgradeMenu* GetUpgradeMenuViewModel() {return UpgradeMenuViewModel;}
-	
+
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
 protected:
@@ -125,11 +123,5 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_CardSelection> CardSelectionViewModel;
-	
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UMVVM_UpgradeMenu> UpgradeMenuViewModelClass;
-	
-	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<UMVVM_UpgradeMenu> UpgradeMenuViewModel;
 
 };
