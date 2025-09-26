@@ -9,6 +9,7 @@
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
+struct FDamageEffectParams;
 class UGameOverWidgetController;
 class ULootTiers;
 class UAbilityUpgradeInfo;
@@ -234,4 +235,10 @@ public:
 	// 활성화 모든 어빌리티의 태그를 반환
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static TArray<FGameplayTag> GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor);
+
+	UFUNCTION(BlueprintPure, Category = "GameplayAbility|GameplayMechanics")
+	static int32 GetAbilityUpgradeStackCount(AActor* AvatarActor, const FGameplayTag& Tag);
+	
+	UFUNCTION(BlueprintPure, Category = "GameplayAbility|GameplayMechanics")
+	static int32 GetAbilityUpgradeStackCountByAuraPS(AAuraPlayerState* AuraPS, const FGameplayTag& Tag);
 };

@@ -33,14 +33,16 @@ public:
 	FGameplayTag GetUpgradeTag() const { return UpgradeTag; }
 	FString GetUpgradeName() const { return UpgradeName; }
 	FText GetUpgradeDescription() const { return UpgradeDescription; }
-	int32 GetUpgradeMaxLevel() const { return UpgradeMaxLevel; }
+	int32 GetMaxStack() const { return MaxStack; }
 	EUpgradeRarity GetUpgradeRarity() const { return UpgradeRarity; }
+	FString GetUpgradeRarityString() const { return UpgradeRarityString; }
 
 	void SetUpgradeTag(FGameplayTag InGameplayTag);
 	void SetUpgradeName(FString InUpgradeName);
 	void SetUpgradeDescription(FText InUpgradeDescription);
-	void SetUpgradeMaxLevel(int32 InUpgradeMaxLevel);
-	void SetUpgradeRarity(EUpgradeRarity InRarity){ UpgradeRarity = InRarity; }
+	void SetMaxStack(int32 InMaxStack);
+	void SetUpgradeRarity(EUpgradeRarity InRarity);
+	void SetUpgradeRarityString(FString InRarity);
 
 	UFUNCTION(BlueprintCallable)
 	void UpgradeButtonClicked();
@@ -57,8 +59,11 @@ private:
 	FText UpgradeDescription;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
-	int32 UpgradeMaxLevel;
+	int32 MaxStack;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	EUpgradeRarity UpgradeRarity = EUpgradeRarity::Common;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, FieldNotify, meta=(AllowPrivateAccess = "true"))
+	FString UpgradeRarityString;
 };

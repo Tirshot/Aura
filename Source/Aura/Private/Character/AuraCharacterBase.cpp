@@ -1,10 +1,12 @@
 #include "Character/AuraCharacterBase.h"
 #include "AbilitySystemComponent.h"
+#include "AuraAbilityTypes.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
 #include "AuraGameplayTags.h"
 #include "NiagaraSystem.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
@@ -12,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/Passive/PassiveNiagaraComponent.h"
+#include "Actor/AuraEffectActor.h"
 #include "Player/AuraPlayerController.h"
 
 AAuraCharacterBase::AAuraCharacterBase()
@@ -83,6 +86,30 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 
 	// 랙돌 효과
 	MulticastHandleDeath(DeathImpulse);
+
+	// 소환수 모두 제거
+	for (AActor* Minion : Minions)
+	{
+		if (AAuraCharacterBase* CharacterBase = Cast<AAuraCharacterBase>(Minion))
+		{
+			if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(CharacterBase->GetAbilitySystemComponent()))
+			{
+				float MaxHealth = UAuraAbilitySystemLibrary::GetAttributeValue(CharacterBase, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+				
+				// Gameplay Effect Context 생성
+				FGameplayEffectContextHandle EffectContextHandle = AuraASC->MakeEffectContext();
+				EffectContextHandle.AddSourceObject(this);
+	
+				// Gameplay Effect Spec 생성
+				const FGameplayEffectSpecHandle EffectSpecHandle = AuraASC->MakeOutgoingSpec(DamageGameplayEffectClass, 1, EffectContextHandle);
+	
+				// Gameplay Effect Spec을 본인에게 적용
+				const FActiveGameplayEffectHandle ActiveEffectHandle = AuraASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+	
+			}
+		}
+	}
+	
 }
 
 void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& DeathImpulse)

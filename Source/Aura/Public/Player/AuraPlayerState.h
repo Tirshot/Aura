@@ -15,7 +15,7 @@ class ULevelUpInfo;
 // 플레이어 스테이트 초기화 완료
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitialized, AAuraPlayerState*, InitializedPlayerState);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32, Value);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLevelChanged, int32/*Level*/, bool /*bLevelUp*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCardsInitialized, TArray<FAuraAbilityUpgradeInfo>&, InitializedCards);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAbilityUpgradeTagsChanged, FGameplayTag, UpgradeTag, int32, Stack);
@@ -47,7 +47,11 @@ public:
 	// 값 변화 델리게이트
 	FOnPlayerStatChanged OnXPChangedDelegate;
 	FOnLevelChanged OnLevelChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable)
 	FOnPlayerStatChanged OnAttributePointChangedDelegate;
+	
+	UPROPERTY(BlueprintAssignable)
 	FOnPlayerStatChanged OnSpellPointChangedDelegate;
 
 	UPROPERTY()
@@ -58,8 +62,13 @@ public:
 	
 	FORCEINLINE int32 GetCharacterLevel() const { return Level; }
 	FORCEINLINE int32 GetXP() const { return XP; }
+	
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE int32 GetAttributePoints() const { return AttributePoints; }
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE int32 GetSpellPoints() const { return SpellPoints; }
+	
 	void SetXP(int32 GainedXP);
 	void AddToXP(int32 GainedXP);
 	void SetLevel(int32 InLevel);

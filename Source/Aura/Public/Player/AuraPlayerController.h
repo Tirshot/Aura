@@ -9,6 +9,9 @@
 #include "Actor/MagicCircle.h"
 #include "AuraPlayerController.generated.h"
 
+class UAuraUserWidget;
+class UMVVM_TutorialDialogue;
+class UGameplayAbility;
 class AAbilityRangeIndicator;
 struct FAuraAbilityUpgradeInfo;
 class IHighlightInterface;
@@ -29,6 +32,7 @@ enum class ETargetingStatus : uint8
 };
 
 DECLARE_MULTICAST_DELEGATE(FOnCardSelected);
+DECLARE_MULTICAST_DELEGATE(FOnBossMonsterAddedToGameMode);
 
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
@@ -79,6 +83,7 @@ public:
 	 * 어빌리티 업그레이드 카드
 	 */
 	// 카드 선택 UI 초기화 완료시 호출되는 델리게이트
+	
 	FOnCardSelected OnCardSelectedDelegate;
 
 	UFUNCTION()
@@ -94,7 +99,11 @@ public:
 	// 리롤 버튼 클릭
 	UFUNCTION()
 	void HandleAbilityCardRerollSelected();
-	
+
+public:
+	/*
+	//	서버 RPC 함수
+	*/
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_CreateCardSelection(AActor* InteractedActor);
 	
@@ -107,6 +116,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveUpgrade(FGameplayTag RemoveTag);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_AddAbilityToPlayerByGameplayTag(const FGameplayTag& Tag);
 
 private:
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -166,12 +178,23 @@ private:
 
 	void AutoRun();
 
+	UFUNCTION(BlueprintCallable)
+	void AutoRunToLocation(const FVector& Location);
+
+	UFUNCTION(BlueprintCallable)
+	void AutoRunToActor(AActor* Actor);
+
 public:
 	UFUNCTION(BlueprintCallable)
 	void StopAutoRun();
 
 public:
 	// 보스 이벤트 바인딩
+	FOnBossMonsterAddedToGameMode OnBossMonsterAdded;
+
+	UFUNCTION()
+	void BossMonsterBind();
+	
 	UFUNCTION()
 	void OnBossEventStart(AActor* BossActor);
 
@@ -188,6 +211,20 @@ public:
 	// 인풋 모드 변경
 	void SetPlayerInputEnable(bool bEnable);
 
+public:
+	/* 튜토리얼 다이얼로그 UI */
+	void ShowTutorialUI(bool bVisibility);
+
+protected:
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UMVVM_TutorialDialogue> TutorialDialogueViewModel;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> TutorialDialogueViewClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> TutorialDialogueView;
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;

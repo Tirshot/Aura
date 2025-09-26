@@ -13,22 +13,34 @@ class AURA_API UAuraArcaneAreaAbility : public UAuraDamageGameplayAbility
 {
 	GENERATED_BODY()
 
+public:
+	virtual FString GetDescription(int32 Level, const UObject* WorldContextObject) override;
+	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
+
+	virtual void CheckAbilityUpgrades() override;
+
 protected:
 	UFUNCTION(BlueprintCallable)
 	void SpawnArcaneArea(const FVector& Location);
 
 	UFUNCTION()
 	void OnArcaneAreaDestroyed(AActor* DestroyedActor);
-
-	UFUNCTION(BlueprintCallable)
-	void ApplySlowEffect(AActor* TargetActor);
-
-	UFUNCTION()
-	void OnSlowStackChanged(FGameplayEffectSpecHandle SpecHandle, int32 NewStack, int32 OldStack);
-
+	
 protected:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
+	bool bTakeDamage = false;
+	
+	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
+	float LifeSpan = 5.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
 	float SlowDownRatio = 0.25f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float SlowRadius = 200.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
+	float ApplyEffectPeriod = 0.2f;
 
 protected:
 	UPROPERTY(EditDefaultsOnly)
@@ -40,5 +52,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> SlowDownEffectClass;
 
-	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> SlowDownDecayEffectClass;
 };

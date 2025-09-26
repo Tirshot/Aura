@@ -32,31 +32,45 @@ public:
 	UFUNCTION()
 	void ApplySlowEffect();
 
-	UFUNCTION()
-	void OnSlowStackChanged(FActiveGameplayEffectHandle ActiveGEHandle, int32 NewStackCount, int32 OldStackCount);
-
 	bool IsValidOverlap(AActor* OtherActor);
 
-	void DamageAndKnockback(AActor* OtherActor);
+	UFUNCTION()
+	void DamageAndKnockback();
 
-protected:
+public:
+	// 게터 or 세터
+	void SetSlowSpeedRatio(float InSpeed) {SlowSpeedRatio = InSpeed;}
+	void SetSlowRadius(float InSlowRadius) {SlowRadius = InSlowRadius;}
+	void SetApplyEffectPeriod(float InPeriod) {ApplyEffectPeriod = InPeriod;}
+	void SetTakeDamage(bool InBool) {bTakeDamage = InBool;}
+
+public:
+	// 슬로우 이펙트
 	UPROPERTY()
-	TArray<AActor*> OverlappedActors;
-	
-	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> SlowDownEffectClass;
 
+	// 이동 속도 돌려주기
 	UPROPERTY()
-	FTimerHandle ApplyEffectTimer;
+	TSubclassOf<UGameplayEffect> SlowDownDecayEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float LifeSpan = 5.f;
 	
+protected:
+	UPROPERTY()
+	TArray<AActor*> OverlappedActors;
+
+	UPROPERTY()
+	FTimerHandle ApplyEffectTimer;
+	
+	UPROPERTY()
+	FTimerHandle ApplyDamageEffectTimer;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
 	float SlowSpeedRatio = 0.25f;
 	
-	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
-	float SlowRadius = 200.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float SlowRadius = 250.f;
 
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float ApplyEffectPeriod = 0.2f;
@@ -75,6 +89,10 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<UDecalComponent> Decal;
+
+	// 각 액터 별 초기 이동속도 저장
+	UPROPERTY(BlueprintReadOnly)
+	TMap<AActor*, float> MovementSpeeds;
 
 
 };

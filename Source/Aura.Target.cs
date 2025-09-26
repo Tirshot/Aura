@@ -7,9 +7,9 @@ public class AuraTarget : TargetRules
 {
 	public AuraTarget(TargetInfo Target) : base(Target)
 	{
+		DefaultBuildSettings = BuildSettingsVersion.V5; 
 		Type = TargetType.Game;
-		DefaultBuildSettings = BuildSettingsVersion.V2;
-
+		
 		ExtraModuleNames.AddRange( new string[] { "Aura" } );
 	}
 }

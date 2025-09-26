@@ -3,8 +3,10 @@
 
 #include "Actor/AuraEnemySpawnVolume.h"
 
+#include "NiagaraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Interaction/PlayerInterface.h"
+#include "Player/AuraPlayerController.h"
 
 AAuraEnemySpawnVolume::AAuraEnemySpawnVolume()
 {
@@ -16,6 +18,10 @@ AAuraEnemySpawnVolume::AAuraEnemySpawnVolume()
 	Box->SetCollisionObjectType(ECC_WorldStatic);
 	Box->SetCollisionResponseToChannels(ECR_Ignore);
 	Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	Niagara = CreateDefaultSubobject<UNiagaraComponent>("Niagara");
+	Niagara->SetupAttachment(GetRootComponent());
+	Niagara->Activate();
 }
 
 void AAuraEnemySpawnVolume::LoadActor_Implementation()
@@ -30,6 +36,12 @@ void AAuraEnemySpawnVolume::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (bShowArrow)
+		Niagara->Activate();
+	else
+		Niagara->Deactivate();
+	
+	
 	Box->OnComponentBeginOverlap.AddDynamic(this, &AAuraEnemySpawnVolume::OnSphereOverlap);
 }
 
@@ -49,5 +61,17 @@ void AAuraEnemySpawnVolume::OnSphereOverlap(UPrimitiveComponent* OverlappedCompo
 			Point->SpawnEnemy();
 		}
 	}
+
+	Box->SetVisibility(false);
+
+	if (IsValid(Niagara))
+		Niagara->DestroyComponent();
+
+	// 오토 런
+	if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(OtherActor))
+	{
+		AuraPC->SetCachedDestination(GetActorLocation());
+	}
+	
 	Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }

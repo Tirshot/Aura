@@ -20,7 +20,7 @@ void UOverlayWidgetController::BroadcastInitialValues()
 
 void UOverlayWidgetController::BindCallbacksToDependencies()
 {
-    GetAuraPS()->OnXPChangedDelegate.AddUObject(this, &UOverlayWidgetController::OnXPChanged);
+    GetAuraPS()->OnXPChangedDelegate.AddDynamic(this, &UOverlayWidgetController::OnXPChanged);
     GetAuraPS()->OnLevelChangedDelegate.AddLambda([this](int32 NewLevel, bool bLevelUp)
         {
             OnPlayerLevelChangedDelegate.Broadcast(NewLevel, bLevelUp);
@@ -111,6 +111,16 @@ void UOverlayWidgetController::ShowOverlayWidget()
 void UOverlayWidgetController::HideOverlayWidget()
 {
     OnOverlayVisibilityChanged.Broadcast(false);
+}
+
+void UOverlayWidgetController::ShowOverlayButtons()
+{
+    OnButtonVisibilityChanged.Broadcast(true);
+}
+
+void UOverlayWidgetController::HideOverlayButtons()
+{
+    OnButtonVisibilityChanged.Broadcast(false);
 }
 
 void UOverlayWidgetController::OnXPChanged(int32 NewXP)

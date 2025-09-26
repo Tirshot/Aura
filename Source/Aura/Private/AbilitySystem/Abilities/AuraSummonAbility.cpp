@@ -10,10 +10,10 @@ TArray<FVector> UAuraSummonAbility::GetSpawnLocations()
 
 	int Attempt = 0;
 	
-	// ������ �Ÿ����� ��ȯ�� ��ġ
+	// 지정된 각도로 퍼트려서 소환
 	const float DeltaSpread = SpawnSpread / NumMinions;
 
-	// Z�� ���� �¿� 45���� ���⺤��
+	// 왼쪽에서부터 순차 소환
 	const FVector LeftSpread = Forward.RotateAngleAxis(-SpawnSpread / 2, FVector::UpVector);
 	TArray<FVector> SpawnLocations;
 
@@ -21,7 +21,6 @@ TArray<FVector> UAuraSummonAbility::GetSpawnLocations()
 	
 	while ( idx < NumMinions )
 	{
-		// ���� ���� �� ȸ��
 		const FVector Direction = LeftSpread.RotateAngleAxis(DeltaSpread * idx, FVector::UpVector);
 		FVector DirectionVector = Direction * FMath::FRandRange(MinSpawnDistance, MaxSpawnDistance - 50.f * Attempt);
 		FVector ChosenSpawnLocation = Location + DirectionVector;
@@ -48,7 +47,6 @@ TArray<FVector> UAuraSummonAbility::GetSpawnLocations()
 
 TSubclassOf<APawn> UAuraSummonAbility::GetRandomMinionClass()
 {
-	// ���� ����
 	int32 Selection = FMath::RandRange(0, MinionClasses.Num() - 1);
 
 	return MinionClasses[Selection];

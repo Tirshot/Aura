@@ -19,6 +19,9 @@ class UAbilityInfo;
 class UMVVM_LoadSlot;
 class USaveGame;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
+
 UCLASS()
 class AURA_API AAuraGameModeBase : public AGameModeBase
 {
@@ -103,14 +106,26 @@ public:
 	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
 
 public:
+	UFUNCTION()
+	void OnBossMonsterDead(AActor* DeadActor);
+	
+	UFUNCTION()
 	void AddMonsterToArray(AAuraEnemy* Enemy);
 	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
 
+	void GameAutoSave();
+
 	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
+
+	UPROPERTY(BlueprintAssignable)
+	FOnBossMonsterCountChanged OnBossMonsterCountChanged;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnMonsterCountChanged OnMonsterCountChanged;
 
 private:
 	// 액터 배열
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess = true))
 	TArray<TSoftObjectPtr<AAuraEnemy>> EnemyCharacters;
 
 	UPROPERTY()

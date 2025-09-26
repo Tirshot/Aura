@@ -15,7 +15,6 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "Character/AuraBossMonster.h"
 #include "Game/AuraGameModeBase.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 
 AAuraEnemy::AAuraEnemy()
@@ -105,6 +104,8 @@ void AAuraEnemy::Die(const FVector& DeathImpulse)
 {
     // 랙돌 효과와 무기 드랍
     Super::Die(DeathImpulse);
+
+    HealthBar->DestroyComponent();
     
     if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
     {

@@ -164,14 +164,13 @@ void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
 
 int32 AAuraPlayerState::GetUpgradeTagCount(FGameplayTag UpgradeTag)
 {
-    int TagCount = 0;
-    
     if (!UpgradeTag.IsValid())
         return 0;
 
-    TagCount = *OwnedAbilityUpgradeTags.Find(UpgradeTag);
-    
-    return TagCount;
+    if (OwnedAbilityUpgradeTags.Find(UpgradeTag))
+        return *OwnedAbilityUpgradeTags.Find(UpgradeTag);
+
+    return 0;
 }
 
 bool AAuraPlayerState::HasUpgradeTag(FGameplayTag UpgradeTag)
@@ -276,7 +275,7 @@ void AAuraPlayerState::Server_AddAbilityUpgradeTag_Implementation(FGameplayTag U
     // 어빌리티 군 업그레이드는 Abilties.Fire / Abilities.Lightning / Abilities.Arcane
     if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
     {
-        AuraASC->AddCharacterAbility(UpgradeTag);
+        AuraASC->AddCharacterAbilityByTag(UpgradeTag);
     }
 
     // 만약 어빌리티 획득 업그레이드(또는 레벨업 업그레이드)라면 업그레이드 태그로 저장하지 않음

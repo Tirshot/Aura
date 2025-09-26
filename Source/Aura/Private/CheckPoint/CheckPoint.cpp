@@ -5,9 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
-#include "Aura/Aura.h"
 #include "Character/AuraCharacter.h"
-#include "CheckPoint/AbilityUpgradeChest.h"
 #include "Components/SphereComponent.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/PlayerInterface.h"

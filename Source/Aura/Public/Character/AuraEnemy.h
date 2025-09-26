@@ -68,6 +68,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	int32 Level = 1;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
+	FString MonsterName = "Default Name";
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
 	

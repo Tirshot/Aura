@@ -8,6 +8,8 @@
 #include "Interaction/SaveInterface.h"
 #include "AuraEnemySpawnVolume.generated.h"
 
+class UNiagaraComponent;
+class UNiagaraSystem;
 class UBoxComponent;
 
 UCLASS()
@@ -26,6 +28,12 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame)
 	bool bReached = false;
 
+	UPROPERTY(EditAnywhere, Category= "Spawn Volume")
+	bool bShowArrow = false;
+	
+	UPROPERTY(EditAnywhere, Category= "Spawn Volume")
+	bool bStopAutoRun = false;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -34,6 +42,10 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 	TArray<AAuraEnemySpawnPoint*> SpawnPoints;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UNiagaraComponent> Niagara;
+	
 private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UBoxComponent> Box;

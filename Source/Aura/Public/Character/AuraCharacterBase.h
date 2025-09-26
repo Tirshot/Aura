@@ -163,6 +163,14 @@ protected:
 	// 미니언 소환 카운트
 	int32 MinionCount = 0;
 
+	// 미니언 포인터 배열
+	UPROPERTY(BlueprintReadWrite)
+	TArray<AActor*> Minions;
+
+	// 미니언 자동 처치를 위한 데미지 이펙트 클래스
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> DamageGameplayEffectClass;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	ECharacterClass CharacterClass = ECharacterClass::Warrior;
 

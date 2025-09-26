@@ -30,6 +30,7 @@ void UAbilityUpgradeInfo::RebuildUpgradeInfoMaps()
 	}
 }
 
+#if WITH_EDITOR
 void UAbilityUpgradeInfo::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -39,6 +40,7 @@ void UAbilityUpgradeInfo::PostEditChangeProperty(FPropertyChangedEvent& Property
 		RebuildUpgradeInfoMaps();
 	}
 }
+#endif
 
 FAuraAbilityUpgradeInfoArray UAbilityUpgradeInfo::GetUpgradesForAbility(const FGameplayTag& AbilityTag)
 {

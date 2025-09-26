@@ -102,7 +102,19 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute & Attribute,
     // 인수로 넘겨받은 Attribute가 해당 속성과 동일한지 확인하기
     if (Attribute == GetHealthAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+        // NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+        // 무적 상태 체크
+        bool bIsInvulnerable = GetOwningAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("Effects.Invulnerable"));
+        
+        // 일반 상태
+        if (!bIsInvulnerable)
+        {
+            NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+        }
+        else  // 무적 상태
+        {
+            NewValue = FMath::Clamp(NewValue, 50.f, GetMaxHealth());
+        }
     }
     if (Attribute == GetManaAttribute())
     {
@@ -263,6 +275,8 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             if (CombatInterface)
             {
                 // 사망
+                FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+                Props.SourceASC->AddLooseGameplayTag(DeadTag); 
                 CombatInterface->Die(UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle));
             }
             SendXPEvent(Props);

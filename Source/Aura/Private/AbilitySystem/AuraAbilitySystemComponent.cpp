@@ -135,7 +135,7 @@ void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSub
     UpdateAbilityStatus(1);
 }
 
-void UAuraAbilitySystemComponent::AddCharacterAbility(const FGameplayTag& AbilityTag)
+void UAuraAbilitySystemComponent::AddCharacterAbilityByTag(const FGameplayTag& AbilityTag)
 {
     // 게임플레이 어빌리티 스펙 생성
     auto AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this)->FindAbilityInfoForTag(AbilityTag);
@@ -298,8 +298,11 @@ void UAuraAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
                         return;
                     }
                 }
+                else
+                {
+                    CancelAbilityHandle(AbilitySpec.Handle);
+                }
             }
-            CancelAbilityHandle(AbilitySpec.Handle);
         }
         return;
     }

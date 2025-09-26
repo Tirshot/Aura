@@ -101,13 +101,14 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
 
     // 구조체에 할당 후 오버레이 위젯 컨트롤러를 초기화
     const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
-    UOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
+    UOverlayWidgetController* NewOverlayWidgetController = GetOverlayWidgetController(WidgetControllerParams);
 
     // 위젯에 위젯 컨트롤러를 연결
-    OverlayWidget->SetWidgetController(WidgetController);
+    OverlayWidget->SetWidgetController(NewOverlayWidgetController);
+    NewOverlayWidgetController->OverlayWidget = OverlayWidget;
     
     // 유효한 속성 세트와 위젯 컨트롤러를 가짐 -> 값 초기화 가능
-    WidgetController->BroadcastInitialValues();
+    NewOverlayWidgetController->BroadcastInitialValues();
     Widget->AddToViewport();
     
     // 게임오버 위젯 컨트롤러 생성
@@ -192,7 +193,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_0->SetUpgradeTag(Upgrade.UpgradeEffectTag);
         CardViewModel_0->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_0->SetUpgradeName(Upgrade.UpgradeName);
-        CardViewModel_0->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_0->SetMaxStack(Upgrade.MaxStack);
         CardViewModel_0->SetUpgradeRarity(Upgrade.Rarity);
 
         CardViewModel_0->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag0);
@@ -206,7 +207,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_1->SetUpgradeTag(Upgrade.UpgradeEffectTag);
         CardViewModel_1->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_1->SetUpgradeName(Upgrade.UpgradeName);
-        CardViewModel_1->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_1->SetMaxStack(Upgrade.MaxStack);
         CardViewModel_1->SetUpgradeRarity(Upgrade.Rarity);
         
         CardViewModel_1->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag1);
@@ -220,7 +221,7 @@ void AAuraHUD::HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag
         CardViewModel_2->SetUpgradeTag(Upgrade.UpgradeEffectTag);
         CardViewModel_2->SetUpgradeDescription(Upgrade.UpgradeDescription);
         CardViewModel_2->SetUpgradeName(Upgrade.UpgradeName);
-        CardViewModel_2->SetUpgradeMaxLevel(Upgrade.UpgradeMaxLevel);
+        CardViewModel_2->SetMaxStack(Upgrade.MaxStack);
         CardViewModel_2->SetUpgradeRarity(Upgrade.Rarity);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeTag2);
@@ -244,7 +245,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_0->SetUpgradeTag(UpgradeInfos[0].UpgradeEffectTag);
         CardViewModel_0->SetUpgradeDescription(UpgradeInfos[0].UpgradeDescription);
         CardViewModel_0->SetUpgradeName(UpgradeInfos[0].UpgradeName);
-        CardViewModel_0->SetUpgradeMaxLevel(UpgradeInfos[0].UpgradeMaxLevel);
+        CardViewModel_0->SetMaxStack(UpgradeInfos[0].MaxStack);
         CardViewModel_0->SetUpgradeRarity(UpgradeInfos[0].Rarity);
 
         CardViewModel_0->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[0].UpgradeEffectTag);
@@ -256,7 +257,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_1->SetUpgradeTag(UpgradeInfos[1].UpgradeEffectTag);
         CardViewModel_1->SetUpgradeDescription(UpgradeInfos[1].UpgradeDescription);
         CardViewModel_1->SetUpgradeName(UpgradeInfos[1].UpgradeName);
-        CardViewModel_1->SetUpgradeMaxLevel(UpgradeInfos[1].UpgradeMaxLevel);
+        CardViewModel_1->SetMaxStack(UpgradeInfos[1].MaxStack);
         CardViewModel_1->SetUpgradeRarity(UpgradeInfos[1].Rarity);
         
         CardViewModel_1->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[1].UpgradeEffectTag);
@@ -268,7 +269,7 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_2->SetUpgradeTag(UpgradeInfos[2].UpgradeEffectTag);
         CardViewModel_2->SetUpgradeDescription(UpgradeInfos[2].UpgradeDescription);
         CardViewModel_2->SetUpgradeName(UpgradeInfos[2].UpgradeName);
-        CardViewModel_2->SetUpgradeMaxLevel(UpgradeInfos[2].UpgradeMaxLevel);
+        CardViewModel_2->SetMaxStack(UpgradeInfos[2].MaxStack);
         CardViewModel_2->SetUpgradeRarity(UpgradeInfos[2].Rarity);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[2].UpgradeEffectTag);

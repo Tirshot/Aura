@@ -132,8 +132,6 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor *TargetActor, TSubclassOf<UGam
 	// 이펙트 발생자에 대한 정보 추가
 	EffectContextHandle.AddSourceObject(this);
 	
-	float InitialHealth = TargetASC->GetNumericAttribute(UAuraAttributeSet::GetHealthAttribute());
-	
 	// Gameplay Effect Spec 생성
 	const FGameplayEffectSpecHandle EffectSpecHandle = TargetASC->MakeOutgoingSpec(GameplayEffectClass, ActorLevel, EffectContextHandle);
 	

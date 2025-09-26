@@ -8,11 +8,9 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Abilities/AuraArcaneAreaAbility.h"
-#include "Character/AuraCharacter.h"
 #include "Character/AuraCharacterBase.h"
 #include "Character/AuraEnemy.h"
 #include "Components/DecalComponent.h"
-#include "GameFramework/PawnMovementComponent.h"
 
 AAuraArcaneArea::AAuraArcaneArea()
 {
@@ -36,16 +34,18 @@ void AAuraArcaneArea::BeginPlay()
 
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraArcaneArea::OnSphereOverlap);
 	Sphere->OnComponentEndOverlap.AddDynamic(this, &AAuraArcaneArea::OnSphereEndOverlap);
+
+	// 기본 메시 반경이 0.25m
+	float ScaleFloat = SlowRadius / 50.f;
+	Mesh->SetWorldScale3D(FVector(ScaleFloat, ScaleFloat, ScaleFloat));
 }
 
 void AAuraArcaneArea::Destroyed()
 {
-	// 어빌리티의 소환 함수내에서 바인딩 된 콜백 함수 호출됨
 	OverlappedActors.Empty();
 
 	if (ApplyEffectTimer.IsValid())
 	{
-		// 어트리뷰트를 감소시키는 이펙트 적용 해제
 		GetWorldTimerManager().ClearTimer(ApplyEffectTimer);
 	}
 
@@ -58,95 +58,64 @@ void AAuraArcaneArea::ApplySlowEffect()
 	{
 		for (auto* TargetActor : OverlappedActors)
 		{
+			// 슬로우 이펙트 적용
 			if (auto* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor))
 			{
-				const FActiveGameplayEffect* ActiveGE = nullptr;
-				FGameplayEffectQuery Query;
-				Query.EffectDefinition = SlowDownEffectClass;
-
-				TArray<FActiveGameplayEffectHandle> Handles = TargetASC->GetActiveEffects(Query);
-				if (Handles.Num() > 0)
-				{
-					ActiveGE = TargetASC->GetActiveGameplayEffect(Handles[0]);
-				}
-
-				// 기존 이펙트에서 스택 가져오기
-				int32 Stack = 1;
-				if (ActiveGE)
-				{
-					Stack = ActiveGE->Spec.GetStackCount();
-					if (Stack == 0)
-						Stack = 1;
-				}
-
-				// 새로운 이펙트를 만들어 스택 덮어 씌우기
 				FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownEffectClass, 1, OwnerASC->MakeEffectContext());
-				SpecHandle.Data->SetStackCount(Stack);
+				
+				const float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(TargetActor, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed);
+				const float Magnitude = -MovementSpeed * 0.1f;
 
-				float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(TargetActor, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed);
-				float Magnitude = -MovementSpeed * 0.1f * Stack;
+				// Set By Caller로 매그니튜드 지정 후 이펙트 적용
 				SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);
-
-				// 기존 이펙트 제거 후 새로운 이펙트 다시 적용
-				if (ActiveGE)
-				{
-					TargetASC->RemoveActiveGameplayEffect(Handles[0]);
-					
-					// // 스턴 스택 델리게이트 생성 및 바인딩
-					// TargetASC->OnGameplayEffectStackChangeDelegate(Handles[0])->AddUObject(this, &AAuraArcaneArea::OnSlowStackChanged);
-				}
 				OwnerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 			}
 		}
 	}
 }
 
-void AAuraArcaneArea::OnSlowStackChanged(FActiveGameplayEffectHandle ActiveGEHandle, int32 NewStackCount,
-	int32 OldStackCount)
-{
-	//감소할때만 체크
-	if (OldStackCount > NewStackCount)
-	{
-		// 한 스택에 한 단계씩 다시 빨라지도록 이펙트 적용
-		if (auto* TargetASC = ActiveGEHandle.GetOwningAbilitySystemComponent())
-		{
-			if (AActor* AvatarActor = TargetASC->GetAvatarActor())
-			{
-				float MovementSpeedBase = UAuraAbilitySystemLibrary::GetAttributeValue(AvatarActor, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed, true);
-				float Magnitude = 250.f;
-	
-				if (auto* OwnerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
-				{
-					FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownEffectClass, 1, OwnerASC->MakeEffectContext());
-					SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);
-	
-					OwnerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-				}
-			}
-		}
-	}
-}
-
-
 void AAuraArcaneArea::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (AAuraEnemy* AuraEnemy = Cast<AAuraEnemy>(OtherActor))
 	{
+		// 초기 이동속도 한 번만 저장
+		if (!MovementSpeeds.Contains(AuraEnemy))
+		{
+			const FGameplayTag& MovementTag = FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed;
+			const float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(AuraEnemy, MovementTag);
+				
+			MovementSpeeds.Add(AuraEnemy, MovementSpeed);
+		}
+		
 		DamageEffectParams.TargetAbilitySystemComponent = AuraEnemy->GetAbilitySystemComponent();
 
 		OverlappedActors.AddUnique(OtherActor);
 		
-		// 타이머 설정
-		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindUFunction(this, FName("ApplySlowEffect"));
+		// 슬로우 이펙트 타이머 설정
+		FTimerDelegate EffectTimerDelegate;
+		EffectTimerDelegate.BindUObject(this, &AAuraArcaneArea::ApplySlowEffect);
 
 		// 오버랩이 시작하면 일정 시간마다 이펙트 중첩(스택 중첩)
 		if (!ApplyEffectTimer.IsValid())
 		{
 			GetWorldTimerManager().SetTimer(
 			   ApplyEffectTimer,
-			   TimerDelegate,
+			   EffectTimerDelegate,
+			   ApplyEffectPeriod,
+			   true
+			   );
+		}
+
+		// 데미지 이펙트 타이머 설정
+		FTimerDelegate DamageTimerDelegate;
+		DamageTimerDelegate.BindUObject(this, &AAuraArcaneArea::DamageAndKnockback);
+		
+		if (!ApplyDamageEffectTimer.IsValid())
+		{
+			GetWorldTimerManager().SetTimer(
+			   ApplyDamageEffectTimer,
+			   DamageTimerDelegate,
 			   ApplyEffectPeriod,
 			   true
 			   );
@@ -159,17 +128,26 @@ void AAuraArcaneArea::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponen
 {
 	if (AAuraEnemy* AuraEnemy = Cast<AAuraEnemy>(OtherActor))
 	{
-		// const FActiveGameplayEffect* ActiveGE = nullptr;
-		// FGameplayEffectQuery Query;
-		// Query.EffectDefinition = SlowDownEffectClass;
+		if (auto* OwnerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+		{
+			// 이동속도 돌려주기
+			if (auto* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AuraEnemy))
+			{
+				FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownDecayEffectClass, 1, OwnerASC->MakeEffectContext());
+
+				if (float* ValPtr = MovementSpeeds.Find(AuraEnemy))
+				{
+					const float MovementSpeed = *ValPtr;
+					const float Magnitude = MovementSpeed;
+
+					// Set By Caller로 매그니튜드 지정 후 이펙트 적용
+					SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);
+					OwnerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+				}
+			}
+		}
 		//
-		// TArray<FActiveGameplayEffectHandle> Handles = AuraEnemy->GetAbilitySystemComponent()->GetActiveEffects(Query);
-		// if (Handles.Num() > 0)
-		// {
-		// 	ActiveGE = AuraEnemy->GetAbilitySystemComponent()->GetActiveGameplayEffect(Handles[0]);
-		// }
-		// int32 DefaultWalkSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(AuraEnemy, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed, true);
-		
+		MovementSpeeds.Remove(AuraEnemy);
 		OverlappedActors.Remove(AuraEnemy);
 	}
 }
@@ -192,43 +170,56 @@ bool AAuraArcaneArea::IsValidOverlap(AActor* OtherActor)
 	return true;
 }
 
-void AAuraArcaneArea::DamageAndKnockback(AActor* OtherActor)
+void AAuraArcaneArea::DamageAndKnockback()
 {
 	if (HasAuthority())
 	{
-		if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+		if (!bTakeDamage)
+			return;
+
+		// 유효성을 위해 거꾸로 순회
+		for (int32 i = OverlappedActors.Num() - 1; i >= 0; --i)
 		{
-			bool bIsKnockBack = true;
-				
-			// 벡터를 구하고 정규화
-			FVector ToCenter = GetActorLocation() - OtherActor->GetActorLocation();
-			ToCenter.Z = GetActorLocation().Z - Sphere->GetScaledSphereRadius();
-			ToCenter.Normalize();
-				
-			// 보스는 넉백 무효
-			if (OtherActor->ActorHasTag(FName("Boss")))
+			auto* OtherActor = OverlappedActors[i];
+			if (!OtherActor || OtherActor->IsPendingKillPending())
 			{
-				bIsKnockBack = false;
-				DamageEffectParams.KnockbackChance = 0.f;
+				OverlappedActors.RemoveAt(i);
+				continue;
 			}
-
-			if (bIsKnockBack)
+			if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 			{
-				const FVector KnockbackDirection = ToCenter;
-				const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
-				DamageEffectParams.KnockbackForce = KnockbackForce;
-			}
+				bool bIsKnockBack = true;
+				
+				// 벡터를 구하고 정규화
+				FVector ToCenter = GetActorLocation() - OtherActor->GetActorLocation();
+				ToCenter.Z = GetActorLocation().Z - Sphere->GetScaledSphereRadius();
+				ToCenter.Normalize();
+				
+				// 보스는 넉백 무효
+				if (OtherActor->ActorHasTag(FName("Boss")))
+				{
+					bIsKnockBack = false;
+					DamageEffectParams.KnockbackChance = 0.f;
+				}
 
-			FVector DistanceVector = (OtherActor->GetActorLocation()-GetActorLocation());
-			float Distance = DistanceVector.Length();
+				if (bIsKnockBack)
+				{
+					const FVector KnockbackDirection = ToCenter;
+					const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
+					DamageEffectParams.KnockbackForce = KnockbackForce;
+				}
+
+				FVector DistanceVector = (OtherActor->GetActorLocation()-GetActorLocation());
+				float Distance = DistanceVector.Length();
 				
-			if (Distance <= SlowRadius)
-			{
-				const FVector DeathImpulse = ToCenter * DamageEffectParams.DeathImpulseMagnitude;
-				DamageEffectParams.DeathImpulse = DeathImpulse;
-				DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
+				if (Distance <= SlowRadius)
+				{
+					const FVector DeathImpulse = ToCenter * DamageEffectParams.DeathImpulseMagnitude;
+					DamageEffectParams.DeathImpulse = DeathImpulse;
+					DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
 				
-				UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
+					UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
+				}
 			}
 		}
 	}

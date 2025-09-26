@@ -26,6 +26,14 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+protected:
+	UFUNCTION()
+	void OnAttributePointChanged(int32 AttributePoints);
+
+	UFUNCTION()
+	void OnSpellPointChanged(int32 SpellPoints);
+
+public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FAttributeInfoSignature AttributeInfoDelegate;
 

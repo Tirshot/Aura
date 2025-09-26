@@ -14,11 +14,9 @@
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraFunctionLibrary.h"
-#include "SWarningOrErrorBox.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/AbilityRangeIndicator.h"
 #include "Actor/MagicCircle.h"
-#include "Components/DecalComponent.h"
 #include "Aura/Aura.h"
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
@@ -32,6 +30,7 @@
 #include "UI/HUD/AuraHUD.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
+#include "UI/ViewModel/MVVM_TutorialDialogue.h"
 #include "UI/Widget/LoadScreenWidget.h"
 
 AAuraPlayerController::AAuraPlayerController()
@@ -71,23 +70,24 @@ void AAuraPlayerController::BeginPlay()
 
     // 델리게이트 바인딩
     OnCardSelectedDelegate.AddUObject(this ,&AAuraPlayerController::HandleCardSelectionInitialized);
+
+    const FString CurrentLevelName = GetWorld()->GetMapName();
+
+    // 튜토리얼 레벨에서만 위젯 컨트롤러 생성
+    if (CurrentLevelName.Contains(TEXT("Tutorial")))
+    {
+        // 튜토리얼 뷰 모델 생성
+        TutorialDialogueViewModel = NewObject<UMVVM_TutorialDialogue>(this);
+        TutorialDialogueViewModel->BlueprintInitialize();
+        ShowTutorialUI(true);
+    }
 }
 
 void AAuraPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
-    // 게임 모드의 보스 배열에 접근하여 몽타주 이벤트에 바인딩
-    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
-    {
-        auto BossArray = AuraGameMode->GetBossCharactersArray();
-        for (const auto Boss : BossArray)
-        {
-            Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::OnBossEventStart);
-            Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::OnBossEventEnd);
-            Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
-        }
-    }
+    OnBossMonsterAdded.AddUObject(this, &AAuraPlayerController::BossMonsterBind);
 }
 
 
@@ -165,10 +165,69 @@ void AAuraPlayerController::AutoRun()
     }
 }
 
+void AAuraPlayerController::AutoRunToLocation(const FVector& Location)
+{
+    if (!GetPawn())
+        return;
+
+    CachedDestination = Location;
+    bAutoRunning = true;
+    Spline->ClearSplinePoints();
+
+    UNavigationPath* NavigationPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, GetPawn()->GetActorLocation(), Location);
+
+    if (NavigationPath && NavigationPath->PathPoints.Num() > 0)
+    {
+        for (FVector& Point : NavigationPath->PathPoints)
+        {
+            // 캡슐 높이만큼 보정
+            Point += FVector(0.f, 0.f, GetPawn()->GetSimpleCollisionHalfHeight());
+            Spline->AddSplinePoint(Point, ESplineCoordinateSpace::World, true);
+        }
+    }
+}
+
+void AAuraPlayerController::AutoRunToActor(AActor* Actor)
+{
+    if (!GetPawn())
+        return;
+
+    CachedDestination = Actor->GetActorLocation();
+    bAutoRunning = true;
+    Spline->ClearSplinePoints();
+
+    UNavigationPath* NavigationPath = UNavigationSystemV1::FindPathToActorSynchronously(this, GetPawn()->GetActorLocation(), Actor);
+
+    if (NavigationPath && NavigationPath->PathPoints.Num() > 0)
+    {
+        for (FVector& Point : NavigationPath->PathPoints)
+        {
+            // 캡슐 높이만큼 보정
+            Point += FVector(0.f, 0.f, GetPawn()->GetSimpleCollisionHalfHeight());
+            Spline->AddSplinePoint(Point, ESplineCoordinateSpace::World, true);
+        }
+    }
+}
+
 void AAuraPlayerController::StopAutoRun()
 {
     bAutoRunning = false;
     CachedDestination = FVector::ZeroVector;
+}
+
+void AAuraPlayerController::BossMonsterBind()
+{
+    // 게임 모드의 보스 배열에 접근하여 몽타주 이벤트에 바인딩
+    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        auto BossArray = AuraGameMode->GetBossCharactersArray();
+        for (const auto Boss : BossArray)
+        {
+            Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::OnBossEventStart);
+            Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::OnBossEventEnd);
+            Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
+        }
+    }
 }
 
 void AAuraPlayerController::OnBossEventStart(AActor* BossActor)
@@ -271,6 +330,36 @@ void AAuraPlayerController::SetPlayerInputEnable(bool bEnable)
         // 마우스 커서가 뷰포트에 갇히지 않도록 설정
         InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         SetInputMode(InputModeData);
+    }
+}
+
+void AAuraPlayerController::ShowTutorialUI(bool bVisibility)
+{
+    if (!IsValid(TutorialDialogueViewModel))
+        return;
+
+    if (bVisibility)
+    {
+        // 생성 또는 표시
+        if (IsValid(TutorialDialogueView))
+        {
+            TutorialDialogueView->SetVisibility(ESlateVisibility::Visible);
+            TutorialDialogueViewModel->SetViewToViewModel(TutorialDialogueView); 
+            return;
+        }
+        
+        TutorialDialogueView = CreateWidget<UUserWidget>(this, TutorialDialogueViewClass);
+        TutorialDialogueViewModel->SetViewToViewModel(TutorialDialogueView);
+        
+        TutorialDialogueView->AddToViewport();
+    }
+    else
+    {
+        // 제거
+        if (IsValid(TutorialDialogueView))
+        {
+            TutorialDialogueView->RemoveFromParent();
+        }
     }
 }
 
@@ -458,6 +547,12 @@ void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgra
         AuraHUD->CardSelectionWidget->RemoveFromParent();
         AuraHUD->CardSelectionWidget = nullptr;
     }
+
+    // 강제 저장
+    if (AAuraGameModeBase* GameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        GameMode->GameAutoSave();
+    }
 }
 
 void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpgradeInfo>& SelectedUpgradeInfo)
@@ -475,6 +570,17 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
     Server_CreateCardSelection(GetPawn());
+}
+
+void AAuraPlayerController::Server_AddAbilityToPlayerByGameplayTag_Implementation(const FGameplayTag& Tag)
+{
+    if (!HasAuthority())
+        return;
+
+    if (auto* AuraASC = GetASC())
+    {
+        AuraASC->AddCharacterAbilityByTag(Tag);
+    }
 }
 
 void AAuraPlayerController::Server_CreateCardSelection_Implementation(AActor* InteractedActor)

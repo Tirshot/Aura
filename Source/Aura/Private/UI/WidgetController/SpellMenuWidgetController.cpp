@@ -77,50 +77,52 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 	GetAuraASC()->AbilityEquipped.AddUObject(this, &USpellMenuWidgetController::OnAbilityEquipped);
 
 	// 스펠 포인트 변경
-	GetAuraPS()->OnSpellPointChangedDelegate.AddLambda([this](int32 SpellPoints)
-		{
-			// �������Ʈ�� ����
-			OnSpellPointsChanged.Broadcast(SpellPoints);
-			CurrentSpellPoints = SpellPoints;
+	GetAuraPS()->OnSpellPointChangedDelegate.AddDynamic(this, &USpellMenuWidgetController::OnSpellPointChanged);
+}
 
-			bool bEnableSpendPoints = false;
-			bool bEnableEquip = false;
+void USpellMenuWidgetController::OnSpellPointChanged(int32 SpellPoints)
+{
+	// �������Ʈ�� ����
+	OnSpellPointsChanged.Broadcast(SpellPoints);
+	CurrentSpellPoints = SpellPoints;
+
+	bool bEnableSpendPoints = false;
+	bool bEnableEquip = false;
 		
-			// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
-			if (SelectedAbility.Ability.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+	// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
+	if (SelectedAbility.Ability.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+	{
+		if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(SelectedAbility.Ability))
+		{
+			int32 MaxLevel = 1;
+			if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
 			{
-				if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(SelectedAbility.Ability))
-				{
-					int32 MaxLevel = 1;
-					if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
-					{
-						MaxLevel = Passive->GetMaxLevel();
-					}
+				MaxLevel = Passive->GetMaxLevel();
+			}
 									
-					int32 CurrentLevel = Spec->Level;
-					if (CurrentLevel >= MaxLevel)
-					{
-						ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
-					}
-					else
-					{
-						ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-					}
-				}
+			int32 CurrentLevel = Spec->Level;
+			if (CurrentLevel >= MaxLevel)
+			{
+				ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
 			}
 			else
 			{
 				ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
 			}
+		}
+	}
+	else
+	{
+		ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+	}
 		
-			// �����Ƽ ����
-			FString Description;
-			FString NextLevelDescription;
-			GetAuraASC()->GetDescriptionsByAbilityTag(SelectedAbility.Ability, Description, NextLevelDescription);
+	// �����Ƽ ����
+	FString Description;
+	FString NextLevelDescription;
+	GetAuraASC()->GetDescriptionsByAbilityTag(SelectedAbility.Ability, Description, NextLevelDescription);
 
-			// �������Ʈ�� ��ε�ĳ����
-			OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
-		});
+	// �������Ʈ�� ��ε�ĳ����
+	OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 }
 
 void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityTag)

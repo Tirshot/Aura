@@ -136,6 +136,10 @@ public:
 	FGameplayTag Upgrades_Arcane_ArcaneShards_FirstLargeShard;
 	
 	FGameplayTag Upgrades_Arcane_ArcaneOrbit_IncreaseRange;
+	FGameplayTag Upgrades_Arcane_ArcaneOrbit_IncreaseNum;
+	
+	FGameplayTag Upgrades_Arcane_ArcaneArea_IncreaseRange;
+	FGameplayTag Upgrades_Arcane_ArcaneArea_IncreaseSize;
 	
 	FGameplayTag Upgrades_Lightning_Increase10PercentDamage;
 	FGameplayTag Upgrades_Lightning_Electrocute_AdditionalTarget;

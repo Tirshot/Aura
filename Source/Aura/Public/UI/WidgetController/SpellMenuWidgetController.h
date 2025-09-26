@@ -29,6 +29,11 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+protected:
+	UFUNCTION()
+	void OnSpellPointChanged(int32 SpellPoints);
+
+public:
 	UPROPERTY(BlueprintAssignable)
 	FOnSpellPointsChangedSignature OnSpellPointsChanged;
 

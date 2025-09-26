@@ -40,7 +40,7 @@ public:
 	void AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities);
 	void AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
 	bool bStartupAbilitiesGiven = false;
-	void AddCharacterAbility(const FGameplayTag& AbilityTag);
+	void AddCharacterAbilityByTag(const FGameplayTag& AbilityTag);
 
 	// 어빌리티 입력
 	void AbilityInputTagPressed(const FGameplayTag& InputTag);

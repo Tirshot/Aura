@@ -50,6 +50,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageWidgetRowSignature, FUIWidge
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMessageRemoveSignature, const FGameplayTag&, MessageTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityActivatedSignature, bool, bAbilityActivated);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOverlayVisibilityChangedSignature, bool, bVisibility);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnButtonVisibilityChangedSignature, bool, bVisibility);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCloseMenuAnchors, bool, bClose);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController
@@ -88,9 +90,28 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
 	FOnOverlayVisibilityChangedSignature OnOverlayVisibilityChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
+	FOnButtonVisibilityChangedSignature OnButtonVisibilityChanged;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnCloseMenuAnchors OnCloseMenuAnchors;
+
 public:
+	UFUNCTION(BlueprintCallable)
 	void ShowOverlayWidget();
+
+	UFUNCTION(BlueprintCallable)
 	void HideOverlayWidget();
+
+	UFUNCTION(BlueprintCallable)
+	void ShowOverlayButtons();
+
+	UFUNCTION(BlueprintCallable)
+	void HideOverlayButtons();
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UUserWidget> OverlayWidget;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
@@ -108,6 +129,7 @@ public:
 
 protected:
 	// 경험치 콜백 함수
+	UFUNCTION()
 	void OnXPChanged(int32 NewXP);
 
 	// 어빌리티 장착 표시

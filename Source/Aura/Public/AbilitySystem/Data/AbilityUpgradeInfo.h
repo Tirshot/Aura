@@ -11,9 +11,9 @@ UENUM(BlueprintType)
 enum class EUpgradeRarity : uint8
 {
 	Common = 0,
-	Rare,
-	Unique,
-	Legendary,
+	Rare = 1,
+	Unique = 2,
+	Legendary = 3,
 };
 
 USTRUCT(BlueprintType)
@@ -31,7 +31,7 @@ struct FAuraAbilityUpgradeInfo
 	EUpgradeRarity Rarity = EUpgradeRarity::Common;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	int32 UpgradeMaxLevel = 1;
+	int32 MaxStack = 5;
 
 	// 실제 적용할 효과 타입 (ex. 데미지 +, 쿨다운 감소 등)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

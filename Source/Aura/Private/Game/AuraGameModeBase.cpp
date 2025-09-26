@@ -17,7 +17,7 @@
 #include "Interaction/SaveInterface.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "GameFramework/Character.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -283,15 +283,31 @@ FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetNam
 	return FString();
 }
 
+void AAuraGameModeBase::OnBossMonsterDead(AActor* DeadActor)
+{
+	// 월드 상태 저장
+	GameAutoSave();
+}
+
 void AAuraGameModeBase::AddMonsterToArray(AAuraEnemy* Enemy)
 {
 	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
 	{
 		BossCharacters.Add(Boss);
+		OnBossMonsterCountChanged.Broadcast(BossCharacters.Num());
+
+		// 보스 사망 델리게이트 구독 -> 게임 강제 저장
+		Boss->OnDeath.AddDynamic(this, &AAuraGameModeBase::OnBossMonsterDead);
+
+		if (AAuraPlayerController* AuraPC = GetWorld()->GetFirstPlayerController<AAuraPlayerController>())
+		{
+			AuraPC->OnBossMonsterAdded.Broadcast();
+		}
 	}
-	else if (AAuraEnemy* Monster = Cast<AAuraEnemy>(Enemy))
+	else
 	{
 		EnemyCharacters.Add(Enemy);
+		OnMonsterCountChanged.Broadcast(EnemyCharacters.Num());
 	}
 }
 
@@ -300,10 +316,30 @@ void AAuraGameModeBase::RemoveMonsterFromArray(AAuraEnemy* Enemy)
 	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
 	{
 		BossCharacters.Remove(Boss);
+		OnBossMonsterCountChanged.Broadcast(BossCharacters.Num());
 	}
-	else if (AAuraEnemy* Monster = Cast<AAuraEnemy>(Enemy))
+	else
 	{
 		EnemyCharacters.Remove(Enemy);
+		OnMonsterCountChanged.Broadcast(EnemyCharacters.Num());
+	}
+}
+
+void AAuraGameModeBase::GameAutoSave()
+{
+	// 월드 상태 저장
+	if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+	{
+		const UWorld* World = GetWorld();
+		FString MapName = World->GetMapName();
+		MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+			
+		AuraGM->SaveWorldState(GetWorld(), MapName);
+
+		auto* PlayerController = GetWorld()->GetFirstPlayerController();
+		AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
+		if (Actor->Implements<UPlayerInterface>())
+			IPlayerInterface::Execute_SaveProgress(Actor, "");
 	}
 }
 
@@ -491,6 +527,7 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 			}
 		}
 
+		// 유효하지 않은 카드 제거
 		for (auto It = RandomUpgradeInfos.CreateIterator(); It; ++It)
 		{
 			if (It->UpgradeEffectTag == FGameplayTag::EmptyTag)
@@ -498,7 +535,17 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 				It.RemoveCurrent();
 			}
 		}	
-		
+
+		// 최대 스택을 넘은 업그레이드가 있으면 제거
+		for (auto It = RandomUpgradeInfos.CreateIterator(); It; ++It)
+		{
+			const FGameplayTag& UpgradeTag = It->UpgradeEffectTag;
+			int32 StackCount = UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCountByAuraPS(AuraPS, UpgradeTag);
+			if (StackCount >= It->MaxStack)
+			{
+				It.RemoveCurrent();
+			}
+		}	
 	}
     return RandomUpgradeInfos;
 }

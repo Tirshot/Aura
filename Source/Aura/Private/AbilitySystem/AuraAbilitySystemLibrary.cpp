@@ -243,7 +243,7 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 
 	AActor* SourceActor = SourceASC->GetAvatarActor();
 
-	auto EffectClass = Params.DamageGameplayEffectClass;
+	TSubclassOf<UGameplayEffect> EffectClass = Params.DamageGameplayEffectClass;
 
 	// 이펙트 컨텍스트 핸들 생성
 	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
@@ -344,7 +344,7 @@ void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& 
 
 	if (SpecHandle.IsValid())
 	{
-		SpecHandle.Data.Get()->DynamicGrantedTags.AddTag(Tag);
+		SpecHandle.Data.Get()->AddDynamicAssetTag(Tag);
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 		
 		FGameplayTagContainer CurrentOwnedTags;
@@ -385,6 +385,34 @@ TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvata
 	}
     
 	return AllActiveTags;
+}
+
+int32 UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCount(AActor* AvatarActor, const FGameplayTag& Tag)
+{
+	if (!Tag.IsValid() || !AvatarActor)
+		return 0;
+
+	if (APlayerController* PC = Cast<APlayerController>(Cast<APawn>(AvatarActor)->GetController()))
+	{
+		if (AAuraPlayerState* AuraPS = PC->GetPlayerState<AAuraPlayerState>())
+		{
+			return AuraPS->GetUpgradeTagCount(Tag);
+		}
+	}
+	return 0;
+}
+
+int32 UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCountByAuraPS(AAuraPlayerState* AuraPS, const FGameplayTag& Tag)
+{
+	if (!Tag.IsValid())
+		return 0;
+
+	if (AuraPS)
+	{
+		return AuraPS->GetUpgradeTagCount(Tag);
+	}
+	
+	return 0;
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)

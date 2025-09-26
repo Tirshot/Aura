@@ -453,6 +453,21 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	FString("Increase Range of ArcaneOrbit")
 	);
 	
+	GameplayTags.Upgrades_Arcane_ArcaneOrbit_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneOrbit.IncreaseNum"),
+	FString("Increase Num of ArcaneOrbit")
+	);
+	
+	GameplayTags.Upgrades_Arcane_ArcaneArea_IncreaseRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneArea.IncreaseRange"),
+	FString("Increase Range of ArcaneArea")
+	);
+	
+	GameplayTags.Upgrades_Arcane_ArcaneArea_IncreaseSize = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Arcane.ArcaneArea.IncreaseSize"),
+	FString("Increase Size of ArcaneArea")
+	);
+	
 	GameplayTags.Upgrades_Lightning_Increase10PercentDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Lightning.Increase10PercentDamage"),
 	FString("Increase Damage of Lightning SpellDamage")
