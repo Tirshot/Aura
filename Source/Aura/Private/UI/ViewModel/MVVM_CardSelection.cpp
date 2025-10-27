@@ -3,7 +3,6 @@
 
 #include "UI/ViewModel/MVVM_CardSelection.h"
 
-#include "AuraGameplayTags.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 
 void UMVVM_CardSelection::InitializeSlot()

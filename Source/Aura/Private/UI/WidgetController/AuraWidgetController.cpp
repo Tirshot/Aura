@@ -29,14 +29,14 @@ void UAuraWidgetController::BroadcastAbilityInfo()
     BroadcastDelegate.BindLambda([this](const FGameplayAbilitySpec& AbilitySpec)
         {
             // �±׸� �̿��ؼ� �����Ƽ ���� ��������
-            FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(GetAuraASC()->GetAbilityTagFromSpec(AbilitySpec));
+            FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(GetAuraASC()->GetAbilityTagFromSpec(AbilitySpec));
 
             // �����Ƽ�� �Է� �±� �� ���� �±� �ο�
-            Info.InputTag = GetAuraASC()->GetInputTagFromSpec(AbilitySpec);
-            Info.StatusTag = GetAuraASC()->GetStatusFromSpec(AbilitySpec);
+            Info->InputTag = GetAuraASC()->GetInputTagFromSpec(AbilitySpec);
+            Info->StatusTag = GetAuraASC()->GetStatusFromSpec(AbilitySpec);
 
             // ��������Ʈ ��������Ʈ�� ����
-            AbilityInfoDelegate.Broadcast(Info);
+            AbilityInfoDelegate.Broadcast(*Info);
         });
 
     // ��������Ʈ ����

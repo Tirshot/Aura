@@ -231,7 +231,7 @@ void UAuraDamageGameplayAbility::HideMagicCircleAndRangeIndicator()
 	}
 }
 
-AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(const FVector& Location, bool bAttachToActor, ERangeShape RangeShape, float Radius, float Width, float Height, const FVector& RGB, float LifeSpan)
+AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(const FVector& Location, bool bAttachToActor, ERangeShape RangeShape, float Radius, float Width, float Height, FVector RGB, float LifeSpan)
 {
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (!AvatarActor)
@@ -239,7 +239,14 @@ AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(const FV
         
 	auto* RangeIndicator = GetWorld()->SpawnActor<AAbilityRangeIndicator>();
 	RangeIndicator->SetOwner(AvatarActor);
+	
+	if (LifeSpan == 0.f)
+		LifeSpan = 1.5f;
 	RangeIndicator->SetLifeSpan(LifeSpan);
+	
+	if (RGB == FVector::ZeroVector)
+		RGB = FVector(5.f, 0.f, 0.f);
+	
 	RangeIndicator->IndicatorInitialized.Broadcast(AvatarActor, bAttachToActor, RangeShape, Location, Radius, Width, Height, 0.f, RGB);
 
 	return RangeIndicator;

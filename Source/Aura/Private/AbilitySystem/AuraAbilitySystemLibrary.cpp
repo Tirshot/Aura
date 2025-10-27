@@ -104,6 +104,36 @@ UGameOverWidgetController* UAuraAbilitySystemLibrary::GetGameOverWidgetControlle
 	return nullptr;
 }
 
+UMVVM_DebugMenu* UAuraAbilitySystemLibrary::GetDebugMenuViewModel(const UObject* WorldContextObject)
+{
+	AAuraHUD* AuraHUD = nullptr;
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	{
+		AuraHUD = Cast<AAuraHUD>(PC->GetHUD());
+		if (AuraHUD)
+		{
+			return AuraHUD->GetDebugMenuViewModel();
+		}
+	}
+
+	return nullptr;
+}
+
+UMVVM_CardSelection* UAuraAbilitySystemLibrary::GetCardSelectionViewModel(const UObject* WorldContextObject)
+{
+	AAuraHUD* AuraHUD = nullptr;
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	{
+		AuraHUD = Cast<AAuraHUD>(PC->GetHUD());
+		if (AuraHUD)
+		{
+			return AuraHUD->CardSelectionViewModel;
+		}
+	}
+
+	return nullptr;
+}
+
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC)
 {
 	AActor* AvatarActor = ASC->GetAvatarActor();
@@ -215,6 +245,25 @@ void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContext
 		{
 			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, ICombatInterface::Execute_GetCharacterLevel(ASC->GetAvatarActor()));
 			ASC->GiveAbility(AbilitySpec);
+		}
+	}
+}
+
+void UAuraAbilitySystemLibrary::GiveStartupPassiveAbilities(const UObject* WorldContextObject,
+	UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
+{
+	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+	if (CharacterClassInfo == nullptr)
+		return;
+	
+	// 캐릭터 클래스에 맞는 정보 탐색
+	const FCharacterClassDefaultInfo& DefaultInfo = CharacterClassInfo->GetClassDefaultInfo(CharacterClass);
+	for (auto& AbilityClass : DefaultInfo.StartupPassiveAbilities)
+	{
+		if (ASC->GetAvatarActor()->Implements<UCombatInterface>())
+		{
+			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, ICombatInterface::Execute_GetCharacterLevel(ASC->GetAvatarActor()));
+			ASC->GiveAbilityAndActivateOnce(AbilitySpec);
 		}
 	}
 }
@@ -413,6 +462,17 @@ int32 UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCountByAuraPS(AAuraPlayer
 	}
 	
 	return 0;
+}
+
+bool UAuraAbilitySystemLibrary::IsThisMapTutorial(const UObject* WorldContextObject)
+{
+	const FString CurrentLevelName = WorldContextObject->GetWorld()->GetMapName();
+
+	// 튜토리얼 레벨에서만 위젯 컨트롤러 생성
+	if (CurrentLevelName.Contains(TEXT("Tutorial")))
+		return true;
+
+	return false;
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)

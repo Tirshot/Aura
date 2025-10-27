@@ -31,4 +31,5 @@ public:
 	TArray<FAuraLevelUpInfo> LevelUpInformation;
 
 	int32 FindLevelForXP(int32 XP) const;
+	int32 FindXPForLevel(int32 Level) const;
 };

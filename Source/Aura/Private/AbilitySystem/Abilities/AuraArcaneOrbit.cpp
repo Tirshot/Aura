@@ -18,7 +18,7 @@ FString UAuraArcaneOrbit::GetDescription(int32 Level, const UObject* WorldContex
 	const float RealDamage = ScaledDamage + MagicPowerDamage;
 	
 	return FString::Printf(TEXT(
-		"<Title>아케인 궤도</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
+		"<Title>아케인 궤도</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>일정 시간 이후, 각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
@@ -40,7 +40,7 @@ FString UAuraArcaneOrbit::GetNextLevelDescription(int32 Level, const UObject* Wo
 	const float RealDamage = ScaledDamage + MagicPowerDamage;
 	
 	return FString::Printf(TEXT(
-		"<Title>다음 레벨:</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
+		"<Title>다음 레벨:</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>캐릭터 주위를 </><Num>%.1f</><Default>초 동안 회전하는 아케인 미사일을 </><Num>%d</><Default>개 소환합니다.</>\n<Default>일정 시간 이후, 각 미사일은 사거리 내의 적을 자동으로 공격하여 </><Damage>%.1f</><Default>의 피해를 입힙니다.</>\n<Small>타겟팅된 적이 사망하면 다시 궤도로 돌아옵니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
@@ -79,8 +79,18 @@ void UAuraArcaneOrbit::CheckAbilityUpgrades()
 	{
 		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseRange);
 
-		// 50프로 증가
-		AbilityRange += (AbilityRange * 0.5f) * Stacks;
+		// 25프로 증가
+		AbilityRange += (AbilityRange * 0.25f) * Stacks;
+	}
+
+	// (2) 갯수 증가 태그
+	FGameplayTag IncreaseNum = Tags.Upgrades_Arcane_ArcaneOrbit_IncreaseNum;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseNum))
+	{
+		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
+
+		// 스택 수 만큼 증가
+		NumMissiles += Stacks;
 	}
 }
 
@@ -107,7 +117,7 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 		SpawnTransform.SetLocation(Location + Direction * OrbitRadius);
 		SpawnTransform.SetRotation(Rotators[i].Quaternion());
 
-		// 월드에 파이어볼 생성
+		// 월드에 미사일 생성
 		AAuraArcaneMissile* ArcaneMissile = GetWorld()->SpawnActorDeferred<AAuraArcaneMissile>(
 			ArcaneMissileClass,
 			SpawnTransform,
@@ -121,6 +131,7 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 		ArcaneMissile->OrbitSpeed = OrbitSpeed;
 		ArcaneMissile->FollowRadius = AbilityRange;
 		ArcaneMissile->SetLifeSpan(MissileLifeSpan);
+		ArcaneMissile->InitialDelayDuration = InitialDelayDuration;
 
 		// 소유 어빌리티 지정
 		ArcaneMissile->SetOwnedAbility(this);

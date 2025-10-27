@@ -14,6 +14,7 @@
 #include "GameFramework/Character.h"
 #include "UI/Widget/DamageTextComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/AbilityRangeIndicator.h"
 #include "Actor/MagicCircle.h"
@@ -22,6 +23,7 @@
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Game/AuraGameModeBase.h"
+#include "GameFramework/GameUserSettings.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interaction/CombatInterface.h"
 #include "Interaction/HighlightInterface.h"
@@ -46,6 +48,17 @@ void AAuraPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
+    // 해상도 고정
+    if (UGameUserSettings* Settings = GEngine->GetGameUserSettings())
+    {
+        FIntPoint DesiredResolution(1920, 1080);
+        Settings->SetScreenResolution(DesiredResolution);
+
+        // 창 모드
+        Settings->SetFullscreenMode(EWindowMode::Windowed);
+        Settings->ApplySettings(false); 
+    }
+    
     // IMC가 할당되지 않았다면 중단
     check(AuraContext);
 
@@ -88,6 +101,15 @@ void AAuraPlayerController::OnPossess(APawn* InPawn)
     Super::OnPossess(InPawn);
 
     OnBossMonsterAdded.AddUObject(this, &AAuraPlayerController::BossMonsterBind);
+
+    if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+    {
+        auto BossArray = AuraGM->GetBossCharactersArray();
+        if (BossArray.Num() > 0)
+        {
+            OnBossMonsterAdded.Broadcast();
+        }
+    }
 }
 
 
@@ -102,6 +124,7 @@ void AAuraPlayerController::SetupInputComponent()
     AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
     AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
     AuraInputComponent->BindAction(WheelAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Zoom);
+    AuraInputComponent->BindAction(DebugAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ActivateDebugMode);
     
     // 어빌리티와 입력 액션 바인딩
     AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
@@ -540,12 +563,33 @@ void AAuraPlayerController::HandleCardSelectionInitialized()
 void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag)
 {
     Server_SelectUpgrade(SelectedUpgradeTag);
-
+    
+    // 델리게이트 언바인드
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+    {
+        if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+        {
+            // 업그레이드 선택 완료 알림
+            CardSelectionViewModel->OnUpgradeSelectedOnCardDelegate.Broadcast();
+            
+            for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
+            {
+                if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
+                {
+                    CardViewModel->OnUpgradeSelectedDelegate.Clear();
+                }
+            }
+        }
+    }
+    
     // 카드 선택 UI 닫기
     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
-        AuraHUD->CardSelectionWidget->RemoveFromParent();
-        AuraHUD->CardSelectionWidget = nullptr;
+        if (AuraHUD->CardSelectionWidget)
+        {
+            AuraHUD->CardSelectionWidget->RemoveFromParent();
+            AuraHUD->CardSelectionWidget = nullptr;
+        }
     }
 
     // 강제 저장
@@ -570,6 +614,48 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
     Server_CreateCardSelection(GetPawn());
+}
+
+void AAuraPlayerController::Server_CharacterDebugInvincible_Implementation(bool bInvincible)
+{
+    if (!HasAuthority())
+        return;
+
+    if (AAuraCharacterBase* AuraCharacterBase = GetPawn<AAuraCharacterBase>())
+    {
+        if (AuraCharacterBase->Implements<UCombatInterface>())
+        {
+            ICombatInterface::Execute_SetCharacterDebugInvincible(AuraCharacterBase, bInvincible);
+        }
+    }
+}
+
+void AAuraPlayerController::Server_CharacterInvincible_Implementation(bool bInvincible)
+{
+    if (!HasAuthority())
+        return;
+
+    if (AAuraCharacterBase* AuraCharacterBase = GetPawn<AAuraCharacterBase>())
+    {
+        if (AuraCharacterBase->Implements<UCombatInterface>())
+        {
+            ICombatInterface::Execute_SetCharacterInvincible(AuraCharacterBase, bInvincible);
+        }
+    }
+}
+
+void AAuraPlayerController::Server_CharacterInfiniteMana_Implementation(bool bInfiniteMana)
+{
+    if (!HasAuthority())
+        return;
+
+    if (AAuraCharacterBase* AuraCharacterBase = GetPawn<AAuraCharacterBase>())
+    {
+        if (AuraCharacterBase->Implements<UCombatInterface>())
+        {
+            ICombatInterface::Execute_SetCharacterInfiniteMana(AuraCharacterBase, bInfiniteMana);
+        }
+    }
 }
 
 void AAuraPlayerController::Server_AddAbilityToPlayerByGameplayTag_Implementation(const FGameplayTag& Tag)
@@ -664,6 +750,8 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
         return;
     }
 
+    SetAutoRunning(false);
+
     const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
     const FRotator Rotation = GetControlRotation();
     const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -727,6 +815,22 @@ void AAuraPlayerController::Zoom(const struct FInputActionValue& InputActionValu
                 Box->SetRelativeScale3D(CurrentBoxScale);
             }
         }
+    }
+}
+
+void AAuraPlayerController::ActivateDebugMode(const struct FInputActionValue& InputActionValue)
+{
+    if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+    {
+        if (bDebugModeActivated)
+        {
+            bDebugModeActivated = false;
+            OverlayWC->OnDebugModeActivated.Broadcast(false);
+            return;
+        }
+        
+        bDebugModeActivated = true;
+        OverlayWC->OnDebugModeActivated.Broadcast(true);
     }
 }
 

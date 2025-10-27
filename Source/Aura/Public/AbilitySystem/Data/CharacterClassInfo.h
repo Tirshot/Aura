@@ -19,6 +19,7 @@ enum class ECharacterClass : uint8
 	Shroom,
 	Warrior_Tutorial,
 	Ranger_Tutorial,
+	Ghoul
 };
 
 USTRUCT(BlueprintType)
@@ -33,6 +34,10 @@ struct FCharacterClassDefaultInfo
 	// 시작 시 부여되는 어빌리티
 	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+	// 시작 시 부여되는 어빌리티
+	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
+	TArray<TSubclassOf<UGameplayAbility>> StartupPassiveAbilities;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
 	FScalableFloat XPReward = FScalableFloat();

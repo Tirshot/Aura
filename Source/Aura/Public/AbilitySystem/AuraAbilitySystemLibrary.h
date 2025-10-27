@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Data/CharacterClassInfo.h"
+#include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
@@ -29,7 +30,7 @@ class AURA_API UAuraAbilitySystemLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	// 위젯 컨트롤러
+	// 위젯 컨트롤러, ViewModel
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static bool MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD);
 
@@ -48,6 +49,12 @@ public:
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UGameOverWidgetController* GetGameOverWidgetController(const UObject* WorldContextObject);
 
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UMVVM_DebugMenu* GetDebugMenuViewModel(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UMVVM_CardSelection* GetCardSelectionViewModel(const UObject* WorldContextObject);
+
 	/*
 	* 어빌리티 시스템 초기화
 	*/
@@ -60,9 +67,13 @@ public:
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributesFromSaveData(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ULoadScreenSaveGame* SaveGame);
 
-	// 초기 어빌리티 부여
+	// 몬스터 - 초기 어빌리티 부여
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
+
+	// 몬스터 - 초기 패시브 어빌리티 부여
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
+	static void GiveStartupPassiveAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
 
 	// 캐릭터 클래스 정보 가져오기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
@@ -241,4 +252,8 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "GameplayAbility|GameplayMechanics")
 	static int32 GetAbilityUpgradeStackCountByAuraPS(AAuraPlayerState* AuraPS, const FGameplayTag& Tag);
+
+	// 튜토리얼 월드 판단
+	UFUNCTION(BlueprintPure, Category = "GameplayAbility|GameplayMechanics")
+	static bool IsThisMapTutorial(const UObject* WorldContextObject);
 };

@@ -23,6 +23,9 @@ public:
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
 	UFUNCTION(BlueprintCallable)
+	void SetInitialValue();
+	
+	UFUNCTION(BlueprintCallable)
 	TArray<AAuraFireBall*> SpawnFireBalls();
 
 public:

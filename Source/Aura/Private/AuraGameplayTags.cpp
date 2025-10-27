@@ -212,6 +212,23 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FName("Attributes.Resistance.Physical"),
 		FString("Physical Resistance")
 	);
+
+	
+	// 상태
+	GameplayTags.State_Invincible = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("State.Invincible"),
+		FString("Invincible State")
+	);
+	
+	GameplayTags.State_DebugInvincible = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("State.DebugInvincible"),
+		FString("Debug Invincible State")
+	);
+	
+	GameplayTags.State_InfiniteMana = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("State.InfiniteMana"),
+		FString("Infinite Mana State")
+	);
 	
 	// 디버프
 	GameplayTags.Debuff_Burn = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -443,7 +460,7 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	FString("Increase Number of Shards")
 	);
 	
-	GameplayTags.Upgrades_Arcane_ArcaneShards_FirstLargeShard = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	GameplayTags.Upgrades_Arcane_ArcaneShards_FirstShardLarge = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Arcane.ArcaneShards.FirstLargeShard"),
 	FString("Increase Size of First Shard")
 	);

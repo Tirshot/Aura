@@ -74,6 +74,11 @@ public:
 	FGameplayTag Attributes_Resistance_Lightning;
 	FGameplayTag Attributes_Resistance_Physical;
 
+	// 상태
+	FGameplayTag State_Invincible;
+	FGameplayTag State_DebugInvincible;
+	FGameplayTag State_InfiniteMana;
+
 	// 디버프
 	FGameplayTag Debuff_Burn;
 	FGameplayTag Debuff_Stun;
@@ -133,7 +138,7 @@ public:
 	FGameplayTag Upgrades_Arcane_Increase10PercentDamage;
 	FGameplayTag Upgrades_Arcane_ArcaneShards_Temp;
 	FGameplayTag Upgrades_Arcane_ArcaneShards_IncreaseNum;
-	FGameplayTag Upgrades_Arcane_ArcaneShards_FirstLargeShard;
+	FGameplayTag Upgrades_Arcane_ArcaneShards_FirstShardLarge;
 	
 	FGameplayTag Upgrades_Arcane_ArcaneOrbit_IncreaseRange;
 	FGameplayTag Upgrades_Arcane_ArcaneOrbit_IncreaseNum;

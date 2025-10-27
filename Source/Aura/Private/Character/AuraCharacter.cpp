@@ -187,6 +187,13 @@ int32 AAuraCharacter::FindLevelForXP_Implementation(int32 InXP) const
     return AuraPlayerState->LevelUpInfo->FindLevelForXP(InXP);
 }
 
+int32 AAuraCharacter::FindXPForLevel_Implementation(int32 InLevel) const
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->LevelUpInfo->FindXPForLevel(InLevel) - AuraPlayerState->GetXP();
+}
+
 int32 AAuraCharacter::GetAttributePointsReward_Implementation(int32 Level) const
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
@@ -215,7 +222,6 @@ void AAuraCharacter::AddToPlayerLevel_Implementation(int32 InLevel)
 
 void AAuraCharacter::AddToAttributePoints_Implementation(int32 InAttributePoints)
 {
-    // TODO : 속성 포인트 PlayerState에 구현
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
     check(AuraPlayerState);
     AuraPlayerState->AddToAttributePoints(InAttributePoints);
@@ -223,7 +229,6 @@ void AAuraCharacter::AddToAttributePoints_Implementation(int32 InAttributePoints
 
 void AAuraCharacter::AddToSpellPoints_Implementation(int32 InSpellPoints)
 {
-    // TODO : 속성 포인트 PlayerState에 구현
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
     check(AuraPlayerState);
     AuraPlayerState->AddToSpellPoints(InSpellPoints);
@@ -330,15 +335,15 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
             UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this);
 
             // 어빌리티 태그에 해당하는 어빌리티 정보 가져오기
-            FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+            FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
             
             FSavedAbility SavedAbility;
-            SavedAbility.GameplayAbility = Info.Ability;
+            SavedAbility.GameplayAbility = Info->Ability;
             SavedAbility.AbilityTag = AbilityTag;
             SavedAbility.AbilityLevel = AbilitySpec.Level;
             SavedAbility.AbilitySlot = AuraASC->GetSlotFromAbilityTag(AbilityTag);
             SavedAbility.AbilityStatus = AuraASC->GetStatusFromAbilityTag(AbilityTag);
-            SavedAbility.AbilityType = Info.AbilityType;
+            SavedAbility.AbilityType = Info->AbilityType;
 
             // 어빌리티 저장
             SaveData->SavedAbilities.AddUnique(SavedAbility);

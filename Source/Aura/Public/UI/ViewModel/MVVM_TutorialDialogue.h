@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "AbilitySystem/Data/TutorialData.h"
 #include "MVVM_TutorialDialogue.generated.h"
 
 UCLASS()
@@ -20,12 +21,14 @@ public:
 	FText GetRequirementText() const {return RequirementText;}
 	int32 GetRequireCount() const {return RequireCount;}
 	int32 GetCurrentCount() const {return CurrentCount;}
+	EDialogueAlign GetDialogueAlignment() const {return CurrentDialogueAlignment;}
 
 	void SetCurrentDialogue(FText InDialogue);
 	void SetCurrentDialogueIndex(int32 InIndex);
 	void SetRequirementText(FText InText);
 	void SetRequireCount(int32 InCount);
 	void SetCurrentCount(int32 InCount);
+	void SetCurrentDialogueAlignment(const EDialogueAlign& InAlignment);
 
 	void SetViewToViewModel(UUserWidget* View) { TutorialDialogueView = View; }
 
@@ -40,13 +43,17 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void GoToNextDialogue();
 
+	// 하나 뒤로
+	UFUNCTION(BlueprintCallable)
+	void GoBackToPrevDialogue();
+	
 protected:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> TutorialDialogueView;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta =(AllowPrivateAccess="true"))
-	TArray<FText> DialoguesArray;
+	TArray<FDialogueLine> DialoguesArray;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	FText CurrentDialogue;
@@ -62,4 +69,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	int32 RequireCount;
+
+	UPROPERTY(BlueprintReadOnly, meta =(AllowPrivateAccess="true"))
+	TEnumAsByte<EDialogueAlign> CurrentDialogueAlignment = EDialogueAlign::Left;
 };

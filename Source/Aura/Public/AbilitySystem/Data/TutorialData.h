@@ -7,6 +7,29 @@
 #include "Engine/DataAsset.h"
 #include "TutorialData.generated.h"
 
+UENUM()
+enum EDialogueAlign
+{
+	Left,
+	Right,
+};
+
+USTRUCT(BlueprintType)
+struct FDialogueLine
+{
+	GENERATED_BODY()
+
+	FDialogueLine() : Alignment(EDialogueAlign::Left) {}
+
+	// 대화문 텍스트
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(MultiLine = true))
+	FText Text;
+
+	// 대화문 정렬
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TEnumAsByte<EDialogueAlign> Alignment;
+};
+
 USTRUCT(BlueprintType)
 struct FTutorialDialogueEntry
 {
@@ -18,7 +41,7 @@ struct FTutorialDialogueEntry
 	
 	// 대화문
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(MultiLine = true))
-	TArray<FText> Dialogues;
+	TArray<FDialogueLine> Dialogues;
 
 	// 태그 기반 조건
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -31,6 +54,10 @@ struct FTutorialDialogueEntry
 	// 조건
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 RequireCount = 0;
+	
+	// 조건
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TEnumAsByte<EDialogueAlign> DialogueAlign = EDialogueAlign::Left;
 };
 
 

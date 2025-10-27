@@ -24,6 +24,7 @@ public:
 	int32 CardIndex;
 
 public:
+	UPROPERTY(BlueprintAssignable)
 	FOnUpgradeSelected OnUpgradeSelectedDelegate;
 	
 	UPROPERTY(BlueprintAssignable)

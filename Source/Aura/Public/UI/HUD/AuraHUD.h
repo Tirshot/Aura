@@ -7,6 +7,7 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
+class UMVVM_DebugMenu;
 class USpellUpgradesWidgetController;
 struct FAuraAbilityUpgradeInfo;
 class UMVVM_LoadScreen;
@@ -35,6 +36,7 @@ public:
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
+	UMVVM_DebugMenu* GetDebugMenuViewModel() { return DebugMenuViewModel; }
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
@@ -49,8 +51,8 @@ public:
 	void CreateSaveProgressWidget();
 	void RemoveSaveProgressWidget();
 
-	UFUNCTION()
-	void HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1, FGameplayTag UpgradeTag2);
+	// UFUNCTION()
+	// void HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1, FGameplayTag UpgradeTag2);
 
 	UFUNCTION()
 	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
@@ -123,5 +125,11 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_CardSelection> CardSelectionViewModel;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UMVVM_DebugMenu> DebugMenuViewModelClass;
+
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UMVVM_DebugMenu> DebugMenuViewModel;
 
 };

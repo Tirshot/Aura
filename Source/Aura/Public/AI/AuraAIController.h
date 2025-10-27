@@ -22,7 +22,11 @@ public:
 
 	virtual void OnPossess(APawn* InPawn) override;
 
-protected:
+public:
+	UFUNCTION(Server, Reliable)
+	void Server_CharacterInvincible(bool bInvincible);
+	
+public:
 	UPROPERTY()
 	TObjectPtr<UBehaviorTreeComponent> BehaviorTreeComponent;
 };

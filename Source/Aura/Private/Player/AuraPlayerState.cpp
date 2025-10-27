@@ -7,7 +7,9 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Interaction/CombatInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/HUD/AuraHUD.h"
 
@@ -72,8 +74,7 @@ void AAuraPlayerState::SetLevel(int32 InLevel)
 
 void AAuraPlayerState::AddToLevelOne()
 {
-    Level += 1;
-    OnLevelChangedDelegate.Broadcast(Level, true);
+    AddToLevel(1);
 }
 
 void AAuraPlayerState::AddToLevel(int32 InLevel)
@@ -140,6 +141,8 @@ void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
 
     // 값 1 증가
     CountRef++;
+
+    OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, CountRef);
 }
 
 void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
@@ -204,6 +207,10 @@ TArray<FGameplayTag> AAuraPlayerState::GetAllActiveAbilityTags() const
         if (AbilityTagContainer.HasTag(AuraTags.Abilities_None))
             continue;
 
+        if (Spec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Eligible)
+            || Spec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Locked))
+            continue;
+
         if (AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Fire")))
             || AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Arcane")))
             || AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Lightning")))
@@ -213,8 +220,17 @@ TArray<FGameplayTag> AAuraPlayerState::GetAllActiveAbilityTags() const
             {
                 if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities"))))
                 {
-                    // 어빌리티 태그라면 추가
-                    AllActiveTags.Add(Tag);
+                    if (UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this))
+                    {
+                        FAuraAbilityInfo* AuraAbilityInfo = AbilityInfo->FindAbilityInfoForTag(Tag);
+                        
+                        if (AuraAbilityInfo->StatusTag.MatchesTag(AuraTags.Abilities_Status_Eligible)
+                           || AuraAbilityInfo->StatusTag.MatchesTag(AuraTags.Abilities_Status_Equipped))
+                        {
+                            // 어빌리티 태그라면 추가
+                            AllActiveTags.Add(Tag);
+                        }
+                    }
                 }
             }
         }
@@ -273,14 +289,15 @@ void AAuraPlayerState::Server_AddAbilityUpgradeTag_Implementation(FGameplayTag U
     // 비 보유 중인 어빌리티라면 새로 습득
     // 보유 중인 어빌리티라면 레벨 상승
     // 어빌리티 군 업그레이드는 Abilties.Fire / Abilities.Lightning / Abilities.Arcane
-    if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
-    {
-        AuraASC->AddCharacterAbilityByTag(UpgradeTag);
-    }
-
     // 만약 어빌리티 획득 업그레이드(또는 레벨업 업그레이드)라면 업그레이드 태그로 저장하지 않음
     if (UpgradeTag.RequestDirectParent().MatchesTag(FGameplayTag::RequestGameplayTag("Abilities")))
-        return;
+    {
+        if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+        {
+            AuraASC->AddCharacterAbilityByTag(UpgradeTag);
+            AuraASC->AbilityStatusChanged.Broadcast(UpgradeTag, FAuraGameplayTags::Get().Abilities_Status_Equipped, 0);
+        }
+    }
     
     // 보유중인 어빌리티 업그레이드 배열에 추가
     AddUpgradeTag(UpgradeTag);

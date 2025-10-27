@@ -14,6 +14,8 @@ void AAuraEnemySpawnPoint::SpawnEnemy()
 	AAuraEnemy* Enemy = GetWorld()->SpawnActorDeferred<AAuraEnemy>(EnemyClass, GetActorTransform());
 	Enemy->SetLevel(EnemyLevel);
 	Enemy->SetCharacterClass(CharacterClass);
+	Enemy->SetXPOverride(bXPOverride);
+	Enemy->SetXPOverrideValue(XPOverrideValue);
 	Enemy->FinishSpawning(GetActorTransform());
 	Enemy->SpawnDefaultController();
 }

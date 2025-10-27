@@ -88,8 +88,8 @@ void UArcaneShards::CheckAbilityUpgrades()
 		NumPoints += AdditionalShards;
 	}
 
-	FGameplayTag FirstLargeShard = Tags.Upgrades_Arcane_ArcaneShards_FirstLargeShard;
-	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), FirstLargeShard))
+	FGameplayTag FirstShardLarge = Tags.Upgrades_Arcane_ArcaneShards_FirstShardLarge;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), FirstShardLarge))
 	{
 		// 첫번째 기둥 크기 증가
 		bIsFirstShardLarge = true;
@@ -176,7 +176,7 @@ void UArcaneShards::SpawnCueAndApplyDamage()
 
 		if (bIsFirstShardLarge && Idx == 0)
 		{
-			int32 Stacks = GetUpgradeStackCount(AvatarActor, FAuraGameplayTags::Get().Upgrades_Arcane_ArcaneShards_FirstLargeShard);
+			int32 Stacks = GetUpgradeStackCount(AvatarActor, FAuraGameplayTags::Get().Upgrades_Arcane_ArcaneShards_FirstShardLarge);
 			float SizeMultiplier = Stacks * UpgradeFirstShardSizeMultiplier;
 			
 			// 아케인 파편 기둥 이펙트 생성

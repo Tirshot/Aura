@@ -15,7 +15,11 @@
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/Passive/PassiveNiagaraComponent.h"
 #include "Actor/AuraEffectActor.h"
+#include "AI/NavigationModifier.h"
+#include "Game/AuraGameInstance.h"
+#include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerController.h"
+#include "Player/AuraPlayerState.h"
 
 AAuraCharacterBase::AAuraCharacterBase()
 {
@@ -88,6 +92,12 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 	MulticastHandleDeath(DeathImpulse);
 
 	// 소환수 모두 제거
+	RemoveAllMinions();
+	
+}
+
+void AAuraCharacterBase::RemoveAllMinions()
+{
 	for (AActor* Minion : Minions)
 	{
 		if (AAuraCharacterBase* CharacterBase = Cast<AAuraCharacterBase>(Minion))
@@ -109,7 +119,6 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 			}
 		}
 	}
-	
 }
 
 void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& DeathImpulse)
@@ -304,6 +313,143 @@ void AAuraCharacterBase::HideRangeIndicator_Implementation() const
 	if (AuraPC)
 	{
 		AuraPC->HideRangeIndicator();
+	}
+}
+
+void AAuraCharacterBase::SetCharacterInvincible_Implementation(bool InbInvincible)
+{
+	if (InbInvincible)
+	{
+		// 무적 GE 적용
+		ApplyEffectToSelf(InvincibleGameplayEffectClass, 1.0f);
+		
+		bInvincible = InbInvincible;
+	}
+	else
+	{
+		// 캐릭터에게서 태그 제거
+		if (Implements<UPlayerInterface>())
+		{
+			// Aura Character
+			if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+			{
+				if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
+				{
+					const FGameplayTag& InvincibleTag = FAuraGameplayTags::Get().State_Invincible;
+					FGameplayTagContainer InvincibleTagContainer;
+					InvincibleTagContainer.AddTag(InvincibleTag);
+					
+					AuraASC->RemoveActiveEffectsWithAppliedTags(InvincibleTagContainer);
+					bInvincible = InbInvincible;
+				}
+			}
+		}
+		else
+		{
+			// Enemy Character
+			if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+			{
+				const FGameplayTag& InvincibleTag = FAuraGameplayTags::Get().State_Invincible;
+				FGameplayTagContainer InvincibleTagContainer;
+				InvincibleTagContainer.AddTag(InvincibleTag);
+					
+				AuraASC->RemoveActiveEffectsWithAppliedTags(InvincibleTagContainer);
+	
+				bInvincible = InbInvincible;
+			}
+		}
+	}
+
+	if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+	{
+		if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+		{
+			if (AuraASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().State_DebugInvincible))
+				AuraGI->SetAuraInvincible(true);
+
+			return;
+		}
+		AuraGI->SetAuraInvincible(bInvincible);
+	}
+}
+
+bool AAuraCharacterBase::IsCharacterInvincible_Implementation() const
+{
+	return bInvincible;
+}
+
+void AAuraCharacterBase::SetCharacterInfiniteMana_Implementation(bool InbInfinite)
+{
+	if (InbInfinite)
+	{
+		// 무적 GE 적용
+		ApplyEffectToSelf(InfiniteManaGameplayEffectClass, 1.0f);
+	}
+	else
+	{
+		if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+		{
+			const FGameplayTag& InfiniteManaTag = FAuraGameplayTags::Get().State_InfiniteMana;
+			FGameplayTagContainer InfiniteManaTagContainer;
+			InfiniteManaTagContainer.AddTag(InfiniteManaTag);
+					
+			AuraASC->RemoveActiveEffectsWithAppliedTags(InfiniteManaTagContainer);
+		}
+	}
+}
+
+bool AAuraCharacterBase::IsCharacterInfiniteMana_Implementation() const
+{
+	return GetAbilitySystemComponent()->HasMatchingGameplayTag(FAuraGameplayTags::Get().State_InfiniteMana);
+}
+
+void AAuraCharacterBase::SetCharacterDebugInvincible_Implementation(bool InbInvincible)
+{
+	if (InbInvincible)
+	{
+		// 무적 GE 적용
+		ApplyEffectToSelf(DebugInvincibleGameplayEffectClass, 1.0f);
+		
+		bInvincible = InbInvincible;
+	}
+	else
+	{
+		// 캐릭터에게서 태그 제거
+		if (Implements<UPlayerInterface>())
+		{
+			// Aura Character
+			if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+			{
+				if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
+				{
+					const FGameplayTag& DebugInvincibleTag = FAuraGameplayTags::Get().State_DebugInvincible;
+					FGameplayTagContainer DebugInvincibleTagContainer;
+					DebugInvincibleTagContainer.AddTag(DebugInvincibleTag);
+					
+					AuraASC->RemoveActiveEffectsWithAppliedTags(DebugInvincibleTagContainer);
+					bInvincible = InbInvincible;
+				}
+			}
+		}
+		else
+		{
+			// Enemy Character
+			if (UAuraAbilitySystemComponent* AuraASC= Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+			{
+				const FGameplayTag& DebugInvincibleTag = FAuraGameplayTags::Get().State_DebugInvincible;
+				FGameplayTagContainer DebugInvincibleTagContainer;
+				DebugInvincibleTagContainer.AddTag(DebugInvincibleTag);
+					
+				AuraASC->RemoveActiveEffectsWithAppliedTags(DebugInvincibleTagContainer);
+	
+				bInvincible = InbInvincible;
+			}
+		}
+	}
+
+	if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+	{
+		AuraGI->SetAuraInvincible(bInvincible);
 	}
 }
 

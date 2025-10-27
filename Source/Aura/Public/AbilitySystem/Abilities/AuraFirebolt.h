@@ -19,7 +19,7 @@ public:
 
 	// ���� ����ü
 	UFUNCTION(BlueprintCallable)
-	void SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget);
+	void SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, bool bNumProjectileOverride, int32 NumProjectileOverride, AActor* HomingTarget);
 
 	virtual void CheckAbilityUpgrades() override;
 	

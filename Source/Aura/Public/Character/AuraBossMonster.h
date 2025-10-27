@@ -12,6 +12,7 @@ class UCameraComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossEventStart, AActor*, BossActor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossEventEnd, AActor*, BossActor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBeginBerserkMontage);
 
 UCLASS()
 class AURA_API AAuraBossMonster : public AAuraEnemy
@@ -27,6 +28,9 @@ public:
 	
 	UPROPERTY()
 	FOnBossEventEnd OnBossEventEnd;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FOnBeginBerserkMontage OnBeginBerserkMontage;
 	
 public:
 	// 전투 인터페이스 오버라이드
@@ -36,6 +40,7 @@ public:
 
 	UFUNCTION()
 	void ChangeGlobalTimeDilationToDefault();
+	
 public:
 	virtual void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
@@ -43,11 +48,23 @@ public:
 
 	void OnRoarStart(const FGameplayEventData* EventData);
 	void OnRoarEnd(const FGameplayEventData* EventData);
+	void AddAbilityUpgradeOnBerserkMode();
+
+public:
+	UFUNCTION()
+	void BeginBerserkMode(float NewHealth);
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float BeginBerserkRatio = 0.5f;
+	
 	UPROPERTY(VisibleAnywhere, Category="Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 	TObjectPtr<UCameraComponent> DeathCamera;
+
+	// 광폭화 시 추가 할 업그레이드 태그
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<TSubclassOf<UGameplayEffect>> AbilityUpgradeClassToApplyBerserkMode;
 };

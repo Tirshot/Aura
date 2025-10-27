@@ -120,6 +120,15 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_AddAbilityToPlayerByGameplayTag(const FGameplayTag& Tag);
 
+	UFUNCTION(Server, Reliable)
+	void Server_CharacterInvincible(bool bInvincible);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_CharacterDebugInvincible(bool bInvincible);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_CharacterInfiniteMana(bool bInfiniteMana);
+
 private:
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputMappingContext> AuraContext;
@@ -132,9 +141,15 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> WheelAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> DebugAction;
 
 	void Move(const struct FInputActionValue& InputActionValue);
 	void Zoom(const struct FInputActionValue& InputActionValue);
+	void ActivateDebugMode(const struct FInputActionValue& InputActionValue);
+	bool bDebugModeActivated = false;
+	
 	void ShiftPressed() { bShiftKeyDown = true; }
 	void ShiftReleased() { bShiftKeyDown = false; }
 	bool bShiftKeyDown = false;

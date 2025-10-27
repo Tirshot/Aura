@@ -52,7 +52,7 @@ class AURA_API ICombatInterface
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	int32 GetCharacterLevel();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
@@ -71,6 +71,12 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool IsDead() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	bool IsXPOverridden() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	float GetXPOverriddenValue() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	AActor* GetAvatar();
@@ -106,6 +112,21 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void SetIsBeingShocked(bool bInShock);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SetCharacterInvincible(bool InbInvincible);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	bool IsCharacterInvincible() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SetCharacterDebugInvincible(bool InbInvincible);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SetCharacterInfiniteMana(bool InbInfinite);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	bool IsCharacterInfiniteMana() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UAttributeSet* GetAttributeSet();

@@ -102,19 +102,7 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute & Attribute,
     // 인수로 넘겨받은 Attribute가 해당 속성과 동일한지 확인하기
     if (Attribute == GetHealthAttribute())
     {
-        // NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
-        // 무적 상태 체크
-        bool bIsInvulnerable = GetOwningAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("Effects.Invulnerable"));
-        
-        // 일반 상태
-        if (!bIsInvulnerable)
-        {
-            NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
-        }
-        else  // 무적 상태
-        {
-            NewValue = FMath::Clamp(NewValue, 50.f, GetMaxHealth());
-        }
+        NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
     }
     if (Attribute == GetManaAttribute())
     {
@@ -170,7 +158,18 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     }
     if (Data.EvaluatedData.Attribute == GetManaAttribute())
     {
-        SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+        // 무한 마나 상태 체크
+        const FGameplayTag& InfiniteMana = FAuraGameplayTags::Get().State_InfiniteMana;
+        if (Data.EffectSpec.CapturedSourceTags.GetActorTags().HasTag(InfiniteMana))
+        {
+            // 무한 마나 상태
+            SetMana(GetMaxMana());
+        }
+        else 
+        {
+            // 일반 상태
+            SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+        }
     }
 
     if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
@@ -239,14 +238,11 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             }
         }
 
-        // 대상에 데미지 적용
-        SetHealth(FMath::Clamp(NewHealth, 0, GetMaxHealth()));
-
         // Mana Siphon 검증
         const FGameplayTag& ManaSiphonTag = FAuraGameplayTags::Get().Abilities_Passive_ManaSiphon;
         if (Props.SourceASC->HasMatchingGameplayTag(ManaSiphonTag))
         {
-            // 유저의 속성 세트를 가져와 체력 설정
+            // 유저의 속성 세트를 가져와 마나 설정
             if (Props.SourceCharacter->Implements<UCombatInterface>())
             {
                 UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
@@ -268,9 +264,24 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             }
         }
 
+        // 무적 상태 검증
+        const FGameplayTag& InvincibleTag = FAuraGameplayTags::Get().State_Invincible;
+        if (Props.TargetASC->HasMatchingGameplayTag(InvincibleTag))
+            return;
+        
+        const FGameplayTag& DebugInvincibleTag = FAuraGameplayTags::Get().State_DebugInvincible;
+        if (Props.TargetASC->HasMatchingGameplayTag(DebugInvincibleTag))
+            return;
+
+        // 대상에 데미지 적용
+        SetHealth(FMath::Clamp(NewHealth, 0, GetMaxHealth()));
+
+        // 사망 검증
         const bool bFatal = NewHealth <= 0.f;
         if (bFatal)
         {
+            bool bIsXPOverridden = false;
+            
             ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
             if (CombatInterface)
             {
@@ -278,8 +289,20 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
                 FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
                 Props.SourceASC->AddLooseGameplayTag(DeadTag); 
                 CombatInterface->Die(UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle));
+                bIsXPOverridden = CombatInterface->Execute_IsXPOverridden(Props.TargetAvatarActor);
             }
-            SendXPEvent(Props);
+            
+            if (CombatInterface && bIsXPOverridden)
+            {
+                // 유닛의 디폴트에서 XP 오버라이드 여부 선택
+                const float XPOverriddenValue = CombatInterface->Execute_GetXPOverriddenValue(Props.TargetAvatarActor);
+                SendOverriddenXPEvent(Props, XPOverriddenValue);
+            }
+            else
+            {
+                // XP 오버라이드 상태가 아닌 일반적인 상태
+                SendXPEvent(Props);
+            }
         }
         else
         {
@@ -487,6 +510,22 @@ void UAuraAttributeSet::SendXPEvent(const FEffectProperties& Props)
         FGameplayEventData Payload;
         Payload.EventTag = GameplayTags.Attributes_Meta_IncomingXP;
         Payload.EventMagnitude = XPReward;
+
+        UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Props.SourceCharacter, GameplayTags.Attributes_Meta_IncomingXP, Payload);
+    }
+}
+
+void UAuraAttributeSet::SendOverriddenXPEvent(const FEffectProperties& Props, const float OverriddenValue)
+{
+    if (Props.TargetCharacter->Implements<UCombatInterface>())
+    {
+        // 이벤트 전달
+        const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+        
+        // 페이로드 수정
+        FGameplayEventData Payload;
+        Payload.EventTag = GameplayTags.Attributes_Meta_IncomingXP;
+        Payload.EventMagnitude = OverriddenValue;
 
         UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Props.SourceCharacter, GameplayTags.Attributes_Meta_IncomingXP, Payload);
     }

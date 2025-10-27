@@ -54,11 +54,19 @@ public:
 	virtual FOnDamageSignature& GetOnDamageDelegate() override;
 	virtual void ShowRangeIndicator_Implementation(bool bAttachToActor, ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, const FVector& RGB) override;
 	virtual void HideRangeIndicator_Implementation() const override;
+	virtual void SetCharacterInvincible_Implementation(bool InbInvincible) override;
+	virtual bool IsCharacterInvincible_Implementation() const override;
+	virtual void SetCharacterInfiniteMana_Implementation(bool InbInfinite) override;
+	virtual bool IsCharacterInfiniteMana_Implementation() const override;
+	virtual void SetCharacterDebugInvincible_Implementation(bool InbInvincible) override;
 	/** Combat Interface 끝 **/
 
 	FOnASCRegistered OnASCRegistered;
 	FOnDeath OnDeath;
 	FOnDamageSignature OnDamageDelegate;
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveAllMinions();
 
 	// RPC
 	UFUNCTION(NetMulticast, Reliable)
@@ -112,6 +120,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
 		
+	UPROPERTY(BlueprintReadOnly)
+	bool bInvincible = false;
+		
 	// GAS
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -131,7 +142,16 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> InitializeRegenAttributes;
-
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
+	TSubclassOf<UGameplayEffect> InvincibleGameplayEffectClass;
+		
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
+	TSubclassOf<UGameplayEffect> DebugInvincibleGameplayEffectClass;
+		
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
+	TSubclassOf<UGameplayEffect> InfiniteManaGameplayEffectClass;
+	
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	
 protected:

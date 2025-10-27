@@ -4,13 +4,13 @@
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AuraLogChannels.h"
 
-FAuraAbilityInfo UAbilityInfo::FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound) const
+FAuraAbilityInfo* UAbilityInfo::FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound)
 {
-	for (const FAuraAbilityInfo& Info : AbilityInformation)
+	for (FAuraAbilityInfo& Info : AbilityInformation)
 	{
 		if (Info.AbilityTag == AbilityTag)
 		{
-			return Info;
+			return &Info;
 		}
 	}
 
@@ -19,7 +19,7 @@ FAuraAbilityInfo UAbilityInfo::FindAbilityInfoForTag(const FGameplayTag& Ability
 		UE_LOG(LogAura, Error, TEXT("Can't Find Info for AbilityTag [%s] on AbilityInfo [%s]"), *AbilityTag.ToString(), *GetNameSafe(this));
 	}
 
-	return FAuraAbilityInfo();
+	return nullptr;
 }
 
 FName UAbilityInfo::GetAbilityNameForTag(const FGameplayTag& AbilityTag)

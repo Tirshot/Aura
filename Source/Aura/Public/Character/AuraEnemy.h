@@ -37,6 +37,8 @@ public:
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
+	virtual bool IsXPOverridden_Implementation() const override;
+    virtual float GetXPOverriddenValue_Implementation() const override;
 	// 전투 인터페이스 끝
 	
 	UPROPERTY(BlueprintAssignable)
@@ -50,26 +52,36 @@ public:
 	virtual void BeingShockedTagChanged() override;
 	
 	void SetLevel(int32 InLevel) {Level = InLevel;}
+	void SetXPOverride(bool bOverride) {bIsXPOverride = bOverride;}
+	void SetXPOverrideValue(float InXP) {XPOverrideValue = InXP;}
 	
+public:
 	UPROPERTY(BlueprintReadOnly, category="Combat")
 	bool bHitReacting = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
 	float LifeSpan = 5.f;
-
-	UPROPERTY(BlueprintReadWrite, Category="Combat")
-	TObjectPtr<AActor> CombatTarget;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
+	bool bIsXPOverride = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat", meta = (EditCondition = bIsXPOverride, EditConditionHides))
+	float XPOverrideValue = 0.f;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
 	virtual void InitializeDefaultAttributes() const override;
 
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	int32 Level = 1;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
 	FString MonsterName = "Default Name";
+
+	UPROPERTY(BlueprintReadWrite, Category="Combat")
+	TObjectPtr<AActor> CombatTarget;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
@@ -85,4 +97,13 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpawnLoot();
+
+public:
+	// 어빌리티 업그레이드 및 스택 관리는 몬스터의 ASC에 직접
+	void AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass);
+	void RemoveAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass);
+
+	// 추가 할 업그레이드 태그
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<TSubclassOf<UGameplayEffect>> AbilityUpgradeClassToApply;
 };

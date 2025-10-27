@@ -8,6 +8,8 @@
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "AI/AuraAIController.h"
+#include "AI/NavigationModifier.h"
 #include "Character/AuraBossMonster.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "UI/ViewModel/MVVM_LoadSlot.h"
@@ -21,6 +23,7 @@
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
+#include "UI/ViewModel/MVVM_DebugMenu.h"
 #include "UI/WidgetController/GameOverWidgetController.h"
 
 void AAuraGameModeBase::BeginPlay()
@@ -28,6 +31,8 @@ void AAuraGameModeBase::BeginPlay()
 	Super::BeginPlay();
 
 	Maps.Add(DefaultMapName, DefaultMap);
+
+	OnAllActorsInvincible.AddDynamic(this, &AAuraGameModeBase::SetAllActorsInvincible);
 }
 
 void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -254,6 +259,11 @@ void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()));
 }
 
+void AAuraGameModeBase::TravelToMap(FString MapName)
+{
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Maps.FindChecked(MapName));
+}
+
 ULoadScreenSaveGame* AAuraGameModeBase::GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const
 {
 	USaveGame* SaveGameObject = nullptr;
@@ -271,6 +281,24 @@ ULoadScreenSaveGame* AAuraGameModeBase::GetSaveSlotData(const FString& SlotName,
 	// 커스텀 세이브로 캐스팅 후 리턴
 	ULoadScreenSaveGame* LoadScreenSaveGame = Cast<ULoadScreenSaveGame>(SaveGameObject);
 	return LoadScreenSaveGame;
+}
+
+void AAuraGameModeBase::GameAutoSave()
+{
+	// 월드 상태 저장
+	if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+	{
+		const UWorld* World = GetWorld();
+		FString MapName = World->GetMapName();
+		MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+			
+		AuraGM->SaveWorldState(GetWorld(), MapName);
+
+		auto* PlayerController = GetWorld()->GetFirstPlayerController();
+		AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
+		if (Actor->Implements<UPlayerInterface>())
+			IPlayerInterface::Execute_SaveProgress(Actor, "");
+	}
 }
 
 FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetName)
@@ -325,21 +353,42 @@ void AAuraGameModeBase::RemoveMonsterFromArray(AAuraEnemy* Enemy)
 	}
 }
 
-void AAuraGameModeBase::GameAutoSave()
+void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
 {
-	// 월드 상태 저장
-	if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
-	{
-		const UWorld* World = GetWorld();
-		FString MapName = World->GetMapName();
-		MapName.RemoveFromStart(World->StreamingLevelsPrefix);
-			
-		AuraGM->SaveWorldState(GetWorld(), MapName);
+	if (!HasAuthority())
+		return;
 
-		auto* PlayerController = GetWorld()->GetFirstPlayerController();
-		AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
-		if (Actor->Implements<UPlayerInterface>())
-			IPlayerInterface::Execute_SaveProgress(Actor, "");
+	// 플레이어 순회
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(It->Get()))
+		{
+			AuraPC->Server_CharacterInvincible(bInvincible);
+		}
+	}
+    
+	// 일반 몬스터 순회
+	for (auto MonsterPtr : EnemyCharacters) 
+	{
+		if (APawn* EnemyPawn = Cast<APawn>(MonsterPtr.Get()))
+		{
+			if (AAuraAIController* AuraAIController = EnemyPawn->GetController<AAuraAIController>())
+			{
+				AuraAIController->Server_CharacterInvincible(bInvincible);
+			}
+		}
+	}
+
+	// 보스 몬스터 순회
+	for (auto BossPtr : BossCharacters)
+	{
+		if (APawn* BossPawn = Cast<APawn>(BossPtr.Get()))
+		{
+			if (AAuraAIController* AuraAIController = BossPawn->GetController<AAuraAIController>())
+			{
+				AuraAIController->Server_CharacterInvincible(bInvincible);
+			}
+		}
 	}
 }
 
@@ -548,4 +597,21 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 		}	
 	}
     return RandomUpgradeInfos;
+}
+
+void AAuraGameModeBase::AddAbilityUpgradeToEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass, AActor* ApplyActor)
+{
+	if (AAuraEnemy* Enemy = Cast<AAuraEnemy>(ApplyActor))
+	{
+		Enemy->AddAbilityUpgrade(AbilityUpgradeClass);
+	}
+}
+
+void AAuraGameModeBase::RemoveAbilityUpgradeFromEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass,
+	AActor* ApplyActor)
+{
+	if (AAuraEnemy* Enemy = Cast<AAuraEnemy>(ApplyActor))
+	{
+		Enemy->RemoveAbilityUpgrade(AbilityUpgradeClass);
+	}
 }

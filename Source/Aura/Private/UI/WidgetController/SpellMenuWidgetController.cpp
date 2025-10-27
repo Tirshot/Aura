@@ -67,9 +67,9 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 
 			if (AbilityInfo)
 			{
-				FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-				Info.StatusTag = StatusTag;
-				AbilityInfoDelegate.Broadcast(Info);
+				FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+				Info->StatusTag = StatusTag;
+				AbilityInfoDelegate.Broadcast(*Info);
 			}
 		});
 
@@ -130,7 +130,7 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 	if (bWaitForEquipSelection)
 	{
 		// ���� ���� �� ���� �ִϸ��̼� �ߴ�
-		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
+		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
@@ -206,6 +206,10 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 {
 	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
 	{
+		// 튜토리얼 조건 : 감전사에 포인트 투자
+		if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability != FAuraGameplayTags::Get().Abilities_Lightning_Electrocute)
+			return;
+		
 		AuraASC->ServerSpendSpellPoint(SelectedAbility.Ability);
 	}
 }
@@ -215,7 +219,7 @@ void USpellMenuWidgetController::GlobeDeselect()
 	if (bWaitForEquipSelection)
 	{
 		// ���� ���� �� ���� �ִϸ��̼� �ߴ�
-		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
+		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
@@ -230,8 +234,15 @@ void USpellMenuWidgetController::GlobeDeselect()
 
 void USpellMenuWidgetController::EquipButtonPressed()
 {
+	// 튜토리얼 조건 : 감전사 장착
+	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability == FAuraGameplayTags::Get().Abilities_Lightning_Electrocute)
+	{
+		// 튜토리얼 조건 완료
+		
+	}
+	
 	// (1) equip �ִϸ��̼� ���
-	const FGameplayTag& AbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
+	const FGameplayTag& AbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 
 	WaitForEquipDelegate.Broadcast(AbilityType);
 	bWaitForEquipSelection = true;
@@ -252,7 +263,7 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 		return;
 
 	// ��Ƽ�� �����Ƽ�� �нú� ĭ�� ������ �� ����, �ݴ뵵 ����
-	const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability).AbilityType;
+	const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 	if (SelectedAbilityType.MatchesTagExact(AbilityType) == false)
 		return;
 
@@ -262,7 +273,6 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 
 void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)
 {
-	// �Ҹ��� �÷���
 	bWaitForEquipSelection = false;
 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
@@ -271,21 +281,16 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	LastSlotInfo.StatusTag = GameplayTags.Abilities_Status_Unlocked;
 	LastSlotInfo.InputTag = PrevSlot;
 	LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
-
-	// ������ ���Կ� �̹� �����Ƽ�� �ִٸ� �� �����Ƽ ������ ����
 	AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
-	// ������ ���Կ� ������ �����Ƽ�� ������ ä��
-	FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-	Info.StatusTag = Status;
-	Info.InputTag = Slot;
-	Info.AbilityTag = AbilityTag;
-	AbilityInfoDelegate.Broadcast(Info);
+	FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+	Info->StatusTag = Status;
+	Info->InputTag = Slot;
+	Info->AbilityTag = AbilityTag;
+	AbilityInfoDelegate.Broadcast(*Info);
 
-	// ���� �� ���� �ִϸ��̼� �ߴ�
-	StopWaitForEquipDelegate.Broadcast(AbilityInfo->FindAbilityInfoForTag(AbilityTag).AbilityType);
+	StopWaitForEquipDelegate.Broadcast(AbilityInfo->FindAbilityInfoForTag(AbilityTag)->AbilityType);
 	
-	// ���� �۷κ� ������ ��������Ʈ ȣ��
 	SpellGlobeReassignedDelegate.Broadcast(AbilityTag);
 	GlobeDeselect();
 }

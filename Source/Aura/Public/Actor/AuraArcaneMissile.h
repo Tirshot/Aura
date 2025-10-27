@@ -32,7 +32,7 @@ protected:
 	virtual void Destroyed() override;
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
-	void HomingNearestTarget();
+	void HomingNearestTarget(float DeltaTime);
 	
 public:
 	UPROPERTY(VisibleAnywhere, Category = "Orbit")
@@ -46,9 +46,13 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Orbit")
 	float FollowRadius = 1000.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Orbit")
+	float InitialDelayDuration = 1.5f;
 
 public:
 	void SetOwnedAbility(UAuraDamageGameplayAbility* InAbility){ OwnedAbility = InAbility;}
+	
 private:
 	UPROPERTY()
 	UAuraDamageGameplayAbility* OwnedAbility;
@@ -64,4 +68,6 @@ private:
 	float SelfSpinSpeed = 100.f;
 
 	bool TargetSet = false;
+	
+	float TimeElapsed = 0.0f;
 };

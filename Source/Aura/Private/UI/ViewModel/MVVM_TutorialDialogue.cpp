@@ -3,6 +3,7 @@
 
 #include "UI/ViewModel/MVVM_TutorialDialogue.h"
 
+#include "Blueprint/UserWidget.h"
 #include "Game/TutorialGameMode.h"
 
 void UMVVM_TutorialDialogue::BlueprintInitialize_Implementation()
@@ -35,6 +36,11 @@ void UMVVM_TutorialDialogue::SetCurrentCount(int32 InCount)
 	UE_MVVM_SET_PROPERTY_VALUE(CurrentCount, InCount);
 }
 
+void UMVVM_TutorialDialogue::SetCurrentDialogueAlignment(const EDialogueAlign& InAlignment)
+{
+	CurrentDialogueAlignment = InAlignment;
+}
+
 void UMVVM_TutorialDialogue::SetViewPosition(const FVector2D& Location)
 {
 	
@@ -65,8 +71,25 @@ void UMVVM_TutorialDialogue::GoToNextDialogue()
 	{
 		SetCurrentDialogueIndex(NextDialogueIndex);
 
-		const FText& NextDialogue = DialoguesArray[CurrentDialogueIndex];
+		const FText& NextDialogue = DialoguesArray[CurrentDialogueIndex].Text;
 		SetCurrentDialogue(NextDialogue);
+	}
+}
+
+void UMVVM_TutorialDialogue::GoBackToPrevDialogue()
+{
+	if (DialoguesArray.IsEmpty())
+		return;
+	
+	const int32 DialogueIndexNum = DialoguesArray.Num();
+	const int32 PrevDialogueIndex = FMath::Clamp(CurrentDialogueIndex - 1, 0, DialogueIndexNum - 1);
+
+	if (CurrentDialogueIndex != DialogueIndexNum)
+	{
+		SetCurrentDialogueIndex(PrevDialogueIndex);
+
+		const FText& PrevDialogue = DialoguesArray[CurrentDialogueIndex].Text;
+		SetCurrentDialogue(PrevDialogue);
 	}
 }
 

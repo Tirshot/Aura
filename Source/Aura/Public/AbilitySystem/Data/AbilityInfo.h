@@ -23,7 +23,7 @@ struct FAuraAbilityInfo
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag InputTag = FGameplayTag();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	FGameplayTag StatusTag = FGameplayTag();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -68,7 +68,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="AbilityInformation")
 	TArray<FAuraAbilityInfo> AbilityInformation;
 
-	FAuraAbilityInfo FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound = false) const;
+	FAuraAbilityInfo* FindAbilityInfoForTag(const FGameplayTag& AbilityTag, bool bLogNotFound = false);
 	FName GetAbilityNameForTag(const FGameplayTag& AbilityTag);
 
 	UFUNCTION(BlueprintCallable)

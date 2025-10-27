@@ -146,17 +146,36 @@ void AAuraEnemy::SetIsBeingShocked_Implementation(bool bInShock)
     BeingShockedTagChanged();
 }
 
+bool AAuraEnemy::IsXPOverridden_Implementation() const
+{
+    return bIsXPOverride;
+}
+
+float AAuraEnemy::GetXPOverriddenValue_Implementation() const
+{
+    return XPOverrideValue;
+}
+
 void AAuraEnemy::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 이동 속도는 어트리뷰트를 사용함
-    // GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
-    
     InitAbilityActorInfo();
     if (HasAuthority())
     {
+        // 초기 어빌리티 부여
         UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent, CharacterClass);
+        UAuraAbilitySystemLibrary::GiveStartupPassiveAbilities(this, AbilitySystemComponent, CharacterClass);
+
+        // 초기 어빌리티 업그레이드 부여
+        for (auto UpgradeClass : AbilityUpgradeClassToApply)
+        {
+            if (UpgradeClass)
+            {
+                // 게임플레이 이펙트 스펙 생성 후 적용
+                AddAbilityUpgrade(UpgradeClass);
+            }
+        }
     }
     
     if (UAuraUserWidget* AuraUserWidget = Cast<UAuraUserWidget>(HealthBar->GetUserWidgetObject()))
@@ -185,7 +204,8 @@ void AAuraEnemy::BeginPlay()
             &AAuraEnemy::HitReactTagChanged
         );
 
-        // 이동속도 설정
+        // 이동 속도는 어트리뷰트를 사용함
+        // 이동 속도 설정
         GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
 
         OnHealthChanged.Broadcast(AuraAS->GetHealth());
@@ -250,4 +270,25 @@ void AAuraEnemy::InitAbilityActorInfo()
 void AAuraEnemy::InitializeDefaultAttributes() const
 {
     UAuraAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, Level, AbilitySystemComponent);
+}
+
+void AAuraEnemy::AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass)
+{
+    if (AbilityUpgradeClass)
+    {
+        // 게임플레이 이펙트 스펙 생성 후 적용
+        FGameplayEffectContextHandle ContextHandle = AbilitySystemComponent->MakeEffectContext();
+        FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(AbilityUpgradeClass, 1.0f, ContextHandle);
+
+        AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    }
+}
+
+void AAuraEnemy::RemoveAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass)
+{
+    if (AbilityUpgradeClass)
+    {
+        // 게임플레이 이펙트를 ASC에서 제거
+        AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(AbilityUpgradeClass, nullptr);
+    }
 }

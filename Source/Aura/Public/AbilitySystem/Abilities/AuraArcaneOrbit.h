@@ -53,4 +53,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	float MissileLifeSpan = 10.f;
+	
+	UPROPERTY(EditDefaultsOnly)
+	float InitialDelayDuration = 1.5f;
 };

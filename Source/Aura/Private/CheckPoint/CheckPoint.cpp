@@ -60,6 +60,9 @@ void ACheckPoint::LoadActor_Implementation()
 
 void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!bActivated)
+		return;
+	
 	if (OtherActor->Implements<UPlayerInterface>())
 	{
 		bReached = true;

@@ -28,4 +28,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Class")
 	ECharacterClass CharacterClass = ECharacterClass::Warrior;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Class")
+	bool bXPOverride = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Class", meta = (EditCondition = bXPOverride, EditConditionHides))
+	float XPOverrideValue = 0.f;
+	
 };

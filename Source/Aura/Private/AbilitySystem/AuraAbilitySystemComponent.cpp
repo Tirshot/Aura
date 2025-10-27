@@ -138,129 +138,134 @@ void UAuraAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSub
 void UAuraAbilitySystemComponent::AddCharacterAbilityByTag(const FGameplayTag& AbilityTag)
 {
     // 게임플레이 어빌리티 스펙 생성
-    auto AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this)->FindAbilityInfoForTag(AbilityTag);
-    if (auto Ability = AbilityInfo.Ability)
+    if (UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(this))
     {
-        int AbilityLevel = GetAbilityLevelByTag(AbilityTag);
-        
-        // 이미 가지고 있는 어빌리티
-        if (AbilityLevel > 0)
+        if (FAuraAbilityInfo* AuraAbilityInfo = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
         {
-            FGameplayTag StartupInputTag;
-            UAuraGameplayAbility* AuraAbility = nullptr;
-            
-            FScopedAbilityListLock ActiveScopeLoc(*this);
-            for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+            if (auto Ability = AuraAbilityInfo->Ability)
             {
-                // 활성화 된 모든 어빌리티 스펙에서 태그와 일치하는 스펙 찾기
-                if (AbilitySpec.Ability->GetAssetTags().HasTagExact(AbilityTag))
+                int AbilityLevel = GetAbilityLevelByTag(AbilityTag);
+        
+                // 이미 가지고 있는 어빌리티
+                if (AbilityLevel > 0)
                 {
-                    if (AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Eligible))
+                    FGameplayTag StartupInputTag;
+                    UAuraGameplayAbility* AuraAbility = nullptr;
+            
+                    FScopedAbilityListLock ActiveScopeLoc(*this);
+                    for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
                     {
-                        // 해금 된 어빌리티
-                        AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
-                        AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
-                        AbilitySpec.Level = 1;
-
-                        // 초기 입력 태그 설정
-                        AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability);
-                        
-                        if (AuraAbility)
+                        // 활성화 된 모든 어빌리티 스펙에서 태그와 일치하는 스펙 찾기
+                        if (AbilitySpec.Ability->GetAssetTags().HasTagExact(AbilityTag))
                         {
-                            StartupInputTag = AuraAbility->StartupInputTag;
-                            AbilitySpec.GetDynamicSpecSourceTags().AddTag(StartupInputTag);
+                            if (AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Eligible))
+                            {
+                                // 해금 된 어빌리티
+                                AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+                                AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
+                                AbilitySpec.Level = 1;
+
+                                // 초기 입력 태그 설정
+                                AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability);
+                        
+                                if (AuraAbility)
+                                {
+                                    StartupInputTag = AuraAbility->StartupInputTag;
+                                    AbilitySpec.GetDynamicSpecSourceTags().AddTag(StartupInputTag);
+                                }
+                            }
+                            else if (AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked)
+                                || AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Equipped))
+                            {
+                                // 이미 익힌 어빌리티 또는 장착한 어빌리티
+                                AbilitySpec.Level += 1;
+                            }
+                            // 어빌리티 레벨업
+                            break;
                         }
                     }
-                    else if (AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked)
-                        || AbilitySpec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Equipped))
+
+                    // 시작 태그가 동일할 경우 덮어씌우기
+                    for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
                     {
-                        // 이미 익힌 어빌리티 또는 장착한 어빌리티
-                        AbilitySpec.Level += 1;
-                    }
-                    // 어빌리티 레벨업
-                    break;
-                }
-            }
-
-            // 시작 태그가 동일할 경우 덮어씌우기
-            for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
-            {
-                if (AuraAbility && AbilitySpec.GetDynamicSpecSourceTags().HasTag(StartupInputTag))
-                {
-                    // 위에서 부여한 어빌리티가 아닌 어빌리티의 입력태그와 겹치면 해당 스펙에서 입력 태그 제거
-                    if (AuraAbility != AbilitySpec.Ability)
-                    {
-                        AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(StartupInputTag);
-                        AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
-                        AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
-                    }
-                }
-            }
-        }
-        else
-        {
-            FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Ability, 1);
-
-            FGameplayTag StartupInputTag;
-            UAuraGameplayAbility* AuraAbility = nullptr;
-            
-            AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability);
-            
-            // 어빌리티에 입력 태그를 부여
-            if (AuraAbility)
-            {
-                StartupInputTag = AuraAbility->StartupInputTag;
-                AbilitySpec.GetDynamicSpecSourceTags().AddTag(StartupInputTag);
-                AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
-            }
-
-            bool bIsPassiveAbility = AbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Passive")));
-            if (bIsPassiveAbility)
-            {
-                GiveAbilityAndActivateOnce(AbilitySpec);
-                MulticastActivatePassiveEffect(AbilityTag, true);
-            }
-            else
-            {
-                GiveAbility(AbilitySpec);
-            }
-
-            // 시작 태그가 동일할 경우 덮어씌우기
-            FScopedAbilityListLock ActiveScopeLoc(*this);
-            for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
-            {
-                if (AuraAbility && Spec.GetDynamicSpecSourceTags().HasTag(StartupInputTag))
-                {
-                    // 위에서 부여한 어빌리티가 아닌 어빌리티의 입력태그와 겹치면 해당 스펙에서 입력 태그 제거
-                    if (AuraAbility != Spec.Ability)
-                    {
-                        AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(StartupInputTag);
-                        AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
-                        AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
-                        
-                        FGameplayTag SpecTag = GetAbilityTagFromSpec(Spec);
-
-                        // 패시브면 비활성화
-                        if (SpecTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Passive"))))
+                        if (AuraAbility && AbilitySpec.GetDynamicSpecSourceTags().HasTag(StartupInputTag))
                         {
-                            MulticastActivatePassiveEffect(SpecTag, false);
-                            DeactivePassiveAbility.Broadcast(SpecTag);
+                            // 위에서 부여한 어빌리티가 아닌 어빌리티의 입력태그와 겹치면 해당 스펙에서 입력 태그 제거
+                            if (AuraAbility != AbilitySpec.Ability)
+                            {
+                                AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(StartupInputTag);
+                                AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
+                                AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Ability, 1);
+
+                    FGameplayTag StartupInputTag;
+                    UAuraGameplayAbility* AuraAbility = nullptr;
+            
+                    AuraAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability);
+            
+                    // 어빌리티에 입력 태그를 부여
+                    if (AuraAbility)
+                    {
+                        StartupInputTag = AuraAbility->StartupInputTag;
+                        AbilitySpec.GetDynamicSpecSourceTags().AddTag(StartupInputTag);
+                        AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
+                    }
+
+                    bool bIsPassiveAbility = AbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Passive")));
+                    if (bIsPassiveAbility)
+                    {
+                        GiveAbilityAndActivateOnce(AbilitySpec);
+                        MulticastActivatePassiveEffect(AbilityTag, true);
+                    }
+                    else
+                    {
+                        GiveAbility(AbilitySpec);
+                    }
+
+                    // 시작 태그가 동일할 경우 덮어씌우기
+                    FScopedAbilityListLock ActiveScopeLoc(*this);
+                    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+                    {
+                        if (AuraAbility && Spec.GetDynamicSpecSourceTags().HasTag(StartupInputTag))
+                        {
+                            // 위에서 부여한 어빌리티가 아닌 어빌리티의 입력태그와 겹치면 해당 스펙에서 입력 태그 제거
+                            if (AuraAbility != Spec.Ability)
+                            {
+                                AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(StartupInputTag);
+                                AbilitySpec.GetDynamicSpecSourceTags().RemoveTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
+                                AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
+                        
+                                FGameplayTag SpecTag = GetAbilityTagFromSpec(Spec);
+
+                                // 패시브면 비활성화
+                                if (SpecTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Passive"))))
+                                {
+                                    MulticastActivatePassiveEffect(SpecTag, false);
+                                    DeactivePassiveAbility.Broadcast(SpecTag);
+                                }
+                            }
+                        }
+                    }
+                }
+                AbilitiesGivenDelegate.Broadcast();
+
+                if (GetAvatarActor()->Implements<UCombatInterface>())
+                {
+                    int32 Level = 0;
+                    Level = ICombatInterface::Execute_GetCharacterLevel(GetAvatarActor());
+                    UpdateAbilityStatus(Level);
+                    return;
+                }
+        
+                UpdateAbilityStatus(1);
             }
         }
-        AbilitiesGivenDelegate.Broadcast();
-
-        if (GetAvatarActor()->Implements<UCombatInterface>())
-        {
-            int32 Level = 0;
-            Level = ICombatInterface::Execute_GetCharacterLevel(GetAvatarActor());
-            UpdateAbilityStatus(Level);
-            return;
-        }
-        
-        UpdateAbilityStatus(1);
     }
 }
 
@@ -521,11 +526,11 @@ void UAuraAbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FG
 void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
 {
     UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
-    for (const FAuraAbilityInfo& Info : AbilityInfo->AbilityInformation)
+    for (FAuraAbilityInfo& Info : AbilityInfo->AbilityInformation)
     {
         FGameplayTag AbilityTag = Info.AbilityTag;
         FGameplayTag InferiorAbilityTag = Info.RequireInferiorAbilityTag;
-        FGameplayTag StatusTag = Info.StatusTag;
+        FGameplayTag& StatusTag = Info.StatusTag;
         
         if (!AbilityTag.IsValid())
             continue;
@@ -553,6 +558,7 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
                     
                     // 해금 가능 태그 부여
                     AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+                    StatusTag = FAuraGameplayTags::Get().Abilities_Status_Eligible;
                     GiveAbility(AbilitySpec);
                     
                     // 즉시 복제
@@ -569,6 +575,7 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
                     
                     // 해금 가능 태그 부여
                     AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+                    StatusTag = FAuraGameplayTags::Get().Abilities_Status_Eligible;
                     GiveAbility(AbilitySpec);
                     
                     // 즉시 복제
@@ -714,10 +721,10 @@ bool UAuraAbilitySystemComponent::GetDescriptionsByAbilityTag(const FGameplayTag
     else
     {
         // 이 어빌리티
-        FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-        int32 CharacterLevelRequirement = Info.LevelRequirement;
+        FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+        int32 CharacterLevelRequirement = Info->LevelRequirement;
 
-        OutDescription = UAuraGameplayAbility::GetLockedDescription(CharacterLevelRequirement, this, Info.RequireInferiorAbilityTag);
+        OutDescription = UAuraGameplayAbility::GetLockedDescription(CharacterLevelRequirement, this, Info->RequireInferiorAbilityTag);
     }
     OutNextLevelDescription = FString();
     return false;
@@ -735,9 +742,14 @@ int32 UAuraAbilitySystemComponent::GetAbilityLevelByTag(const FGameplayTag& Abil
 
 void UAuraAbilitySystemComponent::ClearSlot(FGameplayAbilitySpec* Spec)
 {
-    //
+    // 이전 스펠에 할당된 태그 제거
     const FGameplayTag Slot = GetInputTagFromSpec(*Spec);
+    const FGameplayTag StatusTag = GetStatusFromSpec(Spec);
     Spec->GetDynamicSpecSourceTags().RemoveTag(Slot);
+    Spec->GetDynamicSpecSourceTags().RemoveTag(StatusTag);
+
+    // 이전 스펠에 태그 재할당
+    Spec->GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Unlocked);
 }
 
 void UAuraAbilitySystemComponent::ClearAbilitiesOfSlot(const FGameplayTag& Slot)
@@ -781,8 +793,8 @@ bool UAuraAbilitySystemComponent::IsPassiveAbility(const FGameplayAbilitySpec& S
     const FGameplayTag AbilityTag = GetAbilityTagFromSpec(Spec);
     if (AbilityInfo)
     {
-        FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-        return Info.AbilityType.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Type_Passive);
+        FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+        return Info->AbilityType.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Type_Passive);
     }
     return false;
 }

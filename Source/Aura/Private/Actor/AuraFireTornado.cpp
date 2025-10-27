@@ -64,15 +64,30 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 	FRotator DeltaRotation = FRotator(0.f, SpinDegreePerSecond * DeltaSeconds, 0.f);
 	AddActorWorldRotation(DeltaRotation);
 
+	if (GetOwner() == nullptr)
+	{
+		Destroy();
+		return;
+	}
+
 	if (!OverlappingActors.IsEmpty())
 	{
-		AActor* TargetActor = OverlappingActors.Last();
+		FVector ActorLocation = FVector::ZeroVector;
+	
+		int32 OverlappingActorsNum = OverlappingActors.Num() - 1;
+		for (int i = OverlappingActorsNum; i >= 0; i--)
+		{
+			if (!IsValid(OverlappingActors[i]))
+				continue;
 
-		if (!IsValid(TargetActor))
-			return;
+			if (!IsValidOverlap(OverlappingActors[i]))
+				continue;
+			
+			ActorLocation = OverlappingActors[i]->GetActorLocation();
+			break;
+		}
 
 		FVector TornadoLocation = GetActorLocation();
-		FVector ActorLocation = TargetActor->GetActorLocation();
 
 		ActorLocation.Z = TornadoLocation.Z;
 
@@ -115,7 +130,7 @@ void AAuraFireTornado::ApplyDamageAndKnockback()
 	
 	for (AActor* OtherActor : OverlappingActors)
 	{
-		if (IsValidOverlap(OtherActor) == false)
+		if (!IsValidOverlap(OtherActor))
 			continue;
 
 		if (HasAuthority())
@@ -138,9 +153,19 @@ void AAuraFireTornado::ApplyDamageAndKnockback()
 
 				if (bIsKnockBack)
 				{
-					const FVector KnockbackDirection = ToCenter;
-					const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
-					DamageEffectParams.KnockbackForce = KnockbackForce;
+					int32 RandValue = FMath::RandRange(0, 100);
+					int32 KnockbackChance = DamageEffectParams.KnockbackChance;
+
+					if (RandValue <= KnockbackChance)
+					{
+						const FVector KnockbackDirection = ToCenter;
+						const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
+						DamageEffectParams.KnockbackForce = KnockbackForce;
+					}
+					else
+					{
+						DamageEffectParams.KnockbackForce = FVector::ZeroVector;
+					}
 				}
 
 				FVector DistanceVector = (OtherActor->GetActorLocation()-GetActorLocation());
@@ -151,7 +176,6 @@ void AAuraFireTornado::ApplyDamageAndKnockback()
 					const FVector DeathImpulse = ToCenter * DamageEffectParams.DeathImpulseMagnitude;
 					DamageEffectParams.DeathImpulse = DeathImpulse;
 					DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
-				
 					UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 				}
 			}
@@ -165,10 +189,13 @@ bool AAuraFireTornado::IsValidOverlap(AActor* OtherActor)
 		return false;
 
 	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
-
+	if (!SourceAvatarActor)
+		return false;
+	
 	if (SourceAvatarActor == OtherActor)
 		return false;
 
+	// 아군 일 경우
 	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor))
 		return false;
 

@@ -5,7 +5,7 @@
 
 int32 ULevelUpInfo::FindLevelForXP(int32 XP) const
 {
-	// °æÇèÄ¡ ÇÊ¿ä·® Ã£±â
+	// ï¿½ï¿½ï¿½ï¿½Ä¡ ï¿½Ê¿ä·® Ã£ï¿½ï¿½
 	for (int i = 0; i < LevelUpInformation.Num(); i++)
 	{
 		if (LevelUpInformation[i].LevelUpRequirement >= XP)
@@ -15,4 +15,14 @@ int32 ULevelUpInfo::FindLevelForXP(int32 XP) const
 	}
 
 	return 1;
+}
+
+int32 ULevelUpInfo::FindXPForLevel(int32 Level) const
+{
+	int32 MaxLevel = LevelUpInformation.Num() - 1;
+	
+	if (MaxLevel >= Level)
+		return LevelUpInformation[Level].LevelUpRequirement;
+
+	return 0;
 }

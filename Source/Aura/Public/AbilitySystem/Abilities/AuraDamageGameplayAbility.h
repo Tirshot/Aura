@@ -66,7 +66,7 @@ public:
 	void HideMagicCircleAndRangeIndicator();
 
 	UFUNCTION(BlueprintCallable)
-	AAbilityRangeIndicator* SpawnRangeIndicator(const FVector& Location, bool bAttachToActor,ERangeShape RangeShape, float Radius, float Width, float Height, const FVector& RGB, float LifeSpan);
+	AAbilityRangeIndicator* SpawnRangeIndicator(const FVector& Location, bool bAttachToActor,ERangeShape RangeShape, float Radius, float Width, float Height, FVector RGB, float LifeSpan);
 	
 	UFUNCTION(BlueprintCallable)
 	FVector ReceivedMouseHitResult(const FGameplayAbilityTargetDataHandle& TargetDataHandle);

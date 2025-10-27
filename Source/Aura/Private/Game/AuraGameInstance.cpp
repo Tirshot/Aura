@@ -3,3 +3,10 @@
 
 #include "Game/AuraGameInstance.h"
 
+void UAuraGameInstance::SetAllVariablesToDefault()
+{
+	bVisibleNextButton = false;
+	bVisibleLevelUpButton = false;
+	bAuraInvincible = false;
+	bAuraInfiniteMana = false;
+}

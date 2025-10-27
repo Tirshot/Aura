@@ -52,6 +52,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityActivatedSignature, bool, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOverlayVisibilityChangedSignature, bool, bVisibility);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnButtonVisibilityChangedSignature, bool, bVisibility);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCloseMenuAnchors, bool, bClose);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDebugModeActivated, bool, bActivated);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController
@@ -93,22 +94,38 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
 	FOnButtonVisibilityChangedSignature OnButtonVisibilityChanged;
 	
+	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
+	FOnButtonVisibilityChangedSignature OnAttributeMenuButtonVisibilityChanged;
+	
+	UPROPERTY(BlueprintAssignable, Category = "OverlayWidget")
+	FOnButtonVisibilityChangedSignature OnSpellMenuButtonVisibilityChanged;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnButtonVisibilityChangedSignature OnLevelUpButtonVisibilityChanged;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnButtonVisibilityChangedSignature OnNextButtonVisibilityChanged;
+	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
 	FOnCloseMenuAnchors OnCloseMenuAnchors;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnDebugModeActivated OnDebugModeActivated;
+	
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void ShowOverlayWidget();
+	void ShowOverlayWidget(bool bShow);
 
 	UFUNCTION(BlueprintCallable)
-	void HideOverlayWidget();
+	void ShowOverlayButtons(bool bShow);
 
 	UFUNCTION(BlueprintCallable)
-	void ShowOverlayButtons();
-
+	void ShowAttributeMenuButton(bool bShow);
+	
 	UFUNCTION(BlueprintCallable)
-	void HideOverlayButtons();
-
+	void ShowSpellMenuButton(bool bShow);
+	
 public:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UUserWidget> OverlayWidget;

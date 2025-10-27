@@ -64,11 +64,14 @@ FString UAuraFireBlast::GetNextLevelDescription(int32 Level, const UObject* Worl
 	);
 }
 
+void UAuraFireBlast::SetInitialValue()
+{
+	NumFireBalls = BaseNumFireBalls + GetAbilityLevel();
+}
+
 TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 {
 	TArray<AAuraFireBall*> FireBalls;
-
-	NumFireBalls = BaseNumFireBalls + GetAbilityLevel();
 
 	const FVector Forward = GetAvatarActorFromActorInfo()->GetActorForwardVector();
 	const FVector Location = GetAvatarActorFromActorInfo()->GetActorLocation();

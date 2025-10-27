@@ -46,6 +46,10 @@ public:
 public:
 	UPROPERTY(EditDefaultsOnly)
 	int32 CustomDepthStencilOverride = CUSTOM_DEPTH_TAN;
+
+	// 활성화 가능 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bActivated = true;
 	
 	// 이미 도달했는가
 	UPROPERTY(BlueprintReadWrite, SaveGame)

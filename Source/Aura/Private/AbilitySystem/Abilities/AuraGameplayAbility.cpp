@@ -8,6 +8,7 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraEnemy.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 
@@ -58,13 +59,20 @@ bool UAuraGameplayAbility::HasUpgradeTag(AActor* AvatarActor, FGameplayTag Tag)
 {
     if (!AvatarActor)
         return false;
-    
+
+    // 플레이어 캐릭터
     if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(Cast<APawn>(AvatarActor)->GetController()))
     {
         if (AAuraPlayerState* AuraPlayerState = AuraPC->GetPlayerState<AAuraPlayerState>())
         {
             return AuraPlayerState->HasUpgradeTag(Tag);
         }
+    }
+
+    // 몬스터 캐릭터
+    if (AAuraEnemy* Enemy = Cast<AAuraEnemy>(AvatarActor))
+    {
+        return Enemy->GetAbilitySystemComponent()->HasMatchingGameplayTag(Tag);
     }
     
     return false;
@@ -75,6 +83,7 @@ int32 UAuraGameplayAbility::GetUpgradeStackCount(AActor* AvatarActor,FGameplayTa
     if (!Tag.IsValid() || !AvatarActor)
         return 0;
 
+    // 플레이어 캐릭터
     if (APlayerController* PC = Cast<APlayerController>(Cast<APawn>(AvatarActor)->GetController()))
     {
         if (AAuraPlayerState* AuraPS = PC->GetPlayerState<AAuraPlayerState>())
@@ -82,6 +91,16 @@ int32 UAuraGameplayAbility::GetUpgradeStackCount(AActor* AvatarActor,FGameplayTa
             return AuraPS->GetUpgradeTagCount(Tag);
         }
     }
+
+    // 몬스터 캐릭터
+    if (AAuraEnemy* Enemy = Cast<AAuraEnemy>(AvatarActor))
+    {
+        if (Enemy->GetAbilitySystemComponent()->HasMatchingGameplayTag(Tag))
+        {
+            return 1;
+        }
+    }
+    
     return 0;
 }
 

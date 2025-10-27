@@ -60,7 +60,7 @@ protected:
 	UPROPERTY()
 	int32 MaxNumShards = 10;
 
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite)
 	bool bIsFirstShardLarge = false;
 
 	UPROPERTY()

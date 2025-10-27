@@ -112,6 +112,23 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 		AuraGameMode->TravelToMap(SelectedSlot);
 }
 
+void UMVVM_LoadScreen::TutorialButtonPressed()
+{
+	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGameMode->GetGameInstance());
+
+	// 디버그 멤버 변수들 초기화
+	AuraGameInstance->SetAllVariablesToDefault();
+
+	// 슬롯 선택 취소
+	AuraGameInstance->PlayerStartTag = FName();
+	AuraGameInstance->LoadSlotName = FString();
+	AuraGameInstance->LoadSlotIndex = 0;
+	SelectedSlot = nullptr;
+
+	AuraGameMode->TravelToMap(FString("Tutorial"));
+}
+
 void UMVVM_LoadScreen::LoadData()
 {
 	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));

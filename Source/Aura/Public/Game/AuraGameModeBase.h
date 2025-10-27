@@ -3,9 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/Data/EnemyAbilityUpgradeInfo.h"
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+struct FGameplayTag;
+struct FAuraAbilityUpgradeInfo;
+class UGameplayEffect;
 class AAuraBossMonster;
 class AAuraEnemy;
 class AAuraPlayerController;
@@ -21,6 +25,7 @@ class USaveGame;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllActorsInvincible, bool, bInvincible);
 
 UCLASS()
 class AURA_API AAuraGameModeBase : public AGameModeBase
@@ -50,9 +55,12 @@ public:
 	void LoadWorldState(UWorld* World);
 	
 	void TravelToMap(UMVVM_LoadSlot* Slot);
+	void TravelToMap(FString MapName);
 
 	ULoadScreenSaveGame* GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const;
-
+	
+	void GameAutoSave();
+	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<USaveGame> LoadScreenSaveGameClass;
 
@@ -86,6 +94,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Ability Upgrade Info")
 	TObjectPtr<UAbilityUpgradeInfo> AbilityUpgradeInfo;
 	
+	UPROPERTY(EditDefaultsOnly, Category="Ability Upgrade Info")
+	TObjectPtr<UEnemyAbilityUpgradeInfo> EnemyAbilityUpgradeInfo;
+	
 	UPROPERTY(EditDefaultsOnly, Category="Item")
 	TObjectPtr<ULootTiers> LootTiers;
 	
@@ -113,15 +124,34 @@ public:
 	void AddMonsterToArray(AAuraEnemy* Enemy);
 	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
 
-	void GameAutoSave();
+	UFUNCTION(BlueprintCallable)
+	int32 GetBossCharacterArrayLength() { return BossCharacters.Num(); }
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetMonsterCharacterLength() { return EnemyCharacters.Num(); }
 
-	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
+	UFUNCTION()
+	void SetAllActorsInvincible(bool bInvincible);
 
+	UPROPERTY(BlueprintCallable)
+	FOnAllActorsInvincible OnAllActorsInvincible;
+	
 	UPROPERTY(BlueprintAssignable)
 	FOnBossMonsterCountChanged OnBossMonsterCountChanged;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnMonsterCountChanged OnMonsterCountChanged;
+
+	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
+
+public:
+	// 몬스터에게 업그레이드 태그 부여
+	UFUNCTION(BlueprintCallable)
+	void AddAbilityUpgradeToEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass, AActor* ApplyActor);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveAbilityUpgradeFromEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass, AActor* ApplyActor);
+
 
 private:
 	// 액터 배열

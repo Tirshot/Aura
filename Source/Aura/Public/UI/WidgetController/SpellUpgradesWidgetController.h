@@ -3,9 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-#include "UI/Widget/AuraUserWidget.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "SpellUpgradesWidgetController.generated.h"
 
@@ -20,6 +18,7 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 	
+public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
 	TObjectPtr<UAbilityUpgradeInfo> AbilityUpgradeInfo;
 

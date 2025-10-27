@@ -103,24 +103,53 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
     }
 }
 
-void UOverlayWidgetController::ShowOverlayWidget()
+void UOverlayWidgetController::ShowOverlayWidget(bool bShow)
 {
-    OnOverlayVisibilityChanged.Broadcast(true);
+    if (bShow)
+    {
+        OnOverlayVisibilityChanged.Broadcast(true);
+    }
+    else
+    {
+        OnOverlayVisibilityChanged.Broadcast(false);
+    }
+
 }
 
-void UOverlayWidgetController::HideOverlayWidget()
+void UOverlayWidgetController::ShowOverlayButtons(bool bShow)
 {
-    OnOverlayVisibilityChanged.Broadcast(false);
+    if (bShow)
+    {
+        OnButtonVisibilityChanged.Broadcast(true);
+    }
+    else
+    {
+        OnButtonVisibilityChanged.Broadcast(false);
+    }
 }
 
-void UOverlayWidgetController::ShowOverlayButtons()
+void UOverlayWidgetController::ShowAttributeMenuButton(bool bShow)
 {
-    OnButtonVisibilityChanged.Broadcast(true);
+    if (bShow)
+    {
+        OnAttributeMenuButtonVisibilityChanged.Broadcast(true);
+    }
+    else
+    {
+        OnAttributeMenuButtonVisibilityChanged.Broadcast(false);
+    }
 }
 
-void UOverlayWidgetController::HideOverlayButtons()
+void UOverlayWidgetController::ShowSpellMenuButton(bool bShow)
 {
-    OnButtonVisibilityChanged.Broadcast(false);
+    if (bShow)
+    {
+        OnSpellMenuButtonVisibilityChanged.Broadcast(true);
+    }
+    else
+    {
+        OnSpellMenuButtonVisibilityChanged.Broadcast(false);
+    }
 }
 
 void UOverlayWidgetController::OnXPChanged(int32 NewXP)
@@ -165,11 +194,11 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
     AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
     // 변경할 슬롯에 선택한 어빌리티의 정보를 채움
-    FAuraAbilityInfo Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-    Info.StatusTag = Status;
-    Info.InputTag = Slot;
-    Info.AbilityTag = AbilityTag;
-    AbilityInfoDelegate.Broadcast(Info);
+    FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+    Info->StatusTag = Status;
+    Info->InputTag = Slot;
+    Info->AbilityTag = AbilityTag;
+    AbilityInfoDelegate.Broadcast(*Info);
 }
 
 void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)

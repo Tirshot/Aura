@@ -63,7 +63,7 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level, const UObject* World
 	);
 }
 
-void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, AActor* HomingTarget)
+void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, bool bNumProjectileOverride, int32 NumProjectileOverride, AActor* HomingTarget)
 {
 	// 서버 상에 있는지 확인
 	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
@@ -86,7 +86,17 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 
 	const FVector Forward = Rotation.Vector();
 	const int32 AbilityLevel = GetAbilityLevel();
-	const int32 EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectiles + AbilityLevel);
+	int32 EffectiveNumProjectiles = 0;
+
+	if (!bNumProjectileOverride)
+	{
+		EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectiles + AbilityLevel);
+	}
+	else
+	{
+		EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectileOverride);
+	}
+	
 	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Forward, FVector::UpVector, ProjectileSpread, EffectiveNumProjectiles);
 
 	for (const FRotator& Rot : Rotators)
@@ -104,13 +114,14 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 
 		Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 		
-		float Distance = FVector::Dist(HomingTarget->GetActorLocation(), SocketLocation);
+		float Distance = 0.f;
 		
 		// 투사체 유도
 		// 대상이 몬스터인지 확인
 		// 사거리 체크
 		if (HomingTarget && HomingTarget->Implements<UCombatInterface>())
 		{
+			Distance = FVector::Dist(HomingTarget->GetActorLocation(), SocketLocation);
 			if (Distance <= AbilityRange)
 			{
 				Projectile->ProjectileMovement->HomingTargetComponent = HomingTarget->GetRootComponent();

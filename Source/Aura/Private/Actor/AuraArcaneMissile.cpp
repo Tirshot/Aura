@@ -43,7 +43,7 @@ void AAuraArcaneMissile::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	HomingNearestTarget();
+	HomingNearestTarget(DeltaSeconds);
 	
 	// 타겟 설정되면 궤도 회전 정지
 	if (TargetSet)
@@ -107,8 +107,13 @@ void AAuraArcaneMissile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponen
 	Super::OnSphereOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 }
 
-void AAuraArcaneMissile::HomingNearestTarget()
+void AAuraArcaneMissile::HomingNearestTarget(float DeltaTime)
 {
+	TimeElapsed += DeltaTime;
+
+	if (TimeElapsed < InitialDelayDuration)
+		return;
+
 	TArray<AActor*> OutOverlappingActors;
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(Owner);

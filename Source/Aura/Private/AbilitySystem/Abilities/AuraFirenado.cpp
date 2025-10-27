@@ -99,7 +99,7 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 		FireTornadoClass,
 		SpawnTransform,
 		GetOwningActorFromActorInfo(),
-		CurrentActorInfo->PlayerController->GetPawn(),
+		Cast<APawn>(GetOwningActorFromActorInfo()),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	if (UWorld* World = GetWorld())

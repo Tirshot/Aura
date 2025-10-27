@@ -57,7 +57,7 @@ public:
 	UPROPERTY()
 	FOnCardsInitialized OnUpgradeCardsInitializedDelegate;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnAbilityUpgradeTagsChanged OnAbilityUpgradeTagsChangedDelegate;
 	
 	FORCEINLINE int32 GetCharacterLevel() const { return Level; }
@@ -127,14 +127,6 @@ public:
 
 	void GetRandomAttributeUpgrade();
 
-	// // 활성화된 어빌리티 중 3개 선택
-	// TArray<FGameplayTag> GetRandomActivatedAbilityTags_Three(const FGameplayTagContainer& ActivatedAbilityTags);
-	//
-	// // 선택된 어빌리티 중 
-	// TArray<FGameplayTag> GetRandomUpgradeTagsForActivatedAbility_Three();
-	//
-	// TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three();
-	//
 	UFUNCTION()
 	void HandleAbilitiesSet();
 	
