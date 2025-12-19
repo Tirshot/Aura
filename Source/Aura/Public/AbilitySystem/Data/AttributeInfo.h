@@ -32,9 +32,11 @@ class AURA_API UAttributeInfo : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	// ÅÂ±×¸¦ °¡Á®¿Í Array¿¡¼­ Ã£±â
+	// ï¿½Â±×¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Arrayï¿½ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½
 	FAuraAttributeInfo FindAttributeInfoForTag(const FGameplayTag& AttributeTag, bool bLogNotFound = false) const;
 
+	FText GetAttributeNameForTag(const FGameplayTag& AttributeTag);
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<FAuraAttributeInfo> AttributeInformation;
 	

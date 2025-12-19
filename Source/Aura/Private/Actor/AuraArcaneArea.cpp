@@ -64,7 +64,7 @@ void AAuraArcaneArea::ApplySlowEffect()
 				FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownEffectClass, 1, OwnerASC->MakeEffectContext());
 				
 				const float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(TargetActor, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed);
-				const float Magnitude = -MovementSpeed * 0.1f;
+				const float Magnitude = -MovementSpeed * SlowSpeedRatio;
 
 				// Set By Caller로 매그니튜드 지정 후 이펙트 적용
 				SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);

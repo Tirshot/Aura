@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/SaveGame.h"
+#include "Player/EquipmentComponent.h"
+#include "Player/InventoryComponent.h"
 #include "LoadScreenSaveGame.generated.h"
 
+struct FEquipSlotMap;
 class UGameplayAbility;
 
 UENUM(BlueprintType)
@@ -154,6 +157,13 @@ public:
 
 	UPROPERTY()
 	TMap<FGameplayTag, int32> SavedAbilityUpgrades;
+
+	// 인벤토리
+	UPROPERTY()
+	TArray<FInventorySlot> SavedInventorySlots;
+	
+	UPROPERTY()
+	TMap<EItemSubGroup, FEquipmentSlotInfo> SavedEquipmentSlotsMap;
 
 	// 1회용 액터
 	UPROPERTY()

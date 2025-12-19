@@ -63,6 +63,17 @@ void AAuraCharacterBase::Tick(float DeltaTime)
 	EffectAttachComponent->SetWorldRotation(FRotator::ZeroRotator);
 }
 
+void AAuraCharacterBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	OnASCRegistered.AddUObject(this, &AAuraCharacterBase::ASCRegistered);
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetPlayerState()))
+	{
+		AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraCharacterBase::AuraPlayerStateInitialized);
+	}
+}
+
 void AAuraCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -84,7 +95,7 @@ UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
 	return HitReactMontage;
 }
 
-void AAuraCharacterBase::Die(const FVector& DeathImpulse)
+void AAuraCharacterBase::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 
@@ -182,7 +193,6 @@ void AAuraCharacterBase::OnRep_Burned()
 void AAuraCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AAuraCharacterBase::InitAbilityActorInfo()
@@ -451,6 +461,45 @@ void AAuraCharacterBase::SetCharacterDebugInvincible_Implementation(bool InbInvi
 	{
 		AuraGI->SetAuraInvincible(bInvincible);
 	}
+}
+
+void AAuraCharacterBase::ASCRegistered(UAbilitySystemComponent* ASC)
+{
+	UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet);
+	if (ASC && AuraAS)
+	{
+		ASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
+			this, &AAuraCharacterBase::OnMovementSpeedChanged);
+        
+		// 초기화 시점에 한 번 속도를 설정
+		OnMovementSpeedChanged(FOnAttributeChangeData());
+	}
+}
+
+void AAuraCharacterBase::AuraPlayerStateInitialized(AAuraPlayerState* AuraPS)
+{
+	if (UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet))
+	{
+		if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
+		{
+			AuraASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
+				this, &AAuraCharacterBase::OnMovementSpeedChanged);
+        
+			// 초기화 시점에 한 번 속도를 설정
+			OnMovementSpeedChanged(FOnAttributeChangeData());
+		}
+	}
+}
+
+void AAuraCharacterBase::OnMovementSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+}
+
+void AAuraCharacterBase::StopMovementInput()
+{
+	GetMovementComponent()->StopMovementImmediately();
+	GetMovementComponent()->StopActiveMovement();
 }
 
 void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const

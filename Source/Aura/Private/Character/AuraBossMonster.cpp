@@ -18,9 +18,9 @@ AAuraBossMonster::AAuraBossMonster()
 {
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
 	SpringArm->SetUsingAbsoluteRotation(true);
-	SpringArm->bDoCollisionTest = false;
 	SpringArm->SetRelativeRotation(FRotator(-30.f, -180.f, 0.f));
 	SpringArm->TargetArmLength = 600.f;
+	SpringArm->bDoCollisionTest = true;
 	SpringArm->SetupAttachment(RootComponent);
 
 	DeathCamera = CreateDefaultSubobject<UCameraComponent>("Camera");
@@ -53,10 +53,19 @@ void AAuraBossMonster::PossessedBy(AController* NewController)
 	OnHealthChanged.AddDynamic(this, &AAuraBossMonster::BeginBerserkMode);
 }
 
-void AAuraBossMonster::Die(const FVector& DeathImpulse)
+void AAuraBossMonster::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
 	// 랙돌 효과와 무기 드랍
-	Super::Die(DeathImpulse);
+	Super::Die(DeathImpulse, KilledBy);
+	
+	// 월드 위치에 고정
+	// SpringArm->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	
+	// 카메라를 척추에 고정
+	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, FName("Pelvis"));
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritRoll = false;
+	SpringArm->bInheritYaw = false;
 }
 
 void AAuraBossMonster::SetIsBeingShocked_Implementation(bool bInShock)

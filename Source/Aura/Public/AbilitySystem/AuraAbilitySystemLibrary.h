@@ -10,6 +10,10 @@
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
+class UMVVM_DebugMenu;
+class UItemToolTipWidgetController;
+class USettingsMenuWidgetController;
+class AAuraEnemy;
 struct FDamageEffectParams;
 class UGameOverWidgetController;
 class ULootTiers;
@@ -21,6 +25,8 @@ class UAttributeMenuWidgetController;
 class UUOverlayWidgetController;
 class UAbilityInfo;
 struct FWidgetControllerParams;
+class AuraUserWidget;
+
 /**
  * 
  */
@@ -50,10 +56,19 @@ public:
 	static UGameOverWidgetController* GetGameOverWidgetController(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static USettingsMenuWidgetController* GetSettingsMenuWidgetController(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UItemToolTipWidgetController* GetItemToolTipWidgetController(const UObject* WorldContextObject);
+	
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UMVVM_DebugMenu* GetDebugMenuViewModel(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UMVVM_CardSelection* GetCardSelectionViewModel(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UMVVM_Inventory* GetInventoryMenuViewModel(const UObject* WorldContextObject);
 
 	/*
 	* 어빌리티 시스템 초기화
@@ -237,8 +252,12 @@ public:
 
 	// 메시지 게임플레이 이펙트 적용
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static void ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor);
+	static void ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText = FText());
 
+	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static UAuraUserWidget* AddMessageToActor(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText = FText(),
+	                                         UTexture2D* Image = nullptr);
+	
 	// 메시지 태그 제거
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|Message")
 	static void RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag);
@@ -254,6 +273,13 @@ public:
 	static int32 GetAbilityUpgradeStackCountByAuraPS(AAuraPlayerState* AuraPS, const FGameplayTag& Tag);
 
 	// 튜토리얼 월드 판단
-	UFUNCTION(BlueprintPure, Category = "GameplayAbility|GameplayMechanics")
+	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static bool IsThisMapTutorial(const UObject* WorldContextObject);
+
+	// GAS 액터 소환 함수
+	UFUNCTION(BlueprintCallable, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static APawn* SpawnGasActor(const UObject* WorldContextObject, TSubclassOf<APawn> SpawnClass, int32 Level, FTransform SpawnTransform, AActor* Owner);
+	
+	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
+	static const FItemData GetItemDataByItemName(const UObject* WorldContextObject, const FName& ItemName);
 };

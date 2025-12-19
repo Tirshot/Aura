@@ -8,9 +8,11 @@
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Actor/AuraDropItem.h"
 #include "AI/AuraAIController.h"
 #include "AI/NavigationModifier.h"
 #include "Character/AuraBossMonster.h"
+#include "Character/AuraCharacter.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "UI/ViewModel/MVVM_LoadSlot.h"
 #include "Kismet/GameplayStatics.h"
@@ -597,6 +599,188 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 		}	
 	}
     return RandomUpgradeInfos;
+}
+
+bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, FName ItemID, int ItemCount)
+{
+	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Character))
+	{
+		bool bFound = false;
+		FInventorySlot* Slot = const_cast<FInventorySlot*>(Inventory->FindItemSlot(ItemID, bFound));
+
+		// 슬롯이 존재하지 않으면 새로운 아이템 추가
+		if (!bFound)
+		{
+			if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+			{
+				if (const FItemData* FoundRow = AuraGI->GetItemData(ItemID))
+				{
+					UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
+					return Inventory->AddItem_Internal(*FoundRow, ItemCount);
+				}
+			}
+			return false;
+		}
+		// 슬롯이 이미 존재할 경우, 기존 아이템 수량만 증가
+		if (const FItemData* FoundRow = Slot->ItemHandle.GetRow<FItemData>(TEXT("GiveItemToCharacter")))
+		{
+			if (FoundRow->bStackable)
+			{	// 중첩 가능
+				Slot->ItemCount++;
+				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
+				return true;
+			}
+			else
+			{	// 중첩 불가
+				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
+				return Inventory->AddItem_Internal(*FoundRow, ItemCount);
+			}
+		}
+	}
+	return false;
+}
+
+void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, FItemData DropItemData, FVector ItemSpawnLocation)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	int32 RandValue = FMath::RandRange(0, 6);
+	int32 RandValue2 = FMath::RandRange(0, RandValue);
+	
+	float RandLocationX = FMath::RandRange(0, 50);
+	float RandLocationY = FMath::RandRange(0, 50);
+	
+	ItemSpawnLocation.X += RandLocationX;
+	ItemSpawnLocation.Y += RandLocationY;
+	
+	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
+	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
+	
+	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
+		DropItemClass,
+		ItemSpawnLocation,
+		RandRotation,
+		SpawnParams);
+
+	if (DropItemActor)
+	{
+		DropItemActor->InitializeItem(DropItemData);
+		DropItemActor->SetItemCount(1); // 아이템 갯수
+		DropItemActor->SetOwner(OwnedCharacter);
+	}
+}
+
+void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharacter* KilledBy)
+{
+	if (!DeadEnemy || !KilledBy)
+		return;
+	
+	if (!HasAuthority())
+		return;
+	
+	ECharacterClass EnemyCharacterClass = ICombatInterface::Execute_GetCharacterClass(DeadEnemy);
+	
+	// 아이템 드랍 테이블 가져오기
+	if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
+	{
+		if (auto ItemInfos = AuraGI->GetItemInfos())
+		{
+			auto DropList = ItemInfos->DropList;
+			
+			// 그룹 별 아이템 드랍 확률
+			auto ItemGroupDropProbability = ItemInfos->ItemGroupDropProbability;
+			
+			// 키 - 캐릭터 클래스, 값 - 클래스에 등장하는 아이템 별 확률 구조체
+			// 값을 찾지 못하면 리턴
+			if (!DropList.Find(EnemyCharacterClass))
+				return;
+			
+			FDropItemProbabilityArray DropItemArray = *DropList.Find(EnemyCharacterClass);
+			
+			// 몬스터 클래스 별, 동시에 드랍되는 아이템 갯수
+			int32 DropItemCounts = DropItemArray.DropItemCounts;
+			
+			// 그룹 뽑기, 기본적으로 아이템 그룹은 '기타'
+			EItemGroup SelectedItemGroup = EItemGroup::ETC;
+			
+			// 전체 아이템 그룹의 확률 합산 - 가중치 확률 분모 구하기
+			float AllItemGroupProbability = 0.f;
+			for (auto Pair : ItemGroupDropProbability)
+			{
+				AllItemGroupProbability += Pair.Value;
+			}
+			
+			// 동시 드랍 아이템 갯수만큼 스폰 반복
+			for (int i = 0; i < DropItemCounts; i++)
+			{
+				float RandGroupValue = FMath::RandRange(0.f, AllItemGroupProbability);
+				float SumGroupProbability = 0.f;
+			
+				for (auto Pair : ItemGroupDropProbability)
+				{
+					// usable->Equipment->Charm->ETC 순으로 계산
+					SumGroupProbability += Pair.Value;
+				
+					// 당첨
+					if (RandGroupValue <= SumGroupProbability)
+					{
+						SelectedItemGroup = Pair.Key;
+						break;
+					}
+				}
+			
+				// 전체 아이템의 확률 합산 - 가중치 확률 분모 구하기
+				float AllItemsProbability = 0.f;  
+				for (auto DropItem : DropItemArray.DropItemProbabilities)
+				{
+					auto DropItemHandle = DropItem.ItemHandle;
+					auto DropItemInfo = DropItemHandle.GetRow<FItemData>("ItemInfo");
+					auto DropItemGroup = DropItemInfo->ItemGroup;
+				
+					// 이미 당첨된 아이템 그룹이 아니면 넘어감
+					if (DropItemGroup != SelectedItemGroup)
+						continue;
+				
+					auto DropItemProbability = DropItem.DropProbability;
+				
+					AllItemsProbability += DropItemProbability;
+				}
+			
+				float RandItemValue = FMath::RandRange(0.f, AllItemsProbability);
+				float SumItemProbability = 0.f;
+				FName DropItemName = TEXT("");
+				FItemData DropItemData;
+			
+				// 데이터 테이블의 행 핸들과 확률을 가짐
+				for (auto DropItem : DropItemArray.DropItemProbabilities)
+				{
+					auto DropItemHandle = DropItem.ItemHandle;
+					auto DropItemInfo = DropItemHandle.GetRow<FItemData>("ItemInfo");
+					auto DropItemGroup = DropItemInfo->ItemGroup;
+				
+					// 이미 당첨된 아이템 그룹이 아니면 넘어감
+					if (DropItemGroup != SelectedItemGroup)
+						continue;
+				
+					auto DropItemProbability = DropItem.DropProbability;
+				
+					// 아이템 뽑기
+					SumItemProbability += DropItemProbability;
+					if (RandItemValue <= SumItemProbability)
+					{
+						DropItemName = DropItemHandle.RowName;
+						DropItemData = *DropItemInfo;
+						break;
+					}
+				}
+			
+				// 월드에 아이템 드랍
+				FVector ItemSpawnLocation = DeadEnemy->GetActorLocation();
+				SpawnDropItemActor(KilledBy, DropItemData, ItemSpawnLocation);
+			}
+		}
+	}
 }
 
 void AAuraGameModeBase::AddAbilityUpgradeToEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass, AActor* ApplyActor)

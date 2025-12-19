@@ -26,7 +26,7 @@ protected:
 	void KeepMagicCircleInRange();
 
 public:
-	void SetDecalSize(float InSize) {MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);}
+	void SetDecalSize(float InSize);
 	void SetCircleRange(float InRange) {CircleRange = InRange;}
 	void SetDecalMaterial(UMaterialInterface* InMaterial) {MagicCircleDecal->SetMaterial(0, InMaterial);}
 	

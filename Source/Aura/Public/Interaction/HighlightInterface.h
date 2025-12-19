@@ -25,6 +25,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void UnHighlightActor();
 
+	// Move To 컴포넌트로 이동시키는 함수!!
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void SetMoveToLocation(FVector& OutDestination);
 };

@@ -8,6 +8,7 @@
 #include "Engine/DataTable.h"
 #include "OverlayWidgetController.generated.h"
 
+struct FInventorySlot;
 class UAuraUserWidget;
 class UAbilityInfo;
 class UAuraAbilitySystemComponent;
@@ -53,6 +54,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOverlayVisibilityChangedSignature
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnButtonVisibilityChangedSignature, bool, bVisibility);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCloseMenuAnchors, bool, bClose);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDebugModeActivated, bool, bActivated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShowMenuKeyPressed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOpenMenuAnchor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCenterDescriptionRemoved);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemToolTipActivated, const FName&, ItemName, bool, bActivated);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController
@@ -111,8 +116,34 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
 	FOnDebugModeActivated OnDebugModeActivated;
-	
 
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnShowMenuKeyPressed OnAttributeMenuKeyPressed;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnShowMenuKeyPressed OnSpellMenuKeyPressed;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnShowMenuKeyPressed OnESCMenuKeyPressed;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnShowMenuKeyPressed OnInventoryMenuKeyPressed;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnOpenMenuAnchor OnSettingsMenuAnchorOpen;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnOpenMenuAnchor OnDebugMenuAnchorOpen;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnOpenMenuAnchor OnAreYouSureAnchorOpen;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnItemToolTipActivated OnItemToolTipActivated;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
+	FOnCenterDescriptionRemoved OnCenterDescriptionRemoved;
+	
 public:
 	UFUNCTION(BlueprintCallable)
 	void ShowOverlayWidget(bool bShow);
@@ -125,7 +156,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void ShowSpellMenuButton(bool bShow);
-	
+
 public:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UUserWidget> OverlayWidget;
@@ -155,6 +186,10 @@ protected:
 	// 메시지 제거
 	UFUNCTION()
 	void MessageRemove(const FGameplayTag& Tag);
+	
+public:
+	UFUNCTION(BlueprintCallable)
+	void RemoveCenterDescriptionMessage();
 };
 
 template <typename T>

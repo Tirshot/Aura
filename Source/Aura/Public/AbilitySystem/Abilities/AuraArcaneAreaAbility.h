@@ -18,13 +18,16 @@ public:
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
 	virtual void CheckAbilityUpgrades() override;
-
+	
 protected:
 	UFUNCTION(BlueprintCallable)
 	void SpawnArcaneArea(const FVector& Location);
 
 	UFUNCTION()
 	void OnArcaneAreaDestroyed(AActor* DestroyedActor);
+	
+	UFUNCTION(BlueprintCallable)
+	void CalculateSlowRadiusAndSlowRatio();
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
@@ -34,13 +37,28 @@ protected:
 	float LifeSpan = 5.f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float DefaultSlowDownRatio = 0.25f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float SlowDownPerLevelRatio = 0.05f;
+	
+	UPROPERTY(BlueprintReadOnly, Category="ArcaneArea")
 	float SlowDownRatio = 0.25f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float DefaultSlowRadius = 200.f;
+
+	UPROPERTY(BlueprintReadOnly, Category="ArcaneArea")
 	float SlowRadius = 200.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
+	float SlowRadiusPerLevel = 20.f;
+	
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float ApplyEffectPeriod = 0.2f;
+
+	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
+	float RangePerLevel = 80.f;
 
 protected:
 	UPROPERTY(EditDefaultsOnly)

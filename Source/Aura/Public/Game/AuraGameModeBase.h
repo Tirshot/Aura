@@ -4,9 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Data/EnemyAbilityUpgradeInfo.h"
+#include "AbilitySystem/Data/ItemInfo.h"
+#include "Character/AuraCharacterBase.h"
 #include "GameFramework/GameModeBase.h"
 #include "AuraGameModeBase.generated.h"
 
+class AAuraCharacter;
 struct FGameplayTag;
 struct FAuraAbilityUpgradeInfo;
 class UGameplayEffect;
@@ -22,6 +25,7 @@ class UCharacterClassInfo;
 class UAbilityInfo;
 class UMVVM_LoadSlot;
 class USaveGame;
+class AAuraDropItem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
@@ -83,6 +87,18 @@ public:
 	
 	UFUNCTION()
 	TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three(AAuraPlayerState* AuraPS);
+
+public:
+	/*
+	 *	아이템 추가
+	 */
+	UFUNCTION(BlueprintCallable)
+	bool GiveItemToCharacter(AAuraCharacter* Character, FName ItemID, int ItemCount = 1);
+	void SpawnDropItemActor(AAuraCharacter* OwnedCharacter, FItemData DropItemData, FVector ItemSpawnLocation);
+
+	// 아이템 드랍
+	UFUNCTION()
+	void DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharacter* KilledBy);
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Character Class Default")
@@ -100,6 +116,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Item")
 	TObjectPtr<ULootTiers> LootTiers;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Item Drop")
+	TSubclassOf<AAuraDropItem> DropItemClass;
+	
 	// 기본 맵 이름
 	UPROPERTY(EditDefaultsOnly)
 	FString DefaultMapName;
@@ -111,9 +130,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	FName DefaultPlayerStartTag;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
 
+	UFUNCTION(BlueprintCallable)
 	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
 
 public:

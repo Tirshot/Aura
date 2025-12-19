@@ -7,7 +7,7 @@
 #include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAttributeSet.h"
-#include "AbilitySystem/Data/AttributeInfo.h"
+#include "Blueprint/UserWidget.h"
 #include "Character/AuraCharacter.h"
 #include "Character/AuraEnemy.h"
 #include "Game/AuraGameModeBase.h"
@@ -18,6 +18,14 @@
 #include "UI/HUD/AuraHUD.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "Engine/OverlapResult.h"
+#include "Game/AuraGameInstance.h"
+#include "UI/Widget/AuraUserWidget.h"
+#include "Interaction/MessageInterface.h"
+#include "Player/AuraPlayerController.h"
+#include "UI/Widget/AuraCenterDescriptionWidget.h"
+#include "UI/Widget/AuraMessageBoxWidget.h"
+#include "UI/Widget/AuraOverlayWidget.h"
+#include "UI/Widget/AuraUserWidget.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD)
@@ -104,6 +112,32 @@ UGameOverWidgetController* UAuraAbilitySystemLibrary::GetGameOverWidgetControlle
 	return nullptr;
 }
 
+USettingsMenuWidgetController* UAuraAbilitySystemLibrary::GetSettingsMenuWidgetController(
+	const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AAuraHUD* AuraHUD = nullptr;
+
+	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
+	{
+		return AuraHUD->GetSettingsMenuWidgetController(WCParams);
+	}
+	return nullptr;
+}
+
+UItemToolTipWidgetController* UAuraAbilitySystemLibrary::GetItemToolTipWidgetController(
+	const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AAuraHUD* AuraHUD = nullptr;
+
+	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
+	{
+		return AuraHUD->GetItemToolTipWidgetController(WCParams);
+	}
+	return nullptr;
+}
+
 UMVVM_DebugMenu* UAuraAbilitySystemLibrary::GetDebugMenuViewModel(const UObject* WorldContextObject)
 {
 	AAuraHUD* AuraHUD = nullptr;
@@ -128,6 +162,21 @@ UMVVM_CardSelection* UAuraAbilitySystemLibrary::GetCardSelectionViewModel(const 
 		if (AuraHUD)
 		{
 			return AuraHUD->CardSelectionViewModel;
+		}
+	}
+
+	return nullptr;
+}
+
+UMVVM_Inventory* UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(const UObject* WorldContextObject)
+{
+	AAuraHUD* AuraHUD = nullptr;
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	{
+		AuraHUD = Cast<AAuraHUD>(PC->GetHUD());
+		if (AuraHUD)
+		{
+			return AuraHUD->InventoryMenuViewModel;
 		}
 	}
 
@@ -375,7 +424,7 @@ TArray<FVector> UAuraAbilitySystemLibrary::EvenlyRotatedVectors(const FVector& F
 	return Vectors;
 }
 
-void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor)
+void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText)
 {
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
 	if (AuraCharacter == nullptr)
@@ -399,6 +448,82 @@ void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& 
 		FGameplayTagContainer CurrentOwnedTags;
 		ASC->GetOwnedGameplayTags(CurrentOwnedTags);
 	}
+}
+
+UAuraUserWidget* UAuraAbilitySystemLibrary::AddMessageToActor(const FGameplayTag& Tag, AActor* AvatarActor,
+                                                             FText AppendText, UTexture2D* Image)
+{
+	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
+	if (AuraCharacter == nullptr)
+		return nullptr;
+	
+	UAbilitySystemComponent* ASC = AuraCharacter->GetAbilitySystemComponent();
+	if (ASC == nullptr)
+		return nullptr;
+	
+	UWorld* World = AvatarActor->GetWorld();
+	
+	UAuraGameInstance* GI = World->GetGameInstance<UAuraGameInstance>();
+	if (!GI || !GI->MessageTable)
+		return nullptr;
+	
+
+	if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(Tag.GetTagName(), "Found Message"))
+	{
+		FText FinalMessage = FoundRow->Message;
+		if (!AppendText.IsEmpty())
+		{
+			FFormatOrderedArguments Args;
+			Args.Add(AppendText);
+			FinalMessage = FText::Format(FoundRow->Message, Args);
+		}
+		
+		// 메시지 위젯 생성
+		if (FoundRow->MessageWidget)
+		{
+			UAuraUserWidget* MessageWidget = CreateWidget<UAuraUserWidget>(World, FoundRow->MessageWidget);
+			if (UAuraMessageBoxWidget* AuraMessageBox = Cast<UAuraMessageBoxWidget>(MessageWidget))
+			{
+				if (auto AuraPC = AuraCharacter->GetController<AAuraPlayerController>())
+				{
+					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
+					{
+						if (UAuraOverlayWidget* OverlayWidget = Cast<UAuraOverlayWidget>(AuraHUD->GetOverlayWidget()))
+						{
+							// 메시지 박스에 내용 추가
+							OverlayWidget->WBP_MessageBox->AddTextMessageToBox(FinalMessage);
+							return OverlayWidget->WBP_MessageBox;
+						}
+					}
+				}
+			}
+			
+			// 중앙 설명 텍스트
+			if (auto AuraPC = AuraCharacter->GetController<AAuraPlayerController>())
+			{
+				if (Cast<UAuraCenterDescriptionWidget>(FoundRow->MessageWidget))
+				{
+					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
+					{
+						if (UAuraOverlayWidget* OverlayWidget = Cast<UAuraOverlayWidget>(AuraHUD->GetOverlayWidget()))
+						{
+							OverlayWidget->WBP_CenterTutorialDescription->TextBlock->SetText(FinalMessage);
+							return OverlayWidget->WBP_CenterTutorialDescription;
+						}
+					}
+				}
+			}
+			
+			// 팝업 텍스트
+			if (MessageWidget->Implements<UMessageInterface>())
+			{
+				IMessageInterface::Execute_SetMessage(MessageWidget, FinalMessage, Image);
+				MessageWidget->AddToViewport();
+				return MessageWidget;
+			}
+		}
+	}
+	return nullptr;
 }
 
 void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag)
@@ -473,6 +598,44 @@ bool UAuraAbilitySystemLibrary::IsThisMapTutorial(const UObject* WorldContextObj
 		return true;
 
 	return false;
+}
+
+APawn* UAuraAbilitySystemLibrary::SpawnGasActor(const UObject* WorldContextObject, TSubclassOf<APawn> SpawnClass, int32 Level, FTransform SpawnTransform, AActor* Owner)
+{
+	APawn* SpawningActor = WorldContextObject->GetWorld()->SpawnActorDeferred<APawn>
+	(
+		SpawnClass,
+		SpawnTransform,
+		Owner,
+		nullptr,
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn,
+		ESpawnActorScaleMethod::MultiplyWithRoot
+	);
+
+	if (!SpawningActor)
+		return nullptr;
+	
+	if (AAuraEnemy* AuraEnemy = Cast<AAuraEnemy>(SpawningActor))
+	{
+		AuraEnemy->SetLevel(Level);
+	}
+
+	SpawningActor->FinishSpawning(SpawnTransform);
+
+	return SpawningActor;
+}
+
+const FItemData UAuraAbilitySystemLibrary::GetItemDataByItemName(const UObject* WorldContextObject,
+	const FName& ItemName)
+{
+	if (ItemName.IsNone())
+		return FItemData();
+	
+	if (UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(UGameplayStatics::GetGameInstance(WorldContextObject)))
+	{
+		return *AuraGI->GetItemData(ItemName);
+	}
+	return FItemData();
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)
@@ -712,6 +875,9 @@ void UAuraAbilitySystemLibrary::GetClosestTargets(int32 MaxTargets, const TArray
 
 bool UAuraAbilitySystemLibrary::IsNotFriend(AActor* FirstActor, AActor* SecondActor)
 {
+	if (!FirstActor || !SecondActor)
+		return false;
+	
 	const bool bBothArePlayers = FirstActor->ActorHasTag(FName("Player")) && SecondActor->ActorHasTag(FName("Player"));
 	const bool bBothAreEnemys = FirstActor->ActorHasTag(FName("Enemy")) && SecondActor->ActorHasTag(FName("Enemy"));
 

@@ -11,6 +11,7 @@ enum class ERangeShape : uint8
 {
 	ERS_Circle = 0, // 원형
 	ERS_Rectangle, // 직사각형
+	ERS_RectangleAndCircle,
 	ERS_Cone, // 부채꼴
 };
 

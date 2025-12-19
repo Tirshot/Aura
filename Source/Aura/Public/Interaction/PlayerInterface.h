@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "PlayerInterface.generated.h"
 
+class UEquipmentComponent;
+class UInventoryComponent;
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UPlayerInterface : public UInterface
@@ -61,8 +63,14 @@ public:
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();
 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	UInventoryComponent* GetInventoryComponent();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	UEquipmentComponent* GetEquipmentComponent();
+	
 	/*
-	/ ���� ���� ��Į
+	/ 범위 지정 스펠
 	*/
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr, float InRange = 100.f, float InRadius = 200.f) const;
@@ -71,7 +79,7 @@ public:
 	void HideMagicCircle() const;
 
 	/*
-	/ ����
+	/ 저장
 	*/
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void SaveProgress(const FName& CheckpointTag);

@@ -5,8 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/HUD.h"
+#include "UI/ViewModel/MVVM_Inventory.h"
+#include "UI/Widget/ItemToolTipWidget.h"
+#include "UI/WidgetController/AuraWidgetController.h"
 #include "AuraHUD.generated.h"
 
+class UItemToolTipWidgetController;
+class USettingsMenuWidgetController;
 class UMVVM_DebugMenu;
 class USpellUpgradesWidgetController;
 struct FAuraAbilityUpgradeInfo;
@@ -35,6 +40,8 @@ public:
 	USpellUpgradesWidgetController* GetSpellUpgradesWidgetController(const FWidgetControllerParams& WCParams);
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
+	USettingsMenuWidgetController* GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams);
+	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
 	UMVVM_DebugMenu* GetDebugMenuViewModel() { return DebugMenuViewModel; }
 
@@ -62,6 +69,9 @@ public:
 	
 	UFUNCTION()
 	void HideOverlay();
+	
+	UFUNCTION()
+	UAuraUserWidget* GetOverlayWidget() {return OverlayWidget;}
 	
 private:
 	UPROPERTY()
@@ -112,6 +122,18 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UGameOverWidgetController> GameOverWidgetControllerClass;
 
+	UPROPERTY()
+	TObjectPtr<USettingsMenuWidgetController> SettingsMenuWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USettingsMenuWidgetController> SettingsMenuWidgetControllerClass;
+	
+	UPROPERTY()
+	TObjectPtr<UItemToolTipWidgetController> ItemToolTipWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UItemToolTipWidgetController> ItemToolTipWidgetControllerClass;
+
 public:
 	// MVVM
 	UPROPERTY(EditDefaultsOnly)
@@ -131,5 +153,11 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_DebugMenu> DebugMenuViewModel;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UMVVM_Inventory> InventoryMenuViewModelClass;
+
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UMVVM_Inventory> InventoryMenuViewModel;
 
 };

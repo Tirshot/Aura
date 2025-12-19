@@ -27,6 +27,9 @@ class AURA_API UAuraDamageGameplayAbility : public UAuraGameplayAbility
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GameplayAbility")
+	float DefaultAbilityRange = 300.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GameplayAbility")
 	float AbilityRange = 300.f;
 
 	UFUNCTION(BlueprintCallable)

@@ -100,10 +100,10 @@ int32 AAuraEnemy::GetCharacterLevel_Implementation()
     return Level;
 }
 
-void AAuraEnemy::Die(const FVector& DeathImpulse)
+void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
     // 랙돌 효과와 무기 드랍
-    Super::Die(DeathImpulse);
+    Super::Die(DeathImpulse, KilledBy);
 
     HealthBar->DestroyComponent();
     
@@ -120,9 +120,18 @@ void AAuraEnemy::Die(const FVector& DeathImpulse)
         // 블랙보드 키 기본값 설정
         AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
     }
-
-    // 아이템 드랍
+    
+    // 포션, 회복 수정 아이템 드랍
     SpawnLoot();
+    
+    // 아이템 드랍
+    if (HasAuthority())
+    {
+        if (AAuraGameModeBase* GM = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+        {
+            GM->DropItemOnMonsterDied(this, KilledBy);
+        }
+    }
 }
 
 void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
@@ -270,6 +279,14 @@ void AAuraEnemy::InitAbilityActorInfo()
 void AAuraEnemy::InitializeDefaultAttributes() const
 {
     UAuraAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, Level, AbilitySystemComponent);
+}
+
+void AAuraEnemy::SpawnDropItem()
+{
+    // 아이템 그룹 별 - 소모품, 장비, 기타 등 등장 확률
+    
+    // 캐릭터 클래스에 맞는 아이템 - 그룹 내 아이템 별 등장 확률
+    
 }
 
 void AAuraEnemy::AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass)

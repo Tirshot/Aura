@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
@@ -15,7 +16,9 @@
 #include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "UI/WidgetController/SpellMenuWidgetController.h"
 #include "UI/WidgetController/GameOverWidgetController.h"
+#include "UI/WidgetController/ItemToolTipWidgetController.h"
 #include "UI/WidgetController/SaveProgressWidgetController.h"
+#include "UI/WidgetController/SettingsMenuWidgetController.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 UOverlayWidgetController *AAuraHUD::GetOverlayWidgetController(const FWidgetControllerParams &WCParams)
@@ -90,6 +93,30 @@ USaveProgressWidgetController* AAuraHUD::GetSaveProgressWidgetController(const F
     return SaveProgressWidgetController;
 }
 
+USettingsMenuWidgetController* AAuraHUD::GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+    if (SettingsMenuWidgetController == nullptr)
+    {   // 없으면 생성
+        SettingsMenuWidgetController = NewObject<USettingsMenuWidgetController>(this, SettingsMenuWidgetControllerClass);
+        SettingsMenuWidgetController->SetWidgetControllerParams(WCParams);
+        SettingsMenuWidgetController->BindCallbacksToDependencies();
+    }
+
+    return SettingsMenuWidgetController;
+}
+
+UItemToolTipWidgetController* AAuraHUD::GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams)
+{
+    if (ItemToolTipWidgetController == nullptr)
+    {   // 없으면 생성
+        ItemToolTipWidgetController = NewObject<UItemToolTipWidgetController>(this, ItemToolTipWidgetControllerClass);
+        ItemToolTipWidgetController->SetWidgetControllerParams(WCParams);
+        ItemToolTipWidgetController->BindCallbacksToDependencies();
+    }
+
+    return ItemToolTipWidgetController;
+}
+
 void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySystemComponent *ASC, UAttributeSet *AS)
 {
     // 위젯과 위젯 컨트롤러 생성
@@ -123,6 +150,9 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     
     // 스펠 업그레이드 위젯 컨트롤러 생성
     SpellUpgradesWidgetController = GetSpellUpgradesWidgetController(WidgetControllerParams);
+
+    // 설정 메뉴 위젯 컨트롤러 생성
+    SettingsMenuWidgetController = GetSettingsMenuWidgetController(WidgetControllerParams);
     
     // 카드 선택 UI 뷰 모델 생성
     CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
@@ -137,6 +167,10 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     // 디버그 메뉴 뷰 모델 생성
     DebugMenuViewModel = NewObject<UMVVM_DebugMenu>(this, DebugMenuViewModelClass);
     DebugMenuViewModel->ViewModelInitialized();
+
+    // 인벤토리 뷰 모델 생성
+    InventoryMenuViewModel = NewObject<UMVVM_Inventory>(this, InventoryMenuViewModelClass);
+    InventoryMenuViewModel->BindDependencies();
 }
 
 void AAuraHUD::BeginPlay()

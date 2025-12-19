@@ -34,7 +34,7 @@ protected:
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
+	UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
 	// 레벨 정보
@@ -90,6 +90,8 @@ public:
 	TMap<FGameplayTag, int32>& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
 	void SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer);
 	
+	void ResetAttributesToBaseValue();
+	
 public:
 	// 어빌리티 업그레이드
 	UPROPERTY()
@@ -124,8 +126,6 @@ public:
 	// 활성화 되지 않은 모든 어빌리티의 태그를 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "GAS|Abilities")
 	TArray<FGameplayTag> GetAllInActiveAbilityTags() const;
-
-	void GetRandomAttributeUpgrade();
 
 	UFUNCTION()
 	void HandleAbilitiesSet();

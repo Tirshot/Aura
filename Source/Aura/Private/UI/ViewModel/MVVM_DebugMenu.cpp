@@ -5,6 +5,8 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Game/AuraGameInstance.h"
+#include "Game/AuraGameModeBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
@@ -93,4 +95,12 @@ void UMVVM_DebugMenu::SetbAuraDebugInvincible(bool bInvincible)
 void UMVVM_DebugMenu::SetbAuraInfiniteMana(bool bInfiniteMana)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bAuraInfiniteMana, bInfiniteMana);
+}
+
+void UMVVM_DebugMenu::OnForcingSaveButtonPressed()
+{
+	if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+	{
+		AuraGM->GameAutoSave();
+	}
 }

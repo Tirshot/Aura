@@ -33,7 +33,7 @@ public:
 
 	// 전투 인터페이스 오버라이드
 	virtual int32 GetCharacterLevel_Implementation() override;
-	virtual void Die(const FVector& DeathImpulse) override;
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
@@ -74,7 +74,7 @@ protected:
 	virtual void InitializeDefaultAttributes() const override;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, category = "Character Class Defaults")
 	int32 Level = 1;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Character Class Defaults")
@@ -97,6 +97,9 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpawnLoot();
+
+	UFUNCTION()
+	void SpawnDropItem();
 
 public:
 	// 어빌리티 업그레이드 및 스택 관리는 몬스터의 ASC에 직접

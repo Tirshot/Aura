@@ -11,7 +11,8 @@
 			"AdditionalDependencies": [
 				"GameplayAbilities",
 				"ModelViewViewModel",
-				"Engine"
+				"Engine",
+				"UMG"
 			]
 		}
 	],

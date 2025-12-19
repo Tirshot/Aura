@@ -8,6 +8,8 @@
 #include "AbilitySystem/Data/LevelUpInfo.h"
 #include "Player/AuraPlayerState.h"
 #include "AuraGameplayTags.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/Data/ItemInfo.h"
 
 void UOverlayWidgetController::BroadcastInitialValues()
 {
@@ -204,4 +206,9 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
 void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)
 {
     OnMessageRemoved.Broadcast(Tag);
+}
+
+void UOverlayWidgetController::RemoveCenterDescriptionMessage()
+{
+    OnCenterDescriptionRemoved.Broadcast();
 }

@@ -7,6 +7,7 @@
 #include "Interaction/CombatInterface.h"
 #include "AuraCharacterBase.generated.h"
 
+struct FOnAttributeChangeData;
 struct FGameplayEffectSpecHandle;
 class UAbilitySystemComponent;
 class UAttributeSet;
@@ -26,6 +27,7 @@ public:
 	AAuraCharacterBase();
 
 	virtual void Tick(float DeltaTime) override;
+	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
@@ -35,7 +37,7 @@ public:
 
 	/** Combat Interface 시작 **/
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
-	virtual void Die(const FVector& DeathImpulse) override;
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
 	virtual bool IsDead_Implementation() const override;
 	virtual AActor* GetAvatar_Implementation() override;
@@ -62,6 +64,15 @@ public:
 	/** Combat Interface 끝 **/
 
 	FOnASCRegistered OnASCRegistered;
+	void ASCRegistered(UAbilitySystemComponent* ASC);
+	
+	UFUNCTION()
+	void AuraPlayerStateInitialized(AAuraPlayerState* AuraPS);
+	void OnMovementSpeedChanged(const FOnAttributeChangeData& Data);
+	
+	UFUNCTION(BlueprintCallable)
+	void StopMovementInput();
+	
 	FOnDeath OnDeath;
 	FOnDamageSignature OnDamageDelegate;
 
@@ -96,7 +107,7 @@ public:
 
 	UFUNCTION()
 	virtual void OnRep_Burned();
-
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo();

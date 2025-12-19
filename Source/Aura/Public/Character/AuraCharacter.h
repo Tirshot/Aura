@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "Character/AuraCharacterBase.h"
 #include "Interaction/PlayerInterface.h"
+#include "Player/EquipmentComponent.h"
 #include "AuraCharacter.generated.h"
 
+class UInventoryComponent;
 class UBoxComponent;
 class UNiagaraComponent;
 
@@ -39,17 +41,20 @@ public:
 	virtual void ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial = nullptr, float InRange = 0.f, float InRadius = 200.f) const override;
 	virtual void HideMagicCircle_Implementation() const override;
 	virtual void SaveProgress_Implementation(const FName& CheckpointTag) override;
+	virtual UInventoryComponent* GetInventoryComponent_Implementation() override;
+	virtual UEquipmentComponent* GetEquipmentComponent_Implementation() override;
 	// 플레이어 인터페이스 끝
 
 	// 전투 인터페이스
 	virtual int32 GetCharacterLevel_Implementation() override;
-	virtual void Die(const FVector& DeathImpulse) override;
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual void ShowDamageNumber_Implementation(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed) override;
 	// 전투 인터페이스 끝
 
 public:
 	TObjectPtr<class USpringArmComponent> GetSpringArmComponent(){return SpringArm;}
 	TObjectPtr<UBoxComponent> GetBoxComponent(){return Box;}
+	
 public:
 	UPROPERTY(EditDefaultsOnly)
 	float DeathTime = 5.f;
@@ -70,6 +75,8 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLevelUpParticles() const;
 
+	
+
 private:
 	// 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category="Camera")
@@ -85,6 +92,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap", meta=(AllowPrivateAccess = true))
 	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<UInventoryComponent> Inventory;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<UEquipmentComponent> Equipment;
+	
 private:
 	virtual void InitAbilityActorInfo() override;
 };

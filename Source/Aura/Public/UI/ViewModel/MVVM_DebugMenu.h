@@ -40,6 +40,9 @@ public:
 	void SetbVisibleLevelUpButton(bool bVisible);
 	void SetbAuraDebugInvincible(bool bInvincible);
 	void SetbAuraInfiniteMana(bool bInfiniteMana);
+
+	UFUNCTION(BlueprintCallable)
+	void OnForcingSaveButtonPressed();
 	
 private:
 	/*필드 노티파이*/

@@ -35,11 +35,6 @@ void AAuraPlayerState::BeginPlay()
     
     // 초기화 완료
     OnPlayerStateInitialized.Broadcast(this);
-    
-    // if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
-    // {
-    //     AuraASC->AbilitiesInitializedDelegate.AddUObject(this, &AAuraPlayerState::HandleAbilitiesSet);
-    // }
 }
 
 void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -132,6 +127,19 @@ void AAuraPlayerState::SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>&
 void AAuraPlayerState::SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer)
 {
     OwnedAbilityUpgradeTags = InTagContainer;
+}
+
+void AAuraPlayerState::ResetAttributesToBaseValue()
+{
+    for (TFieldIterator<FProperty> It(GetClass()); It; ++It)
+    {
+        if (FGameplayAttribute::IsGameplayAttributeDataProperty(*It))
+        {
+            FGameplayAttributeData* AttributeData = It->ContainerPtrToValuePtr<FGameplayAttributeData>(this);
+            AttributeData->SetBaseValue(AttributeData->GetCurrentValue());
+            AttributeData->SetCurrentValue(AttributeData->GetCurrentValue());
+        }
+    }
 }
 
 void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
@@ -274,20 +282,10 @@ TArray<FGameplayTag> AAuraPlayerState::GetAllInActiveAbilityTags() const
     return AllTags;
 }
 
-void AAuraPlayerState::GetRandomAttributeUpgrade()
-{
-    // 랜덤 속성 뽑기
-    TArray<FGameplayTag> AttributeTags = FAuraGameplayTags::Get().AttributesTags;
-    int32 RandAttributeNum = FMath::RandRange(0, AttributeTags.Num() - 1);
-    
-    // 랜덤 수치 뽑기
-    
-}
-
 void AAuraPlayerState::Server_AddAbilityUpgradeTag_Implementation(FGameplayTag UpgradeTag)
 {
-    // 비 보유 중인 어빌리티라면 새로 습득
-    // 보유 중인 어빌리티라면 레벨 상승
+    // 비 보유 중인 어빌리티라면 새로 습득, 보유 중인 어빌리티라면 레벨 상승
+    
     // 어빌리티 군 업그레이드는 Abilties.Fire / Abilities.Lightning / Abilities.Arcane
     // 만약 어빌리티 획득 업그레이드(또는 레벨업 업그레이드)라면 업그레이드 태그로 저장하지 않음
     if (UpgradeTag.RequestDirectParent().MatchesTag(FGameplayTag::RequestGameplayTag("Abilities")))

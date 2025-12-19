@@ -9,6 +9,8 @@
 #include "Actor/AbilityRangeIndicator.h"
 #include "CombatInterface.generated.h"
 
+class AAuraCharacter;
+class AAuraCharacterBase;
 enum class ERangeShape : uint8;
 class UAbilitySystemComponent;
 class UAnimMontage;
@@ -65,7 +67,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UAnimMontage* GetHitReactMontage();
 
-	virtual void Die(const FVector& DeathImpulse) = 0;
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) = 0;
 	virtual FOnDeath& GetOnDeathDelegate() = 0;
 	virtual FOnDamageSignature& GetOnDamageDelegate() = 0;
 

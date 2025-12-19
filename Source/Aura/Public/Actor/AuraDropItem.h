@@ -1,0 +1,83 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "AbilitySystem/Data/ItemInfo.h"
+#include "Components/SphereComponent.h"
+#include "GameFramework/Actor.h"
+#include "Interaction/HighlightInterface.h"
+#include "Interaction/ItemInterface.h"
+#include "AuraDropItem.generated.h"
+
+class UWidgetComponent;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDropItemInitialized, FText, ItemTitle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClickedDroppedItem, AActor*, ItemOwner);
+
+UCLASS()
+class AURA_API AAuraDropItem : public AActor, public IHighlightInterface, public IItemInterface
+{
+	GENERATED_BODY()
+	
+public:	
+	AAuraDropItem();
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+public:
+	// 하이라이트 인터페이스 오버라이드
+	virtual void HighlightActor_Implementation() override;
+	virtual void UnHighlightActor_Implementation() override;
+	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
+	// 하이라이트 인터페이스 끝
+	
+public:
+	void InitializeItem(const FItemData& InItemData);
+	
+	UFUNCTION()
+	void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
+	
+	UFUNCTION()
+	void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_AddItemToCharacter(AActor* ItemOwner);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetItemCount(int32 InCount) {ItemCount = InCount;}
+	
+	void SetTitleWidgetVisibility(bool InValue);
+	
+	UFUNCTION()
+	void OnClickedItem(UPrimitiveComponent* TouchedComponent , FKey ButtonPressed);
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnDropItemInitialized OnDropItemInitialized;
+	
+	FOnClickedDroppedItem OnClickedDroppedItem;
+	
+public:
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UStaticMeshComponent> Mesh;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USphereComponent> Sphere;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UWidgetComponent> ItemTitleWidget;
+	
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USceneComponent> MoveToComponent;
+	
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ItemData)
+	FItemData DropItemData;
+	
+	int32 ItemCount = 1;
+	
+protected:
+	UFUNCTION()
+	void OnRep_ItemData();
+};

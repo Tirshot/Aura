@@ -74,7 +74,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 	
 	GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
 
-	// TODO :: Shape에 따른 데칼 모양과 크기 결정하기
+	// Shape에 따른 데칼 모양과 크기 결정
 	switch (Shape)
 	{
 	case ERangeShape::ERS_Circle:	
@@ -104,6 +104,31 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 		}
 
 	case ERangeShape::ERS_Rectangle:
+		{
+			if (IsValid(RectMaterial))
+			{
+				DecalComponent->SetMaterial(0, RectMaterial);
+				DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
+			}
+			
+			// 액터에게 붙일 경우
+			if (bAttachToActor)
+			{
+				AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
+				FVector RelativeLocation = Owner->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+		
+				SetActorRelativeLocation(FVector(Height, 0.f, RelativeLocation.Z));
+				
+			}
+			else // 월드에 소환할 경우
+			{
+				SetActorLocation(FVector(Location.X, Location.Y, ImpactPoint.Z));
+			}
+			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
+			break;
+		}
+		
+	case ERangeShape::ERS_RectangleAndCircle:
 		{
 			if (IsValid(RectMaterial))
 			{

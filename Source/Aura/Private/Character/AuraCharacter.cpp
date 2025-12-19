@@ -24,6 +24,7 @@
 
 AAuraCharacter::AAuraCharacter()
 {
+    bReplicates = true;
     LevelUpNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>("LevelUpNiagaraComponent");
     LevelUpNiagaraComponent->SetupAttachment(GetRootComponent());
     LevelUpNiagaraComponent->bAutoActivate = false;
@@ -55,6 +56,13 @@ AAuraCharacter::AAuraCharacter()
 
     MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("MiniMapCapture");
     MiniMapCapture->SetupAttachment(RootComponent);
+
+    // 인벤토리
+    Inventory = CreateDefaultSubobject<UInventoryComponent>("Inventory");
+    Inventory->SetIsReplicated(true);
+    
+    Equipment = CreateDefaultSubobject<UEquipmentComponent>("Equipment");
+    Equipment->SetIsReplicated(true);
 
     CharacterClass = ECharacterClass::Elementalist;
 }
@@ -131,8 +139,11 @@ void AAuraCharacter::LoadProgress()
                 AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
                 AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
                 AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgrades);
+                
+                // 인벤토리 불러오기
+                IPlayerInterface::Execute_GetInventoryComponent(this)->SetInventorySlots(SaveData->SavedInventorySlots);
+                IPlayerInterface::Execute_GetEquipmentComponent(this)->SetEquipmentSlots(SaveData->SavedEquipmentSlotsMap);
             }
-            
             // 1차 속성, 2차 속성 적용
             UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
         }
@@ -305,16 +316,20 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
             SaveData->AttributePoints = AuraPlayerState->GetAttributePoints();
             SaveData->SpellPoints = AuraPlayerState->GetSpellPoints();
         }
+        
+        UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet);
 
         // 1차 속성
-        SaveData->Strength = UAuraAttributeSet::GetStrengthAttribute().GetNumericValue(GetAttributeSet());
-        SaveData->Intelligence = UAuraAttributeSet::GetIntelligenceAttribute().GetNumericValue(GetAttributeSet());
-        SaveData->Resilience = UAuraAttributeSet::GetResilienceAttribute().GetNumericValue(GetAttributeSet());
-        SaveData->Vigor = UAuraAttributeSet::GetVigorAttribute().GetNumericValue(GetAttributeSet());
+        UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+        
+        SaveData->Strength = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetStrengthAttribute());
+        SaveData->Intelligence = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetIntelligenceAttribute());
+        SaveData->Resilience = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetResilienceAttribute());
+        SaveData->Vigor = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetVigorAttribute());
 
         // 바이탈 속성
-        SaveData->Health = UAuraAttributeSet::GetHealthAttribute().GetNumericValue(GetAttributeSet());
-        SaveData->Mana = UAuraAttributeSet::GetHealthAttribute().GetNumericValue(GetAttributeSet());
+        SaveData->Health = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetHealthAttribute());
+        SaveData->Mana = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetManaAttribute());
         
         SaveData->bFirstTimeLoading = false;
 
@@ -322,8 +337,6 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
             return;
         
         // 델리게이트 생성 및 바인딩
-        UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent);
-        
         FForEachAbility SaveAbilityDelegate;
         SaveData->SavedAbilities.Empty();
         SaveAbilityDelegate.BindLambda([this, AuraASC, SaveData](const FGameplayAbilitySpec& AbilitySpec)
@@ -357,7 +370,10 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         {
             SaveData->SavedAbilityUpgrades = AuraPS->GetAbilityUpgradeTagContainer();
         }
-        
+
+        // 인벤토리 저장
+        SaveData->SavedInventorySlots = IPlayerInterface::Execute_GetInventoryComponent(this)->GetSlots();
+        SaveData->SavedEquipmentSlotsMap = IPlayerInterface::Execute_GetEquipmentComponent(this)->GetSlots().EquipSlotMap;
         AuraGameMode->SaveInGameProgressData(SaveData);
         
         // 저장중 위젯 제거
@@ -371,6 +387,16 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
     }
 }
 
+UInventoryComponent* AAuraCharacter::GetInventoryComponent_Implementation()
+{
+    return Inventory;
+}
+
+UEquipmentComponent* AAuraCharacter::GetEquipmentComponent_Implementation()
+{
+    return Equipment;
+}
+
 int32 AAuraCharacter::GetCharacterLevel_Implementation()
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
@@ -379,10 +405,10 @@ int32 AAuraCharacter::GetCharacterLevel_Implementation()
     return AuraPlayerState->GetCharacterLevel();
 }
 
-void AAuraCharacter::Die(const FVector& DeathImpulse)
+void AAuraCharacter::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
     // 랙돌 효과 발생
-    Super::Die(DeathImpulse);
+    Super::Die(DeathImpulse, KilledBy);
 
     AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
     if (AuraGM == nullptr)

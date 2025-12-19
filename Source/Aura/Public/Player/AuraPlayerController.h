@@ -28,6 +28,7 @@ enum class ETargetingStatus : uint8
 {
 	TargetingEnemy,
 	TargetingNonEnemy,
+	TargetingItem,
 	None
 };
 
@@ -129,8 +130,8 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CharacterInfiniteMana(bool bInfiniteMana);
 
-private:
-	UPROPERTY(EditAnywhere, Category="Input")
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> AuraContext;
 	
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -145,9 +146,29 @@ private:
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> DebugAction;
 
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> AttributeMenuAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> SpellMenuAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ESCMenuAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> AltAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> InventoryMenuAction;
+	
 	void Move(const struct FInputActionValue& InputActionValue);
 	void Zoom(const struct FInputActionValue& InputActionValue);
 	void ActivateDebugMode(const struct FInputActionValue& InputActionValue);
+	void ShowAttributeMenu();
+	void ShowSpellMenu();
+	void ShowESCMenu();
+	void ShowInventoryMenu();
+	void ShowItemTitle(const FInputActionValue& Value);
 	bool bDebugModeActivated = false;
 	
 	void ShiftPressed() { bShiftKeyDown = true; }
@@ -190,6 +211,10 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UNiagaraSystem> ClickNiagaraSystem;
+	
+	// 드랍 아이템 자동 이동 후 습득하기
+	UPROPERTY()
+	AActor* TargetItem = nullptr;
 
 	void AutoRun();
 

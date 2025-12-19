@@ -15,6 +15,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/LifeSiphon.h"
 #include "AbilitySystem/Abilities/ManaSiphon.h"
+#include "Character/AuraCharacter.h"
 #include "Character/AuraCharacterBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -110,7 +111,7 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute & Attribute,
     }
     if (Attribute == GetMovementSpeedAttribute())
     {
-        NewValue = FMath::Clamp(NewValue, 0.f, 1000.f);
+        NewValue = FMath::Clamp(NewValue, 0.f, 2000.f);
     }
 }
 
@@ -172,14 +173,6 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
         }
     }
 
-    if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
-    {
-        if (AAuraCharacterBase* AuraCharacter = Cast<AAuraCharacterBase>(Data.Target.GetAvatarActor()))
-        {
-            AuraCharacter->GetCharacterMovement()->MaxWalkSpeed = GetMovementSpeed();
-        }
-    }
-
     // 데미지 판단
     if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
     {
@@ -213,13 +206,13 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
         
         // Life Siphon 검증
         const FGameplayTag& LifeSiphonTag = FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon;
-        if (Props.SourceASC->HasMatchingGameplayTag(LifeSiphonTag))
+        if (SourceASC->HasMatchingGameplayTag(LifeSiphonTag))
         {
             // 유저의 속성 세트를 가져와 체력 설정
-            if (Props.SourceCharacter->Implements<UCombatInterface>())
+            if (SourceCharacter->Implements<UCombatInterface>())
             {
-                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
-                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(Props.SourceASC);
+                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(SourceCharacter));
+                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(SourceASC);
                 if (AuraAS && AuraASC)
                 {
                     if (FGameplayAbilitySpec* LifeSiphonSpec = AuraASC->GetSpecFromAbilityTag(LifeSiphonTag))
@@ -240,13 +233,13 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 
         // Mana Siphon 검증
         const FGameplayTag& ManaSiphonTag = FAuraGameplayTags::Get().Abilities_Passive_ManaSiphon;
-        if (Props.SourceASC->HasMatchingGameplayTag(ManaSiphonTag))
+        if (SourceASC->HasMatchingGameplayTag(ManaSiphonTag))
         {
             // 유저의 속성 세트를 가져와 마나 설정
-            if (Props.SourceCharacter->Implements<UCombatInterface>())
+            if (SourceCharacter->Implements<UCombatInterface>())
             {
-                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(Props.SourceCharacter));
-                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(Props.SourceASC);
+                UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(ICombatInterface::Execute_GetAttributeSet(SourceCharacter));
+                UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(SourceASC);
                 if (AuraAS && AuraASC)
                 {
                     if (FGameplayAbilitySpec* ManaSiphonSpec = AuraASC->GetSpecFromAbilityTag(ManaSiphonTag))
@@ -287,8 +280,17 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             {
                 // 사망
                 FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-                Props.SourceASC->AddLooseGameplayTag(DeadTag); 
-                CombatInterface->Die(UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle));
+                SourceASC->AddLooseGameplayTag(DeadTag); 
+                
+                auto DeathImpulse = UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle);
+                
+                AAuraCharacter* AuraCharacter = nullptr;
+                if (Props.SourceCharacter)
+                    AuraCharacter = Cast<AAuraCharacter>(SourceCharacter);
+                
+                CombatInterface->Die(DeathImpulse, AuraCharacter);
+                
+                // 몬스터 클래스 디폴트의 XP 오버라이드 검증
                 bIsXPOverridden = CombatInterface->Execute_IsXPOverridden(Props.TargetAvatarActor);
             }
             

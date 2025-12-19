@@ -6,14 +6,12 @@
 #include "GameFramework/GameUserSettings.h"
 #include "AuraGameUserSettings.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class AURA_API UAuraGameUserSettings : public UGameUserSettings
 {
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintPure, Category="AuraGameUserSettings")
 	static UAuraGameUserSettings* GetAuraGameUserSettings();
 };

@@ -23,6 +23,9 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 	UFUNCTION(BlueprintCallable)
+	void CalculateRange();
+	
+	UFUNCTION(BlueprintCallable)
 	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
 
 	UFUNCTION(BlueprintCallable)
@@ -55,6 +58,9 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float DamageRadius = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	float RangePerLevel = 80.f;
 
 	FTimerHandle DestroyTimer;
 };

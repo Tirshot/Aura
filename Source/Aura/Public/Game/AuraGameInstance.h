@@ -3,14 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/Data/ItemInfo.h"
 #include "Engine/GameInstance.h"
 #include "AuraGameInstance.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameInstanceInitialized);
 
 UCLASS()
 class AURA_API UAuraGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 
+public:
+	virtual void Init() override;
+	virtual void Shutdown() override;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnGameInstanceInitialized OnInitialized;
+
+	bool bInit = false;
+	
 public:
 	// 저장 슬롯
 	UPROPERTY()
@@ -49,7 +61,12 @@ public:
 	void SetAuraInfiniteMana(bool bInfiniteMana) { bAuraInfiniteMana = bInfiniteMana; }
 
 	void SetAllVariablesToDefault();
-	
+
+	// 아이템 정보
+	UFUNCTION(BlueprintCallable, Category="Item")
+	UItemInfo* GetItemInfos();
+
+	const FItemData* GetItemData(FName ItemName);
 protected:
 	// 디버그 옵션 변수
 	UPROPERTY()
@@ -63,4 +80,14 @@ protected:
 	
 	UPROPERTY()
 	bool bAuraInfiniteMana = false;
+
+public:
+	// 아이템 정보
+	UPROPERTY(EditDefaultsOnly, Category="Item")
+	TObjectPtr<UItemInfo> ItemInfos;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Message")
+	UDataTable* MessageTable;
+	
+	FDataTableRowHandle DTRowHandle;
 };

@@ -15,36 +15,38 @@ FString UAuraArcaneAreaAbility::GetDescription(int32 Level, const UObject* World
 	const float Cooldown = GetCoolDown(Level);
 	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
 	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
-	const int32 SlowDownPercent = SlowDownRatio * 100;
+	const float CalculatedSpellRange = DefaultAbilityRange + (RangePerLevel * Level);
+	const float CalculatedSlowRadius = FMath::Clamp(DefaultSlowRadius + SlowRadiusPerLevel * (Level + 1), DefaultSlowRadius, 1600.f);
+	const float CalculatedSlowPercent = FMath::Clamp(DefaultSlowDownRatio + SlowDownPerLevelRatio * (Level + 1), DefaultSlowDownRatio, 0.95f) * 100;
 
 	if (bTakeDamage)
 	{
 		// 데미지를 입히는 업그레이드 선택 시 설명
 		return FString::Printf(TEXT(
-			"<Title>아케인 영역</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에 매 틱마다 </><Damage>%d</><Default>의 피해를 입히는 </><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여 적을 중앙으로 끌어당깁니다.</>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%d퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
+			"<Title>아케인 영역</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에 매 틱마다 </><Damage>%d</><Default>의 피해를 입히는 </><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여 적을 중앙으로 끌어당깁니다.</>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%.1f 퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
 			Level,
 			ManaCost,
 			Cooldown,
-			AbilityRange,
+			CalculatedSpellRange,
 			ScaledDamage + MagicPowerDamage,
-			SlowRadius,
+			CalculatedSlowRadius,
 			LifeSpan,
 			ApplyEffectPeriod,
-			SlowDownPercent
+			CalculatedSlowPercent
 		);
 	}
 	
 	// 일반적인 설명
 	return FString::Printf(TEXT(
-		"<Title>아케인 영역</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에</><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여, </>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%d퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
+		"<Title>아케인 영역</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에</><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여, </>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%.1f 퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
-		AbilityRange,
-		SlowRadius,
+		CalculatedSpellRange,
+		CalculatedSlowRadius,
 		LifeSpan,
 		ApplyEffectPeriod,
-		SlowDownPercent
+		CalculatedSlowPercent
 	);
 }
 
@@ -55,36 +57,38 @@ FString UAuraArcaneAreaAbility::GetNextLevelDescription(int32 Level, const UObje
 	const float Cooldown = GetCoolDown(Level);
 	const float MagicAttackPower = UAuraAbilitySystemLibrary::GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower);
 	const int32 MagicPowerDamage = MagicAttackPower * MagicPowerCoefficient.GetValue();
-	const int32 SlowDownPercent = SlowDownRatio * 100;
+	const float CalculatedSpellRange = DefaultAbilityRange + (RangePerLevel * Level);
+	const float CalculatedSlowRadius = FMath::Clamp(DefaultSlowRadius + SlowRadiusPerLevel * (Level + 1), DefaultSlowRadius, 1600.f);
+	const float CalculatedSlowPercent = FMath::Clamp(DefaultSlowDownRatio + SlowDownPerLevelRatio * (Level + 1), DefaultSlowDownRatio, 0.95f) * 100;
 
 	if (bTakeDamage)
 	{
 		// 데미지를 입히는 업그레이드 선택 시 설명
 		return FString::Printf(TEXT(
-			"<Title>다음 레벨 :</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에 매 틱마다 </><Damage>%d</><Default>의 피해를 입히는 </><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여 적을 중앙으로 끌어당깁니다.</>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%d퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
+			"<Title>다음 레벨 :</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에 매 틱마다 </><Damage>%d</><Default>의 피해를 입히는 </><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여 적을 중앙으로 끌어당깁니다.</>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%.1f 퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
 			Level,
 			ManaCost,
 			Cooldown,
-			AbilityRange,
+			CalculatedSpellRange,
 			ScaledDamage + MagicPowerDamage,
-			SlowRadius,
+			CalculatedSlowRadius,
 			LifeSpan,
 			ApplyEffectPeriod,
-			SlowDownPercent
+			CalculatedSlowPercent
 		);
 	}
 	
 	// 일반적인 설명
 	return FString::Printf(TEXT(
-		"<Title>다음 레벨 :</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에</><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여, </>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%d퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
+		"<Title>다음 레벨 :</>\n<Small>레벨 </><Level>%d</>\n<Small>마나 </><ManaCost>%.1f</>\n<Small>쿨타임 </><Cooldown>%.1f</>\n<Small>범위 </><Range>%.1f</>\n<Default>스펠 범위 내에</><Num>%.1f</><Default> 크기의 아케인 영역을 </><Num>%.1f초</><Default> 동안 소환하여, </>\n<Default>적의 이동속도를 매 </><Num>%.1f초</><Default>마다 </><Num>%.1f 퍼센트 </><Default>감소시킵니다.</>\n<Small>이동속도 감소 효과를 5스택 이상 보유한 적은 기절합니다.</>"),
 		Level,
 		ManaCost,
 		Cooldown,
-		AbilityRange,
-		SlowRadius,
+		CalculatedSpellRange,
+		CalculatedSlowRadius,
 		LifeSpan,
 		ApplyEffectPeriod,
-		SlowDownPercent
+		CalculatedSlowPercent
 	);
 }
 
@@ -131,7 +135,7 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 	ArcaneArea->SlowDownEffectClass = SlowDownEffectClass;
 	ArcaneArea->SlowDownDecayEffectClass = SlowDownDecayEffectClass;
 	ArcaneArea->OnDestroyed.AddDynamic(this, &UAuraArcaneAreaAbility::OnArcaneAreaDestroyed);
-
+	
 	// 멤버 변수 설정
 	ArcaneArea->LifeSpan = LifeSpan;
 	ArcaneArea->SetSlowRadius(SlowRadius);
@@ -144,5 +148,17 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 
 void UAuraArcaneAreaAbility::OnArcaneAreaDestroyed(AActor* DestroyedActor)
 {
-	K2_EndAbility();
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
+
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+}
+
+void UAuraArcaneAreaAbility::CalculateSlowRadiusAndSlowRatio()
+{
+	// 슬로우 계수 설정
+	SlowDownRatio = FMath::Clamp(DefaultSlowDownRatio + SlowDownPerLevelRatio * GetAbilityLevel(), DefaultSlowDownRatio, 0.95f);
+	SlowRadius = FMath::Clamp(DefaultSlowRadius + SlowRadiusPerLevel * GetAbilityLevel(), DefaultSlowRadius, 1600.f);
+	
+	// 어빌리티 거리 계산
+	AbilityRange = DefaultAbilityRange + (RangePerLevel * GetAbilityLevel());
 }

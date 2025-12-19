@@ -234,13 +234,6 @@ void USpellMenuWidgetController::GlobeDeselect()
 
 void USpellMenuWidgetController::EquipButtonPressed()
 {
-	// 튜토리얼 조건 : 감전사 장착
-	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability == FAuraGameplayTags::Get().Abilities_Lightning_Electrocute)
-	{
-		// 튜토리얼 조건 완료
-		
-	}
-	
 	// (1) equip �ִϸ��̼� ���
 	const FGameplayTag& AbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 
@@ -269,6 +262,13 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 
 	// �������� �˸�
 	GetAuraASC()->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
+	
+	// 튜토리얼 조건 : 감전사 장착
+	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
+	{
+		// 튜토리얼 조건 완료
+		ElectrocuteAssignedDelegate.Broadcast(SelectedAbility.Ability);
+	}
 }
 
 void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)

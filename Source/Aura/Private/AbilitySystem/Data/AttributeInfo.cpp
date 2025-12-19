@@ -21,3 +21,16 @@ FAuraAttributeInfo UAttributeInfo::FindAttributeInfoForTag(const FGameplayTag& A
 
 	return FAuraAttributeInfo();
 }
+
+FText UAttributeInfo::GetAttributeNameForTag(const FGameplayTag& AttributeTag)
+{
+	for (const FAuraAttributeInfo info : AttributeInformation)
+	{
+		if (info.AttributeTag == AttributeTag)
+		{
+			return info.AttributeName;
+		}
+	}
+	
+	return FText();
+}

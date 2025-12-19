@@ -26,6 +26,9 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+public:
+	UAttributeInfo* GetAttributeInfo() { return AttributeInfo; }
+
 protected:
 	UFUNCTION()
 	void OnAttributePointChanged(int32 AttributePoints);

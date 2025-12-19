@@ -34,7 +34,7 @@ public:
 	
 public:
 	// 전투 인터페이스 오버라이드
-	virtual void Die(const FVector& DeathImpulse) override;
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	// 전투 인터페이스 끝
 

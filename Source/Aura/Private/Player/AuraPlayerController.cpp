@@ -9,6 +9,7 @@
 #include "Components/SplineComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
+#include "EngineUtils.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "GameFramework/Character.h"
@@ -17,12 +18,14 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/AbilityRangeIndicator.h"
+#include "Actor/AuraDropItem.h"
 #include "Actor/MagicCircle.h"
 #include "Aura/Aura.h"
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameUserSettings.h"
 #include "GameFramework/GameUserSettings.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interaction/CombatInterface.h"
@@ -34,12 +37,15 @@
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/ViewModel/MVVM_TutorialDialogue.h"
 #include "UI/Widget/LoadScreenWidget.h"
+#include "UI/WidgetController/SettingsMenuWidgetController.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
     // 서버에서 발생한 변경 사항을 복제하여 모든 클라이언트로 전송(브로드 캐스팅)
     bReplicates = true;
-
+    //bEnableClickEvents = true;
+    // bEnableMouseOverEvents = true;
+    
     // 길 찾기 스플라인
     Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 }
@@ -47,17 +53,6 @@ AAuraPlayerController::AAuraPlayerController()
 void AAuraPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-
-    // 해상도 고정
-    if (UGameUserSettings* Settings = GEngine->GetGameUserSettings())
-    {
-        FIntPoint DesiredResolution(1920, 1080);
-        Settings->SetScreenResolution(DesiredResolution);
-
-        // 창 모드
-        Settings->SetFullscreenMode(EWindowMode::Windowed);
-        Settings->ApplySettings(false); 
-    }
     
     // IMC가 할당되지 않았다면 중단
     check(AuraContext);
@@ -125,6 +120,12 @@ void AAuraPlayerController::SetupInputComponent()
     AuraInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
     AuraInputComponent->BindAction(WheelAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Zoom);
     AuraInputComponent->BindAction(DebugAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ActivateDebugMode);
+    AuraInputComponent->BindAction(AttributeMenuAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShowAttributeMenu);
+    AuraInputComponent->BindAction(SpellMenuAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShowSpellMenu);
+    AuraInputComponent->BindAction(ESCMenuAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShowESCMenu);
+    AuraInputComponent->BindAction(AltAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShowItemTitle);
+    AuraInputComponent->BindAction(AltAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShowItemTitle);
+    AuraInputComponent->BindAction(InventoryMenuAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShowInventoryMenu);
     
     // 어빌리티와 입력 액션 바인딩
     AuraInputComponent->BindAbiltyActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
@@ -145,6 +146,23 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 
     //
     UpdateRangeIndicatorRotation();
+    
+    // 아이템 클릭 후 근접하면 획득
+    if (TargetItem)
+    {
+        if (AAuraDropItem* DropItem = Cast<AAuraDropItem>(TargetItem))
+        {
+            FVector AuraLocation = GetPawn()->GetActorLocation();
+            FVector ItemLocation = DropItem->GetActorLocation();
+            
+            float Distance = FVector::Dist(AuraLocation, ItemLocation);
+            if (Distance <= 130.f)
+            {
+                DropItem->Server_AddItemToCharacter(GetPawn());
+                TargetItem = nullptr;
+            }
+        }
+    }
 }
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed)
@@ -747,6 +765,11 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
+        if (AAuraCharacter* Aura = Cast<AAuraCharacter>(GetASC()->GetAvatarActor()))
+        {
+            Aura->StopMovementInput();
+            StopAutoRun();
+        }
         return;
     }
 
@@ -834,6 +857,45 @@ void AAuraPlayerController::ActivateDebugMode(const struct FInputActionValue& In
     }
 }
 
+void AAuraPlayerController::ShowAttributeMenu()
+{
+    UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnAttributeMenuKeyPressed.Broadcast();
+}
+
+void AAuraPlayerController::ShowSpellMenu()
+{
+    UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnSpellMenuKeyPressed.Broadcast();
+}
+
+void AAuraPlayerController::ShowESCMenu()
+{
+    UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnESCMenuKeyPressed.Broadcast();
+}
+
+void AAuraPlayerController::ShowInventoryMenu()
+{
+    UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnInventoryMenuKeyPressed.Broadcast();
+}
+
+void AAuraPlayerController::ShowItemTitle(const FInputActionValue& Value)
+{
+    const bool InputValue = Value.Get<bool>();
+    if (InputValue)
+    {
+        for (TActorIterator<AAuraDropItem> It(GetWorld()); It; ++It)
+        {
+            It->SetTitleWidgetVisibility(true);
+        }
+    }
+    else
+    {
+        for (TActorIterator<AAuraDropItem> It(GetWorld()); It; ++It)
+        {
+            It->SetTitleWidgetVisibility(false);
+        }
+    }
+}
+
 void AAuraPlayerController::CursorTrace()
 {
     // 입력 상태 태그 확인
@@ -909,12 +971,29 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
                 }
             }
             
-            TargetingStatus = ThisActor->Implements<UEnemyInterface>() ? ETargetingStatus::TargetingEnemy : ETargetingStatus::TargetingNonEnemy;
+            if (ThisActor->Implements<UEnemyInterface>())
+            {
+                TargetingStatus = ETargetingStatus::TargetingEnemy;
+            }
+            else if (ThisActor->Implements<UItemInterface>())
+            {
+                TargetingStatus = ETargetingStatus::TargetingItem;
+                TargetItem = ThisActor;
+            }
+            else
+            {
+                TargetingStatus = ETargetingStatus::TargetingNonEnemy;
+            }
         }
         else
         {
             TargetingStatus = ETargetingStatus::None;
         }
+    }
+    
+    if (TargetingStatus == ETargetingStatus::TargetingItem)
+    {
+        TargetItem = ThisActor;
     }
 
     if (GetASC())

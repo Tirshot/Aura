@@ -60,3 +60,9 @@ void AMagicCircle::KeepMagicCircleInRange()
 		}
 	}
 }
+
+void AMagicCircle::SetDecalSize(float InSize)
+{
+	Radius = InSize;
+	MagicCircleDecal->DecalSize = FVector(127.f, Radius, Radius);
+}
