@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/TextBlock.h"
+#include "Components/RichTextBlock.h"
 #include "UI/Widget/AuraUserWidget.h"
+#include "GameplayTagContainer.h"
 #include "AuraToolTipStatRow.generated.h"
 
 /**
@@ -16,9 +17,15 @@ class AURA_API UAuraToolTipStatRow : public UAuraUserWidget
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(meta=(BindWidget))
-	UTextBlock* TextBlock_StatName;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	URichTextBlock* RichTextBlock_StatName;
 	
-	UPROPERTY(meta=(BindWidget))
-	UTextBlock* TextBlock_StatCounts;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	URichTextBlock* RichTextBlock_Plus;
+	
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	URichTextBlock* RichTextBlock_StatCounts;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayTag Tag;
 };

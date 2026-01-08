@@ -8,6 +8,7 @@
 #include "Player/EquipmentComponent.h"
 #include "AuraCharacter.generated.h"
 
+class UCharmComponent;
 class UInventoryComponent;
 class UBoxComponent;
 class UNiagaraComponent;
@@ -38,6 +39,7 @@ public:
 	virtual void AddToSpellPoints_Implementation(int32 InSpellPoints) override;
 	virtual int32 GetAttributePoints_Implementation() const override;
 	virtual int32 GetSpellPoints_Implementation() const override;
+	virtual void SetSpellPoints_Implementation(int32 InPoints) const override;
 	virtual void ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial = nullptr, float InRange = 0.f, float InRadius = 200.f) const override;
 	virtual void HideMagicCircle_Implementation() const override;
 	virtual void SaveProgress_Implementation(const FName& CheckpointTag) override;
@@ -97,6 +99,9 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
 	TObjectPtr<UEquipmentComponent> Equipment;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<UCharmComponent> Charm;
 	
 private:
 	virtual void InitAbilityActorInfo() override;

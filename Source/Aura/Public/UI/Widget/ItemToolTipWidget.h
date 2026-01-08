@@ -21,6 +21,9 @@ public:
 	URichTextBlock* RichTextBlock_ItemName;
 	
 	UPROPERTY(meta=(BindWidget))
+	URichTextBlock* RichTextBlock_SlotSize;
+	
+	UPROPERTY(meta=(BindWidget))
 	UVerticalBox* VerticalBox_ItemStat;
 		
 	UPROPERTY(meta=(BindWidget))

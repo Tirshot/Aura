@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Components/ActorComponent.h"
-#include "Net/Serialization/FastArraySerializer.h"
 #include "InventoryComponent.generated.h"
 
 USTRUCT(BlueprintType)
@@ -53,6 +52,8 @@ struct FInventorySlot
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventorySlotChanged, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemGet, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemoved, FItemData, RemovedItemData);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AURA_API UInventoryComponent : public UActorComponent
@@ -72,6 +73,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventorySlotChanged OnInventorySlotChanged;
 
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnItemGet OnItemGet;
+	
+	UPROPERTY(BlueprintAssignable, Category="Inventory")
+	FOnItemRemoved OnItemRemoved;
+	
 	UFUNCTION()
 	void AssignDataTableToSlot();
 	
@@ -134,6 +141,10 @@ public:
 	
 	FItemData GetCurrentDragItemData() const;
 	FItemData* GetItemData(FName ItemName);
+	
+public:
+	// 참 아이템 효과 적용
+	
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Inventory")

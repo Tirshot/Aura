@@ -21,6 +21,7 @@
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
+#include "Player/CharmComponent.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -63,6 +64,9 @@ AAuraCharacter::AAuraCharacter()
     
     Equipment = CreateDefaultSubobject<UEquipmentComponent>("Equipment");
     Equipment->SetIsReplicated(true);
+
+    Charm = CreateDefaultSubobject<UCharmComponent>("Charm");
+    Charm->SetIsReplicated(true);
 
     CharacterClass = ECharacterClass::Elementalist;
 }
@@ -259,6 +263,13 @@ int32 AAuraCharacter::GetSpellPoints_Implementation() const
     return AuraPlayerState->GetSpellPoints();
 }
 
+void AAuraCharacter::SetSpellPoints_Implementation(int32 InPoints) const
+{
+    AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+    check(AuraPlayerState);
+    return AuraPlayerState->SetSpellPoints(InPoints);
+}
+
 void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial, float InRange , float InRadius) const
 {
     if (IsLocallyControlled() == false)
@@ -317,8 +328,6 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
             SaveData->SpellPoints = AuraPlayerState->GetSpellPoints();
         }
         
-        UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet);
-
         // 1차 속성
         UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent);
         

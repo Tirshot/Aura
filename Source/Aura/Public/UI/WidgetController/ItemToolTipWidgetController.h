@@ -40,6 +40,11 @@ public:
 	void AddStatRow(const FGameplayTag& AttributeTag, const float Stat);
 	
 	UFUNCTION(BlueprintCallable)
+	void ClearStatRows();
+	void ChangeTextColorByUpgradeTag(UAuraToolTipStatRow* StatRow, FString BaseString, FString& OutString);
+	void ChangeTextColorByAbilityTag(UAuraToolTipStatRow* StatRow, FString BaseString, FString& OutString);
+
+	UFUNCTION(BlueprintCallable)
 	void SetItemDataToWidget(const FItemData& ItemData);
 	
 	UFUNCTION(BlueprintCallable)

@@ -41,6 +41,16 @@ void AAuraDropItem::BeginPlay()
 	
 	Mesh->OnClicked.AddDynamic(this, &AAuraDropItem::OnClickedItem);
 	ItemTitleWidget->OnClicked.AddDynamic(this, &AAuraDropItem::OnClickedItem);
+	
+	// 아이템 핸들이 지정되어 있지만, 아이템 데이터가 채워져있지 않으면 데이터 채움
+	if (!ItemHandle.IsNull() && DropItemData.Name.IsNone())
+	{
+		if (auto FoundRow = ItemHandle.GetRow<FItemData>("FoundRow"))
+		{
+			DropItemData = *FoundRow;
+			InitializeItem(DropItemData);
+		}
+	}
 }
 
 void AAuraDropItem::Tick(float DeltaTime)

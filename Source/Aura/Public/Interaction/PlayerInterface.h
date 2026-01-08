@@ -49,6 +49,9 @@ public:
 	int32 GetSpellPoints() const;
 
 	UFUNCTION(BlueprintNativeEvent)
+	void SetSpellPoints(int32 InPoints) const;
+	
+	UFUNCTION(BlueprintNativeEvent)
 	void AddToPlayerLevel(int32 InLevel);
 
 	UFUNCTION(BlueprintNativeEvent)

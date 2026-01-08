@@ -5,6 +5,7 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/AuraCharacterBase.h"
+#include "Character/AuraEnemy.h"
 
 AAuraAIController::AAuraAIController()
 {
@@ -18,7 +19,12 @@ AAuraAIController::AAuraAIController()
 void AAuraAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-
+	
+	if (AAuraEnemy* EnemyBase = GetPawn<AAuraEnemy>())
+	{
+		bool bIsRangedAttacker = EnemyBase->bIsRangedAttacker;
+		Blackboard->SetValueAsBool("RangedAttacker", bIsRangedAttacker);
+	}
 }
 
 void AAuraAIController::Server_CharacterInvincible_Implementation(bool bInvincible)

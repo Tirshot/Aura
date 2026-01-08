@@ -36,26 +36,44 @@ struct FItemStat
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Main"))
 	float Strength = 0.f;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Main"))
 	float Intelligence = 0.f;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Main"))
 	float Resilience = 0.f;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Main"))
 	float Vigor = 0.f;
 	
-	UPROPERTY(EditAnywhere)
-	float MovementSpeed = 0.f;
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
+	float MagicAttackPower = 0.f;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
+	float Armor = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
 	float MaxHealth = 0.f;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
 	float MaxMana = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
+	float HealthRegeneration = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
+	float ManaRegeneration = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Item"))
+	float MovementSpeed = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Special"))
+	float CriticalHitChance = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta =(Category = "Status|Special"))
+	float ArmorPenetration = 0.f;
 	
 	bool IsEmpty() const { return Strength == 0.f && Intelligence == 0.f && Resilience == 0.f && Vigor == 0.f && MovementSpeed == 0.f && MaxHealth == 0.f && MaxMana == 0.f;}
 };
@@ -70,7 +88,7 @@ public:
 	FGameplayTag AbilityTag = FGameplayTag::EmptyTag;
 	
 	UPROPERTY(EditDefaultsOnly)
-	int32 AbilityLevel = 0;
+	int32 AbilityLevel = 1;
 	
 };
 
@@ -84,7 +102,7 @@ public:
 	TSubclassOf<UGameplayEffect> EffectClass;
 	
 	UPROPERTY(EditDefaultsOnly)
-	int32 EffectStack = 0;
+	int32 EffectStack = 1;
 	
 };
 
@@ -114,8 +132,16 @@ struct FItemData: public FTableRowBase
 	UTexture2D* Image = nullptr;
 	
 	// 드롭 아이템 스태틱 메시
+	// 공통
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
-	UStaticMesh* StaticMesh = nullptr;
+	TObjectPtr<UStaticMesh> StaticMesh = nullptr;
+
+	// 부츠 전용
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ItemSubGroup==EItemSubGroup::Boots", EditConditionHides),  Category = "Item Data")
+	TObjectPtr<UStaticMesh> LeftFootMesh = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ItemSubGroup==EItemSubGroup::Boots", EditConditionHides),  Category = "Item Data")
+	TObjectPtr<UStaticMesh> RightFootMesh = nullptr;
 	
 	// 드롭 아이템 머티리얼
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
@@ -143,10 +169,6 @@ struct FItemData: public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	TArray<FAbilityTagAndLevel> AbilityUpgradeTagAndLevel;
 	
-	// 효과 설명
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (MultiLine = true), Category = "Item Data")
-	FText EffectDescription = FText();
-	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	EUpgradeRarity Rarity = EUpgradeRarity::Common;
 	
@@ -155,6 +177,14 @@ struct FItemData: public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	EItemSubGroup ItemSubGroup = EItemSubGroup::None;
+	
+	bool operator==(const FItemData& Other) const
+	{
+		if (Name == Other.Name)
+			return true;
+		
+		return false;
+	};
 };
 
 /* 아이템 드롭 확률 */
@@ -171,17 +201,38 @@ struct FDropItemProbability: public FTableRowBase
 	float DropProbability = 10.f;
 };
 
-// 드롭 확률 구조체를 TArray로 래핑
 USTRUCT(BlueprintType)
-struct FDropItemProbabilityArray: public FTableRowBase
+struct FDropItemGroup: public FTableRowBase
 {
 	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	int32 DropItemCounts = 1;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TArray<FDropItemProbability> DropItemProbabilities;
+	EItemGroup ItemGroup;
+
+	// 아이템 그룹 별 - 소모품, 장비, 기타 등 등장 확률
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item|Drop")
+	float GroupProbability;
+
+	// 각 아이템 별 드랍 확률
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<FDropItemProbability> Items;
+	
+	bool IsValid() const
+	{
+		return Items.Num() > 0;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FDropItemGroupArray: public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 DropCounts = 1;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<FDropItemGroup> Groups;
 };
 
 UCLASS()
@@ -199,13 +250,10 @@ public:
 	
 	const FItemData* GetItemDataByID(const FName& ItemID) const;
 
+	const FDropItemGroupArray* GetDropItemGroup(ECharacterClass EnemyClass);
+	
 public:
-	// 아이템 드랍 확률
-	// 아이템 그룹 별 - 소모품, 장비, 기타 등 등장 확률
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item|Drop")
-	TMap<EItemGroup, float> ItemGroupDropProbability;
-
-	// 몬스터 클래스 별 & 각 아이템 별 등장 확률
+	// 몬스터 클래스 별 & 각 아이템 그룹 별 + 각 아이템 별 등장 확률
 	UPROPERTY(EditDefaultsOnly, Category="Item|Drop")
-	TMap<ECharacterClass, FDropItemProbabilityArray> DropList;
+	TMap<ECharacterClass, FDropItemGroupArray> DropList;
 };

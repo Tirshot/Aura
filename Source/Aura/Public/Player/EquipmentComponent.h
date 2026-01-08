@@ -3,14 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ActiveGameplayEffectHandle.h"
-#include "GameplayAbilitySpecHandle.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Components/ActorComponent.h"
 #include "EquipmentComponent.generated.h"
 
+class AAuraCharacter;
 class UAuraAbilitySystemComponent;
 class UInventoryComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemEquipped, const FItemData&, EquippedItemData);
 
 // 슬롯에 적용되는 데이터
 USTRUCT(BlueprintType)
@@ -26,6 +27,9 @@ public:
 	// 아이템으로 획득하는 어빌리티
 	UPROPERTY()
 	TArray<FGameplayTag> AbilityTags;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> AttachedMesh;
 
 	UPROPERTY()
 	bool bIsSlotEquipped = false;
@@ -87,7 +91,18 @@ public:
 	// 불러오기용, 슬롯 채우기
 	void SetEquipmentSlots(TMap<EItemSubGroup, FEquipmentSlotInfo> SavedEquipmentMap);
 	void ApplyItemStat(const FItemData& ItemData, FEquipmentSlotInfo* Slot);
-
+	
+	// 아이템 메시 캐릭터에 장착, 해제
+	void AttachItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData, AAuraCharacter* AuraCharacter, EItemSubGroup ItemGroup, FName SocketName);
+	void AttachBootsItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData, AAuraCharacter* AuraCharacter);
+	
+	void AttachItemMeshToAuraCharacterMesh(const FItemData& ItemData, AAuraCharacter* AuraCharacter);
+	void DetachItemMeshFromAuraCharacterMesh(EItemSubGroup ItemSubGroup);
+	
+public:
+	UPROPERTY(BlueprintAssignable, BlueprintReadOnly)
+	FOnItemEquipped OnItemEquipped;
+	
 protected:
 	// 내부 장착
 	void EquipItem_Internal(const FItemData& ItemData, int OriginIndex);

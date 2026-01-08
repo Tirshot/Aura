@@ -501,7 +501,7 @@ UAuraUserWidget* UAuraAbilitySystemLibrary::AddMessageToActor(const FGameplayTag
 			// 중앙 설명 텍스트
 			if (auto AuraPC = AuraCharacter->GetController<AAuraPlayerController>())
 			{
-				if (Cast<UAuraCenterDescriptionWidget>(FoundRow->MessageWidget))
+				if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(MessageWidget))
 				{
 					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
 					{

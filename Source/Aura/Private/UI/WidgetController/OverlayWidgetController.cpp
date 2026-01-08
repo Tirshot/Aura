@@ -196,11 +196,13 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
     AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
     // 변경할 슬롯에 선택한 어빌리티의 정보를 채움
-    FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-    Info->StatusTag = Status;
-    Info->InputTag = Slot;
-    Info->AbilityTag = AbilityTag;
-    AbilityInfoDelegate.Broadcast(*Info);
+    if (FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
+    {
+        Info->StatusTag = Status;
+        Info->InputTag = Slot;
+        Info->AbilityTag = AbilityTag;
+        AbilityInfoDelegate.Broadcast(*Info);
+    }
 }
 
 void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)

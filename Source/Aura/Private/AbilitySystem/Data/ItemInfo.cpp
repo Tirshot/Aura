@@ -17,3 +17,15 @@ const FItemData* UItemInfo::GetItemDataByID(const FName& ItemID) const
 {
 	return ItemTable->FindRow<FItemData>(ItemID, TEXT("FoundRow"));
 }
+
+const FDropItemGroupArray* UItemInfo::GetDropItemGroup(ECharacterClass EnemyClass)
+{
+	for (const auto& Pair : DropList)
+	{
+		if (Pair.Key == EnemyClass)
+		{
+			return &Pair.Value;
+		}
+	}
+	return nullptr;
+}

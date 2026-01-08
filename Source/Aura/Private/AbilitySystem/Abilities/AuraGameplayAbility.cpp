@@ -14,11 +14,17 @@
 
 FString UAuraGameplayAbility::GetDescription(int32 Level, const UObject* WorldContextObject)
 {
+    if (Level <= 0)
+        return GetLockedDescription(Level, WorldContextObject);
+    
     return FString::Printf(TEXT("<Default>%s, </><Level>%d</>"), L"Default Ability Name - LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum", Level);
 }
 
 FString UAuraGameplayAbility::GetNextLevelDescription(int32 Level, const UObject* WorldContextObject)
 {
+    if (Level == 1)
+        return TEXT("");
+    
     return FString::Printf(TEXT("<Default>%s, </><Level>%d</>"), L"Default Ability Name - LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum LoremIpsum", Level);
 }
 

@@ -42,9 +42,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnTutorialIndexChanged TutorialIndexChangedDelegate;
-
+	
 public:
 	void OnTutorialDataLoaded();
+	
+	UFUNCTION()
+	void OnItemEquipTutorialFinished(const FItemData& EquippedItem);
 	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tutorial")

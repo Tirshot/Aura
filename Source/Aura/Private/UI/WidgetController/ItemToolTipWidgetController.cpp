@@ -34,13 +34,93 @@ void UItemToolTipWidgetController::AddStatRow(const FGameplayTag& AttributeTag, 
 	}
 }
 
+void UItemToolTipWidgetController::ClearStatRows()
+{
+	if (!ToolTipWidget)
+		return;
+	
+	StatRows.Empty();
+	ToolTipWidget->VerticalBox_ItemStat->ClearChildren();
+}
+
+void UItemToolTipWidgetController::ChangeTextColorByUpgradeTag(UAuraToolTipStatRow* StatRow, FString BaseString, FString& OutString)
+{
+	FGameplayTag DirectParentTag = StatRow->Tag.RequestDirectParent();
+	if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Upgrades.Fire")))
+	{
+		OutString = FString::Printf(TEXT("<Fire>%s</>"), *BaseString);
+	}
+	else if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Upgrades.Lightning")))
+	{
+		OutString = FString::Printf(TEXT("<Lightning>%s</>"), *BaseString);
+	}
+	else if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Upgrades.Arcane")))
+	{
+		OutString = FString::Printf(TEXT("<Arcane>%s</>"), *BaseString);
+	}
+	else
+	{
+		OutString = BaseString;
+	}
+}
+
+void UItemToolTipWidgetController::ChangeTextColorByAbilityTag(UAuraToolTipStatRow* StatRow, FString BaseString, FString& OutString)
+{
+	FGameplayTag DirectParentTag = StatRow->Tag.RequestDirectParent();
+	if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.Fire")))
+	{
+		OutString = FString::Printf(TEXT("<Fire>%s</>"), *BaseString);
+	}
+	else if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.Lightning")))
+	{
+		OutString = FString::Printf(TEXT("<Lightning>%s</>"), *BaseString);
+	}
+	else if (DirectParentTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.Arcane")))
+	{
+		OutString = FString::Printf(TEXT("<Arcane>%s</>"), *BaseString);
+	}
+	else
+	{
+		OutString = BaseString;
+	}
+}
+
 void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData)
 {
 	const FAuraGameplayTags& AuraTags = FAuraGameplayTags::Get();
 	
 	// 아이템 이름, 설명 설정
-	ToolTipWidget->RichTextBlock_ItemName->SetText(ItemData.DisplayName);
+	FString ItemName = ItemData.DisplayName.ToString();
+	EUpgradeRarity ItemRarity = ItemData.Rarity;
+	FString ItemNameWithTextStyle = FString();
+	
+	switch (ItemRarity)
+	{
+	case EUpgradeRarity::Common:
+		ItemNameWithTextStyle = FString::Printf(TEXT("<Common>%s</>"), *ItemName);
+		break;
+		
+	case EUpgradeRarity::Rare:
+		ItemNameWithTextStyle = FString::Printf(TEXT("<Rare>%s</>"), *ItemName);
+		break;
+		
+	case EUpgradeRarity::Unique:
+		ItemNameWithTextStyle = FString::Printf(TEXT("<Unique>%s</>"), *ItemName);
+		break;
+		
+	case EUpgradeRarity::Legendary:
+		ItemNameWithTextStyle = FString::Printf(TEXT("<Legendary>%s</>"), *ItemName);
+		break;
+	}
+	
+	// 아이템 이름, 아이템 설명
+	ToolTipWidget->RichTextBlock_ItemName->SetText(FText::FromString(ItemNameWithTextStyle));
 	ToolTipWidget->RichTextBlock_ItemDesc->SetText(ItemData.Description);
+	
+	// 슬롯 칸 수
+	FString SlotSize = FString();
+	SlotSize = FString::Printf(TEXT("(%dx%d)"), ItemData.Size.X, ItemData.Size.Y);
+	ToolTipWidget->RichTextBlock_SlotSize->SetText(FText::FromString(SlotSize));
 	
 	// 스탯 설명 설정
 	AddStatRow(AuraTags.Attributes_Primary_Strength, ItemData.ItemStat.Strength);
@@ -50,6 +130,12 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 	AddStatRow(AuraTags.Attributes_Secondary_MovementSpeed, ItemData.ItemStat.MovementSpeed);
 	AddStatRow(AuraTags.Attributes_Secondary_MaxHealth, ItemData.ItemStat.MaxHealth);
 	AddStatRow(AuraTags.Attributes_Secondary_MaxMana, ItemData.ItemStat.MaxMana);
+	AddStatRow(AuraTags.Attributes_Secondary_MagicAttackPower, ItemData.ItemStat.MagicAttackPower);
+	AddStatRow(AuraTags.Attributes_Secondary_Armor, ItemData.ItemStat.Armor);
+	AddStatRow(AuraTags.Attributes_Secondary_ArmorPenetration, ItemData.ItemStat.ArmorPenetration);
+	AddStatRow(AuraTags.Attributes_Secondary_CriticalHitChance, ItemData.ItemStat.CriticalHitChance);
+	AddStatRow(AuraTags.Attributes_Secondary_HealthRegeneration, ItemData.ItemStat.HealthRegeneration);
+	AddStatRow(AuraTags.Attributes_Secondary_ManaRegeneration, ItemData.ItemStat.ManaRegeneration);
 	
 	// Row 위젯을 생성해서 추가
 	for (const auto& StatRow : StatRows)
@@ -64,8 +150,8 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 				if (StatName.IsEmpty())
 					continue;
 			
-				StatRowWidget->TextBlock_StatName->SetText(StatName);
-				StatRowWidget->TextBlock_StatCounts->SetText(StatValue);
+				StatRowWidget->RichTextBlock_StatName->SetText(StatName);
+				StatRowWidget->RichTextBlock_StatCounts->SetText(StatValue);
 			
 				ToolTipWidget->VerticalBox_ItemStat->AddChildToVerticalBox(StatRowWidget);
 			}
@@ -92,10 +178,19 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 			
 			if (UAuraToolTipStatRow* StatRow = CreateWidget<UAuraToolTipStatRow>(GetWorld(), StatRowClass))
 			{
-				FText AbilityName = FText::FromName(Info->GetAbilityNameForTag(AbilityTag));
+				FString AbilityNameBase = Info->GetAbilityNameForTag(AbilityTag).ToString();
+				FString AbilityName = TEXT("");
+				FString Plus = TEXT("+");
+				FString Counts = TEXT("");
+				StatRow->Tag = AbilityTag;
 				
-				StatRow->TextBlock_StatName->SetText(AbilityName);
-				StatRow->TextBlock_StatCounts->SetText(FText::AsNumber(AbilityLevel));
+				ChangeTextColorByAbilityTag(StatRow, AbilityNameBase, AbilityName);
+				ChangeTextColorByAbilityTag(StatRow, TEXT(" +"), Plus);
+				ChangeTextColorByAbilityTag(StatRow, FString::FromInt(AbilityLevel), Counts);
+				
+				StatRow->RichTextBlock_StatName->SetText(FText::FromString(AbilityName));
+				StatRow->RichTextBlock_Plus->SetText(FText::FromString(Plus));
+				StatRow->RichTextBlock_StatCounts->SetText(FText::FromString(Counts));
 				ToolTipWidget->VerticalBox_EffectAndAbility->AddChildToVerticalBox(StatRow);
 			}
 		}
@@ -113,10 +208,19 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 			if (UAuraToolTipStatRow* StatRow = CreateWidget<UAuraToolTipStatRow>(GetWorld(), StatRowClass))
 			{
 				FAuraAbilityUpgradeInfo UpgradeInfo = Info->GetUpgradeInfoForUpgradeTag(UpgradeTag);
-				FText AbilityName = FText::FromString(UpgradeInfo.UpgradeName);
+				FString AbilityName = TEXT("");
+				FString Plus = TEXT("+");
+				FString Stacks = TEXT("");
+				StatRow->Tag = UpgradeTag;
 				
-				StatRow->TextBlock_StatName->SetText(AbilityName);
-				StatRow->TextBlock_StatCounts->SetText(FText::AsNumber(UpgradeStack));
+				// 태그에 따라 색상 변경
+				ChangeTextColorByUpgradeTag(StatRow, UpgradeInfo.UpgradeName, AbilityName);
+				ChangeTextColorByUpgradeTag(StatRow, TEXT(" +"), Plus);
+				ChangeTextColorByUpgradeTag(StatRow, FString::FromInt(UpgradeStack), Stacks);
+				
+				StatRow->RichTextBlock_StatName->SetText(FText::FromString(AbilityName));
+				StatRow->RichTextBlock_Plus->SetText(FText::FromString(Plus));
+				StatRow->RichTextBlock_StatCounts->SetText(FText::FromString(Stacks));
 				ToolTipWidget->VerticalBox_EffectAndAbility->AddChildToVerticalBox(StatRow);
 			}
 		}

@@ -92,9 +92,13 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlotInfo* Slot)
 		
 		AuraASC->RemoveCharacterAbilityByTag(AbilityTag, AbilityLevel);
 	}
+	
+	// 장착된 메시 제거
+	DetachItemMeshFromAuraCharacterMesh(Slot->ItemData.ItemSubGroup);
 		
 	// 장착 슬롯 비우기
 	Slot->ItemData = FItemData();
+	Slot->AttachedMesh.Empty();
 	Slot->bIsSlotEquipped = false;
 	Slot->AbilityTags.Empty();
 }
@@ -169,6 +173,12 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			const float MoveSpeed = ItemStat.MovementSpeed;
 			const float MaxHP = ItemStat.MaxHealth;
 			const float MaxMP = ItemStat.MaxMana;
+			const float MAP = ItemStat.MagicAttackPower;
+			const float Armor = ItemStat.Armor;
+			const float ArmorPenet = ItemStat.ArmorPenetration;
+			const float HealthRegen = ItemStat.HealthRegeneration;
+			const float ManaRegen = ItemStat.ManaRegeneration;
+			const float CriticalChance = ItemStat.CriticalHitChance;
 		
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Primary_Strength, Str);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Primary_Intelligence, Int);
@@ -177,9 +187,99 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed, MoveSpeed);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth, MaxHP);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_MaxMana, MaxMP);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_MagicAttackPower, MAP);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_Armor, Armor);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_ArmorPenetration, ArmorPenet);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_HealthRegeneration, HealthRegen);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_ManaRegeneration, ManaRegen);
+			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_CriticalHitChance, CriticalChance);
 		
 			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+			
+			Slot->bIsSlotEquipped = true;
 		}
+	}
+	else if (Slot->ItemData.Name.IsValid())
+	{
+		Slot->bIsSlotEquipped = true;
+	}
+}
+
+void UEquipmentComponent::AttachItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData, AAuraCharacter* AuraCharacter, EItemSubGroup ItemGroup, FName SocketName)
+{
+	if (ItemData.ItemSubGroup == ItemGroup)
+	{
+		UStaticMeshComponent* ItemMesh = NewObject<UStaticMeshComponent>(GetOwner());
+
+		ItemMesh->SetStaticMesh(ItemData.StaticMesh);
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		ItemMesh->SetCanEverAffectNavigation(false);
+		ItemMesh->RegisterComponent();
+
+		ItemMesh->AttachToComponent(
+			AuraCharacter->GetMesh(),
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			SocketName);
+		
+		auto* Slot = GetSlot(ItemGroup);
+		if (!Slot)
+			return;
+		
+		Slot->AttachedMesh.Add(ItemMesh);
+	}
+}
+
+void UEquipmentComponent::AttachBootsItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData,
+	AAuraCharacter* AuraCharacter)
+{
+	UStaticMeshComponent* LeftItemMesh = NewObject<UStaticMeshComponent>(GetOwner());
+	UStaticMeshComponent* RightItemMesh = NewObject<UStaticMeshComponent>(GetOwner());
+
+	RightItemMesh->SetStaticMesh(ItemData.RightFootMesh);
+	RightItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RightItemMesh->SetCanEverAffectNavigation(false);
+	RightItemMesh->RegisterComponent();
+		
+	RightItemMesh->AttachToComponent(
+		AuraCharacter->GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		FName("RightFootSocket"));
+		
+	LeftItemMesh->SetStaticMesh(ItemData.LeftFootMesh);
+	LeftItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	LeftItemMesh->SetCanEverAffectNavigation(false);
+	LeftItemMesh->RegisterComponent();
+
+	LeftItemMesh->AttachToComponent(
+		AuraCharacter->GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		FName("LeftFootSocket"));
+		
+	auto* Slot = GetSlot(EItemSubGroup::Boots);
+	if (!Slot)
+		return;
+		
+	Slot->AttachedMesh.Add(LeftItemMesh);
+	Slot->AttachedMesh.Add(RightItemMesh);
+}
+
+void UEquipmentComponent::AttachItemMeshToAuraCharacterMesh(const FItemData& ItemData, AAuraCharacter* AuraCharacter)
+{
+	AttachItemMeshToAuraCharacterMesh_Internal(ItemData, AuraCharacter, EItemSubGroup::Helmet, "HelmetSocket");
+	AttachItemMeshToAuraCharacterMesh_Internal(ItemData, AuraCharacter, EItemSubGroup::Armor, "ArmorSocket");
+	AttachBootsItemMeshToAuraCharacterMesh_Internal(ItemData, AuraCharacter);
+}
+
+void UEquipmentComponent::DetachItemMeshFromAuraCharacterMesh(EItemSubGroup ItemSubGroup)
+{
+	auto* Slot = GetSlot(ItemSubGroup);
+	if (!Slot)
+		return;
+	
+	for (const auto& AttachedMesh : Slot->AttachedMesh)
+	{
+		AttachedMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		AttachedMesh->DestroyComponent();
 	}
 }
 
@@ -196,6 +296,10 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 	
 	auto* Slot = GetSlot(ItemSubGroup);
 	if (!Slot)
+		return;
+	
+	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
+	if (!AuraCharacter)
 		return;
 	
 	// 아이템 장착 해제
@@ -235,15 +339,12 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 	// PlayerState에 접근 -> 어빌리티 업그레이드 태그 추가
 	for (const auto Pair : ItemData.AbilityUpgradeTagAndLevel)
 	{
-		if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner()))
+		if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
 		{
-			if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
+			// 부여하고자 하는 레벨만큼 반복
+			for (int i = 0; i < Pair.AbilityLevel; i++)
 			{
-				// 부여하고자 하는 레벨만큼 반복
-				for (int i = 0; i < Pair.AbilityLevel; i++)
-				{
-					AuraPS->Server_AddAbilityUpgradeTag(Pair.AbilityTag);
-				}
+				AuraPS->Server_AddAbilityUpgradeTag(Pair.AbilityTag);
 			}
 		}
 	}
@@ -256,6 +357,12 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 	
 	// 툴팁 제거
 	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnItemToolTipActivated.Broadcast(FName(), false);
+	
+	// 아이템을 메시에 장착
+	AttachItemMeshToAuraCharacterMesh(ItemData, AuraCharacter);
+	
+	// 아이템 장착 델리게이트 호출
+	OnItemEquipped.Broadcast(ItemData);
 }
 
 void UEquipmentComponent::UnEquipItem_Internal(FEquipmentSlotInfo* Slot)

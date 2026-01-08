@@ -221,6 +221,8 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 								Slot.ItemCount++;
 							else if (AddCount >= 0)
 								Slot.ItemCount = AddCount;
+							
+							OnItemGet.Broadcast(NewIndex);
 						}
 					}
 				}
@@ -265,6 +267,7 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 							if (X == StartX && Y == StartY)
 							{
 								Slot.ItemCount = 1;
+								OnItemGet.Broadcast(NewIndex);
 							}
 						}
 					}
@@ -408,6 +411,8 @@ void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, c
 	float Width = ItemSize.X;
 	float Height = ItemSize.Y;
 
+	FItemData RemovedItem = Slots[InventoryWidth * StartY + StartX].ItemData;
+	
 	// int StartIndex = InventorySize * StartY + StartX;
 
 	for (int Y = StartY; Y < StartY + Height; Y++)
@@ -432,6 +437,7 @@ void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, c
 		}
 	}
 	
+	OnItemRemoved.Broadcast(RemovedItem);
 	OnRep_Slots();
 }
 

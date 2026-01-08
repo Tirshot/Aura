@@ -95,6 +95,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GiveItemToCharacter(AAuraCharacter* Character, FName ItemID, int ItemCount = 1);
 	void SpawnDropItemActor(AAuraCharacter* OwnedCharacter, FItemData DropItemData, FVector ItemSpawnLocation);
+	
+	UFUNCTION(BlueprintCallable)
+	void SpawnDropItemToActorLocation(AAuraCharacter* Character, FName ItemID);
 
 	// 아이템 드랍
 	UFUNCTION()

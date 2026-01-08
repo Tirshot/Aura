@@ -58,7 +58,10 @@ public:
 public:
 	UPROPERTY(BlueprintReadOnly, category="Combat")
 	bool bHitReacting = false;
-
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="Combat")
+	bool bIsRangedAttacker = false;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
 	float LifeSpan = 5.f;
 	
