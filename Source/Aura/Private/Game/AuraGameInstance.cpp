@@ -5,7 +5,6 @@
 
 #include "AbilitySystemGlobals.h"
 #include "GameplayEffect.h"
-#include "IDetailTreeNode.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "GameFramework/GameUserSettings.h"
 

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Components/ActorComponent.h"
 #include "CharmComponent.generated.h"
