@@ -64,11 +64,6 @@ FString UAuraFireBlast::GetNextLevelDescription(int32 Level, const UObject* Worl
 	);
 }
 
-void UAuraFireBlast::SetInitialValue()
-{
-	NumFireBalls = BaseNumFireBalls + GetAbilityLevel();
-}
-
 TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 {
 	TArray<AAuraFireBall*> FireBalls;
@@ -109,6 +104,8 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 
 void UAuraFireBlast::CheckAbilityUpgrades()
 {
+	NumFireBalls = BaseNumFireBalls + GetAbilityLevel();
+	
 	const auto& Tags = FAuraGameplayTags::Get();
 	
 	// (1) 투사체 갯수 증가 체크
@@ -120,7 +117,6 @@ void UAuraFireBlast::CheckAbilityUpgrades()
 		int32 Magnification = 2;
 
 		// 갯수 2개 씩 증가
-		NumFireBalls = BaseNumFireBalls + (StackCount * Magnification);
-			
+		NumFireBalls = BaseNumFireBalls + (StackCount * Magnification) + GetAbilityLevel();
 	}
 }

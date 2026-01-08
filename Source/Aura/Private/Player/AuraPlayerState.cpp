@@ -303,10 +303,14 @@ void AAuraPlayerState::Server_AddAbilityUpgradeTag_Implementation(FGameplayTag U
 
 void AAuraPlayerState::Server_RemoveAbilityUpgradeTag_Implementation(FGameplayTag UpgradeTag)
 {
-    // if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
-    // {
-    //     AuraASC->RemoveCharacterAbility(UpgradeTag);
-    // }
+    // 어빌리티 획득 업그레이드(또는 레벨업 업그레이드) 제거
+    if (UpgradeTag.RequestDirectParent().MatchesTag(FGameplayTag::RequestGameplayTag("Abilities")))
+    {
+        if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
+        {
+            AuraASC->RemoveCharacterAbilityByTag(UpgradeTag, 1);
+        }
+    }
     
     // 보유중인 어빌리티 업그레이드 배열에서 제거
     RemoveUpgradeTag(UpgradeTag);

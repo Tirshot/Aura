@@ -93,6 +93,23 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlotInfo* Slot)
 		AuraASC->RemoveCharacterAbilityByTag(AbilityTag, AbilityLevel);
 	}
 	
+	if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner()))
+	{
+		if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
+		{
+			// 어빌리티 업그레이드 제거
+			for (const auto Pair : Slot->ItemData.AbilityUpgradeTagAndLevel)
+			{
+				// 부여하고자 하는 레벨만큼 반복
+				for (int i = 0; i < Pair.AbilityLevel; i++)
+				{
+					AuraPS->Server_RemoveAbilityUpgradeTag(Pair.AbilityTag);
+				}
+		
+			}
+		}
+	}
+	
 	// 장착된 메시 제거
 	DetachItemMeshFromAuraCharacterMesh(Slot->ItemData.ItemSubGroup);
 		
@@ -118,17 +135,16 @@ void UEquipmentComponent::SetEquipmentSlots(TMap<EItemSubGroup, FEquipmentSlotIn
 	// 세이브 로드 후 게임에 반영하는 함수
 	EquipmentMap.EquipSlotMap = SavedEquipmentMap;
 	
-	// 1. 아이템 스텟 제거
 	if (!AuraASC)
 		AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
 	
-	// 2. 슬롯 뷰 모델을 가져오기
+	// 슬롯 뷰 모델을 가져오기
 	if (UMVVM_Inventory* InventoryViewModel = UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this))
 	{
 		TArray<UMVVM_EquipmentSlot*> EquipSlots = InventoryViewModel->GetAllEquipSlotViewModels();
 		if (!EquipSlots.IsEmpty())
 		{
-			// 3. 각 슬롯에 대해 실제 데이터를 사용해 필드 노티파이 갱신하기
+			// 각 슬롯에 대해 실제 데이터를 사용해 필드 노티파이 갱신하기
 			for (const auto& Pair : EquipmentMap.EquipSlotMap)
 			{
 				EItemSubGroup ItemSubGroup = Pair.Key;
@@ -141,13 +157,11 @@ void UEquipmentComponent::SetEquipmentSlots(TMap<EItemSubGroup, FEquipmentSlotIn
 					EquipSlotVM->SetDescription(SlotInfo.ItemData.Description);
 					EquipSlotVM->SetbEquipped(SlotInfo.bIsSlotEquipped);
 				}
-				
-				// 4. 아이템 스텟 재적용
-				ApplyItemStat(SlotInfo.ItemData, &SlotInfo);
+				// 아이템 장착
+				EquipItem_Internal(SlotInfo.ItemData, -1);
 			}
 		}
 	}
-	
 	
 }
 
@@ -276,10 +290,14 @@ void UEquipmentComponent::DetachItemMeshFromAuraCharacterMesh(EItemSubGroup Item
 	if (!Slot)
 		return;
 	
+	// TODO::메시가 nullptr로 표시됨
 	for (const auto& AttachedMesh : Slot->AttachedMesh)
 	{
-		AttachedMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-		AttachedMesh->DestroyComponent();
+		if (AttachedMesh)
+		{
+			AttachedMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+			AttachedMesh->DestroyComponent();
+		}
 	}
 }
 
@@ -352,8 +370,9 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 	Slot->ItemData = ItemData;
 	
 	// 슬롯에 장착이 되었다면 기존 아이템은 인벤토리에서 제거
-	// 오직 드래그 드랍으로만 수행했을 때만 장착한다고 가정 -> DragOP에서 인덱스 전달
-	InventoryComponent->Server_RemoveItemToEquip(OriginIndex);
+	// DragOP에서 인덱스 전달, -1 == 인벤토리에서 장착하지 않는 경우
+	if (OriginIndex >= 0)
+		InventoryComponent->Server_RemoveItemToEquip(OriginIndex);
 	
 	// 툴팁 제거
 	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnItemToolTipActivated.Broadcast(FName(), false);
