@@ -598,33 +598,10 @@ bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, FName Ite
 {
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Character))
 	{
-		bool bFound = false;
-		FInventorySlot* Slot = const_cast<FInventorySlot*>(Inventory->FindItemSlot(ItemID, bFound));
-
-		// 슬롯이 존재하지 않으면 새로운 아이템 추가
-		if (!bFound)
+		if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
 		{
-			if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+			if (const FItemData* FoundRow = AuraGI->GetItemData(ItemID))
 			{
-				if (const FItemData* FoundRow = AuraGI->GetItemData(ItemID))
-				{
-					UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
-					return Inventory->AddItem_Internal(*FoundRow, ItemCount);
-				}
-			}
-			return false;
-		}
-		// 슬롯이 이미 존재할 경우, 기존 아이템 수량만 증가
-		if (const FItemData* FoundRow = Slot->ItemHandle.GetRow<FItemData>(TEXT("GiveItemToCharacter")))
-		{
-			if (FoundRow->bStackable)
-			{	// 중첩 가능
-				Slot->ItemCount++;
-				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
-				return true;
-			}
-			else
-			{	// 중첩 불가
 				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
 				return Inventory->AddItem_Internal(*FoundRow, ItemCount);
 			}
@@ -633,7 +610,7 @@ bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, FName Ite
 	return false;
 }
 
-void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, FItemData DropItemData, FVector ItemSpawnLocation)
+void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const FItemData& DropItemData, FVector ItemSpawnLocation)
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
@@ -659,7 +636,7 @@ void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, FItem
 	if (DropItemActor)
 	{
 		DropItemActor->InitializeItem(DropItemData);
-		DropItemActor->SetItemCount(1); // 아이템 갯수
+		DropItemActor->SetItemCount(DropItemData.ItemCounts); // 아이템 갯수
 		DropItemActor->SetOwner(OwnedCharacter);
 	}
 }

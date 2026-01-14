@@ -141,7 +141,6 @@ void AAuraFireTornado::ApplyDamageAndKnockback()
 				
 				// 벡터를 구하고 정규화
 				FVector ToCenter = GetActorLocation() - OtherActor->GetActorLocation();
-				ToCenter.Z = GetActorLocation().Z - Capsule->GetScaledCapsuleHalfHeight();
 				ToCenter.Normalize();
 				
 				// 보스는 넉백 무효

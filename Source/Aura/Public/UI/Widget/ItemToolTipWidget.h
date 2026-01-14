@@ -23,10 +23,10 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	URichTextBlock* RichTextBlock_SlotSize;
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	UVerticalBox* VerticalBox_ItemStat;
 		
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	UVerticalBox* VerticalBox_EffectAndAbility;
 	
 	UPROPERTY(meta=(BindWidget))

@@ -375,7 +375,7 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 		InventoryComponent->Server_RemoveItemToEquip(OriginIndex);
 	
 	// 툴팁 제거
-	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnItemToolTipActivated.Broadcast(FName(), false);
+	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnItemToolTipActivated.Broadcast(FItemData(), false);
 	
 	// 아이템을 메시에 장착
 	AttachItemMeshToAuraCharacterMesh(ItemData, AuraCharacter);

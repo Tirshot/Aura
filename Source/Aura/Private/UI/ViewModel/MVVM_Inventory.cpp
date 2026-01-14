@@ -64,6 +64,8 @@ void UMVVM_Inventory::InventorySlotChanged(int Index)
 	const FInventorySlot& SlotData = InventorySlots[Index];
 	UMVVM_InventorySlot* SlotViewModel = SlotViewModels[Index];
 	
+	SlotViewModel->ItemData = SlotData.ItemData;
+	
 	SlotViewModel->SetItemID(SlotData.ItemHandle.RowName);
 	SlotViewModel->SetItemCount(SlotData.ItemCount);
 	SlotViewModel->SetItemSize(SlotData.ItemSize);

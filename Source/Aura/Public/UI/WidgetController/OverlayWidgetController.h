@@ -13,6 +13,7 @@ class UAuraUserWidget;
 class UAbilityInfo;
 class UAuraAbilitySystemComponent;
 struct FOnAttributeChangeData;
+struct FItemData;
 
 UENUM(BlueprintType)
 enum class EMessageType : uint8
@@ -57,7 +58,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDebugModeActivated, bool, bActiva
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShowMenuKeyPressed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOpenMenuAnchor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCenterDescriptionRemoved);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemToolTipActivated, const FName&, ItemName, bool, bActivated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemToolTipActivated, const FItemData&, ItemData, bool, bActivated);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController

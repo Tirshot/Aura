@@ -56,6 +56,10 @@ public:
 	void SetItemImageHeight(float InHeight);
 	void SetItemDescription(FText InDescription);
 
+public:
+	UPROPERTY(BlueprintReadWrite)
+	FItemData ItemData;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter)
 	FName ItemID;
@@ -88,7 +92,4 @@ protected:
 	// 해당 칸이 점유되었는가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter)
 	bool bIsOccupied = false; 
-	
-	UPROPERTY(BlueprintReadWrite)
-	FItemData ItemData;
 };

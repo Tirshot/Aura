@@ -48,6 +48,7 @@ void AAuraDropItem::BeginPlay()
 		if (auto FoundRow = ItemHandle.GetRow<FItemData>("FoundRow"))
 		{
 			DropItemData = *FoundRow;
+			DropItemData.ItemCounts = ItemCount;
 			InitializeItem(DropItemData);
 		}
 	}

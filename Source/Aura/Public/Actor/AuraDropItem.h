@@ -72,12 +72,13 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> MoveToComponent;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_ItemData)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ItemData)
 	FItemData DropItemData;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
 	FDataTableRowHandle ItemHandle;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
 	int32 ItemCount = 1;
 	
 protected:

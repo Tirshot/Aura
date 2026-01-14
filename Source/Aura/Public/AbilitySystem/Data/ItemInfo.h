@@ -6,6 +6,7 @@
 #include "AbilityUpgradeInfo.h"
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
+#include "Player/CharmInstance.h"
 #include "ItemInfo.generated.h"
 
 enum class ECharacterClass : uint8;
@@ -111,6 +112,10 @@ USTRUCT(BlueprintType)
 struct FItemData: public FTableRowBase
 {
 	GENERATED_BODY()
+	
+	// Item GUID Object <- 고유 이펙트 소스가 됨
+	UPROPERTY(Transient)
+	UObject* EffectSourceObject;
 
 	// !!각 행의 이름을 ItemID와 일치시켜야 함
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
@@ -126,6 +131,9 @@ struct FItemData: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	bool bStackable = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Data")
+	int32 ItemCounts = 1;
 	
 	// 인벤토리 내의 아이콘
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")

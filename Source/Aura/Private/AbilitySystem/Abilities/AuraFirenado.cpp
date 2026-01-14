@@ -113,8 +113,8 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 	if (UWorld* World = GetWorld())
 	{
 		FHitResult HitResult;
-		FVector HitStart = Location + FVector(0.f, 0.f, 500.f);
-		FVector HitEnd = Location + FVector(0.f, 0.f, -500.f);
+		FVector HitStart = Location + FVector(0.f, 0.f, 2000.f);
+		FVector HitEnd = Location + FVector(0.f, 0.f, -2000.f);
 		
 		World->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility);
 

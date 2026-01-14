@@ -63,12 +63,6 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly)
 	class UInventoryComponent* Inventory;
-
-	// 이미지 로딩에 실패한 슬롯 모음
-	UPROPERTY()
-	TMap<int, FInventorySlot> PendingSlots;
-
-	FDelegateHandle ItemInfoReadyHandle;
 	
 public:
 	UPROPERTY(BlueprintReadOnly)

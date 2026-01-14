@@ -22,15 +22,15 @@ protected:
 
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	void RemoveCharmItemEffects();
-	void ApplyCharmItemEffects();
+	void RemoveCharmItemEffect(const FItemData& CharmItem);
+	void ApplyCharmItemEffect(FItemData& CharmItem);
 
 public:
 	UFUNCTION()
 	void AddToCharmSlot(int SlotIndex);
 	
 	UFUNCTION()
-	void RemoveFromCharmSlot(FItemData ItemData);
+	void RemoveFromCharmSlot(const FItemData& ItemData);
 	
 	void ApplyItemStat(const FItemData& ItemData);
 		

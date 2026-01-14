@@ -9,6 +9,7 @@
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerState.h"
+#include "Player/CharmInstance.h"
 #include "Player/InventoryComponent.h"
 
 UCharmComponent::UCharmComponent()
@@ -34,8 +35,14 @@ void UCharmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-void UCharmComponent::RemoveCharmItemEffects()
+void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 {
+	if (!CharmItem.Name.IsValid())
+		return;
+	
+	if (CharmItem.ItemGroup != EItemGroup::Charm)
+		return;
+	
 	auto ASC = UAuraAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
 	if (!ASC)
 		return;
@@ -44,31 +51,29 @@ void UCharmComponent::RemoveCharmItemEffects()
 	if (!AuraASC)
 		return;
 	
-	// 참 효과 전부 제거
-	// 참 슬롯 순회
-	for (auto& Slot : CharmSlotArray)
+	FGameplayEffectQuery GEQuery;
+	GEQuery.EffectSource = CharmItem.EffectSourceObject;
+	
+	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
+	AuraASC->RemoveActiveEffects(GEQuery);
+	
+	// 게임플레이 이펙트 제거
+	for (const auto EffectAndStack : CharmItem.EffectAndStacks)
 	{
-		// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
-		AuraASC->RemoveActiveGameplayEffectBySourceEffect(Slot.ItemStatEffectClass, nullptr);
+		AuraASC->RemoveActiveGameplayEffectBySourceEffect(EffectAndStack.EffectClass, nullptr, 1);
+	}
 	
-		// 게임플레이 이펙트 제거
-		for (const auto EffectAndStack : Slot.EffectAndStacks)
-		{
-			AuraASC->RemoveActiveGameplayEffectBySourceEffect(EffectAndStack.EffectClass, nullptr);
-		}
-	
-		// 슬롯에 배치된 아이템에 의해 부여된 어빌리티 제거
-		for (const auto TagAndLevel : Slot.AbilityTagAndLevel)
-		{
-			const FGameplayTag AbilityTag = TagAndLevel.AbilityTag;
-			const int32 AbilityLevel = TagAndLevel.AbilityLevel;
+	// 슬롯에 배치된 아이템에 의해 부여된 어빌리티 제거
+	for (const auto TagAndLevel : CharmItem.AbilityTagAndLevel)
+	{
+		const FGameplayTag AbilityTag = TagAndLevel.AbilityTag;
+		const int32 AbilityLevel = TagAndLevel.AbilityLevel;
 		
-			AuraASC->RemoveCharacterAbilityByTag(AbilityTag, AbilityLevel);
-		}
+		AuraASC->RemoveCharacterAbilityByTag(AbilityTag, AbilityLevel);
 	}
 }
 
-void UCharmComponent::ApplyCharmItemEffects()
+void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
 {
 	auto ASC = UAuraAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
 	if (!ASC)
@@ -79,49 +84,49 @@ void UCharmComponent::ApplyCharmItemEffects()
 		return;
 	
 	// 참 효과 재적용
-	for (const auto& Slot : CharmSlotArray)
+	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
+	if (!AuraCharacter)
+		return;
+	
+	if (!CharmItem.EffectSourceObject)
+		CharmItem.EffectSourceObject = NewObject<UCharmInstance>(this);
+	
+	// 스텟 적용
+	ApplyItemStat(CharmItem);
+	
+	// 아이템이 어빌리티 태그들을 가지면 각 어빌리티를 ASC에 부여
+	for (const auto TagAndLevel : CharmItem.AbilityTagAndLevel)
 	{
-		AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
-		if (!AuraCharacter)
-			return;
+		const FGameplayTag AbilityTag = TagAndLevel.AbilityTag;
+		const int32 AbilityLevel = TagAndLevel.AbilityLevel;
 		
-		// 스텟 적용
-		ApplyItemStat(Slot);
-	
-		// 아이템이 어빌리티 태그들을 가지면 각 어빌리티를 ASC에 부여
-		for (const auto TagAndLevel : Slot.AbilityTagAndLevel)
+		for (int i = 0; i < AbilityLevel; i++)
 		{
-			const FGameplayTag AbilityTag = TagAndLevel.AbilityTag;
-			const int32 AbilityLevel = TagAndLevel.AbilityLevel;
-		
-			for (int i = 0; i < AbilityLevel; i++)
-			{
-				AuraASC->AddCharacterAbilityByTag(AbilityTag);
-			}
+			AuraASC->AddCharacterAbilityByTag(AbilityTag);
 		}
+	}
 	
-		// 아이템이 게임플레이 이펙트 핸들을 가지면 이펙트를 ASC에 적용
-		for (const auto EffectAndStack : Slot.EffectAndStacks)
+	// 아이템이 게임플레이 이펙트 핸들을 가지면 이펙트를 ASC에 적용
+	for (const auto EffectAndStack : CharmItem.EffectAndStacks)
+	{
+		if (EffectAndStack.EffectClass)
 		{
-			if (EffectAndStack.EffectClass)
-			{
-				const FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
-				const auto SpecHandle = AuraASC->MakeOutgoingSpec(EffectAndStack.EffectClass, EffectAndStack.EffectStack, Context);
-				AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
-			}
+			const FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
+			const auto SpecHandle = AuraASC->MakeOutgoingSpec(EffectAndStack.EffectClass, EffectAndStack.EffectStack, Context);
+			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
 		}
+	}
 	
-		// 어빌리티 업그레이드 태그 추가
-		// PlayerState에 접근 -> 어빌리티 업그레이드 태그 추가
-		for (const auto Pair : Slot.AbilityUpgradeTagAndLevel)
+	// 어빌리티 업그레이드 태그 추가
+	// PlayerState에 접근 -> 어빌리티 업그레이드 태그 추가
+	for (const auto Pair : CharmItem.AbilityUpgradeTagAndLevel)
+	{
+		if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
 		{
-			if (AAuraPlayerState* AuraPS = AuraCharacter->GetPlayerState<AAuraPlayerState>())
+			// 부여하고자 하는 레벨만큼 반복
+			for (int i = 0; i < Pair.AbilityLevel; i++)
 			{
-				// 부여하고자 하는 레벨만큼 반복
-				for (int i = 0; i < Pair.AbilityLevel; i++)
-				{
-					AuraPS->Server_AddAbilityUpgradeTag(Pair.AbilityTag);
-				}
+				AuraPS->Server_AddAbilityUpgradeTag(Pair.AbilityTag);
 			}
 		}
 	}
@@ -135,21 +140,18 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex)
 		if (!InventorySlot)
 			return;
 		
-		FItemData CharmData = InventorySlot->ItemData;
+		FItemData& CharmData = InventorySlot->ItemData;
 		if (CharmData.ItemGroup == EItemGroup::Charm)
 		{
 			CharmSlotArray.Add(CharmData);
 	
-			// 참 효과 제거
-			RemoveCharmItemEffects();
-
 			// 참 효과 적용
-			ApplyCharmItemEffects();
+			ApplyCharmItemEffect(CharmData);
 		}
 	}
 }
 
-void UCharmComponent::RemoveFromCharmSlot(FItemData ItemData)
+void UCharmComponent::RemoveFromCharmSlot(const FItemData& ItemData)
 {
 	if (ItemData.ItemGroup == EItemGroup::Charm)
 	{
@@ -164,10 +166,7 @@ void UCharmComponent::RemoveFromCharmSlot(FItemData ItemData)
 	}
 	
 	// 참 효과 제거
-	RemoveCharmItemEffects();
-
-	// 참 효과 적용
-	ApplyCharmItemEffects();
+	RemoveCharmItemEffect(ItemData);
 }
 
 void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
@@ -176,8 +175,12 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 	UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
 	if (!AuraASC)
 		return;
-		
+	
+	if (!ItemData.EffectSourceObject)
+		return;
+	
 	FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
+	Context.AddSourceObject(ItemData.EffectSourceObject);
 	Context.AddInstigator(AuraASC->GetAvatarActor(), nullptr);
 		
 	auto SpecHandle = AuraASC->MakeOutgoingSpec(ItemData.ItemStatEffectClass, 1.f, Context);

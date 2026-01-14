@@ -113,6 +113,13 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 		break;
 	}
 	
+	// 아이템 갯수
+	if (ItemData.bStackable)
+	{
+		ItemNameWithTextStyle.Append(TEXT(" x"));
+		ItemNameWithTextStyle.AppendInt(ItemData.ItemCounts);
+	}
+	
 	// 아이템 이름, 아이템 설명
 	ToolTipWidget->RichTextBlock_ItemName->SetText(FText::FromString(ItemNameWithTextStyle));
 	ToolTipWidget->RichTextBlock_ItemDesc->SetText(ItemData.Description);

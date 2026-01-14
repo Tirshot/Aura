@@ -53,7 +53,7 @@ struct FInventorySlot
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventorySlotChanged, int32, SlotIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemGet, int32, SlotIndex);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemoved, FItemData, RemovedItemData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemoved, const FItemData&, RemovedItemData);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AURA_API UInventoryComponent : public UActorComponent
@@ -98,6 +98,8 @@ public:
 	FInventorySlot* GetSlotByIndex(int index);
 
 	bool IsItemStackable(const FItemData& ItemData) const;
+	
+	bool HasItem(const FItemData& ItemData) const;
 
 	// 불러오기 용도
 	void SetInventorySlots(const TArray<FInventorySlot>& InSlots);
@@ -107,7 +109,7 @@ public:
 	bool AddItem_Internal(const FItemData& ItemData, int AddCount = 1);
 
 	UFUNCTION()
-	bool AddItemToIndex_Internal(const FItemData& ItemData, int index, int AddCount = 1);
+	bool AddItemToIndex_Internal(const FItemData& ItemData, int index);
 
 	// 드래그를 위해 집어들었을 때 기존 데이터 정리
 	UFUNCTION()
@@ -123,7 +125,7 @@ public:
 	void Server_RemoveItemToEquip(int OriginIndex);
 	
 	// 아이템 슬롯 찾기
-	const FInventorySlot* FindItemSlot(FName ItemID, bool& bFound);
+	FInventorySlot* FindItemSlot(FName ItemID, bool& bFound);
 
 public:
 	int32 GetInventorySize() const;
