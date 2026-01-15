@@ -22,6 +22,8 @@
 #include "UI/Widget/AuraUserWidget.h"
 #include "Interaction/MessageInterface.h"
 #include "Player/AuraPlayerController.h"
+#include "UI/HUD/LoadScreenHUD.h"
+#include "UI/HUD/MainMenuHUD.h"
 #include "UI/Widget/AuraCenterDescriptionWidget.h"
 #include "UI/Widget/AuraMessageBoxWidget.h"
 #include "UI/Widget/AuraOverlayWidget.h"
@@ -118,9 +120,28 @@ USettingsMenuWidgetController* UAuraAbilitySystemLibrary::GetSettingsMenuWidgetC
 	FWidgetControllerParams WCParams;
 	AAuraHUD* AuraHUD = nullptr;
 
+	// 인게임
 	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
 	{
 		return AuraHUD->GetSettingsMenuWidgetController(WCParams);
+	}
+	
+	// 메인메뉴
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	{
+		if (AMainMenuHUD* MainMenuHUD = Cast<AMainMenuHUD>(PC->GetHUD()))
+		{
+			return MainMenuHUD->GetSettingsMenuWidgetController();
+		}
+	}
+	
+	// 로드메뉴
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	{
+		if (ALoadScreenHUD* LoadScreenHUD = Cast<ALoadScreenHUD>(PC->GetHUD()))
+		{
+			return LoadScreenHUD->GetSettingsMenuWidgetController();
+		}
 	}
 	return nullptr;
 }

@@ -6,6 +6,7 @@
 #include "GameFramework/HUD.h"
 #include "LoadScreenHUD.generated.h"
 
+class USettingsMenuWidgetController;
 class ULoadScreenWidget;
 class UMVVM_LoadScreen;
 
@@ -15,19 +16,28 @@ class AURA_API ALoadScreenHUD : public AHUD
 	GENERATED_BODY()
 	
 public:
-	// MVVM - ��(View)
+	USettingsMenuWidgetController* GetSettingsMenuWidgetController();
+	
+public:
+	// MVVM - (View)
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> LoadScreenWidgetClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<ULoadScreenWidget> LoadScreenWidget;
 
-	// MVVM - �� ��(ViewModel)
+	// MVVM - (ViewModel)
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_LoadScreen> LoadScreenViewModelClass;
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_LoadScreen> LoadScreenViewModel;
+	
+	UPROPERTY()
+	TObjectPtr<USettingsMenuWidgetController> SettingsMenuWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USettingsMenuWidgetController> SettingsMenuWidgetControllerClass;
 	
 protected:
 	virtual void BeginPlay() override;
