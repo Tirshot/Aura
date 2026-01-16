@@ -641,12 +641,12 @@ void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const
 	}
 }
 
-void AAuraGameModeBase::SpawnDropItemToActorLocation(AAuraCharacter* Character, FName ItemID)
+void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FName ItemID)
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	
-	FVector ItemSpawnLocation = Character->GetActorLocation();
+	FVector ItemSpawnLocation = Actor->GetActorLocation();
 
 	int32 RandValue = FMath::RandRange(0, 6);
 	int32 RandValue2 = FMath::RandRange(0, RandValue);
@@ -672,7 +672,40 @@ void AAuraGameModeBase::SpawnDropItemToActorLocation(AAuraCharacter* Character, 
 	{
 		DropItemActor->InitializeItem(DropItemData);
 		DropItemActor->SetItemCount(1); // 아이템 갯수
-		DropItemActor->SetOwner(Character);
+		DropItemActor->SetOwner(Actor);
+	}
+}
+
+void AAuraGameModeBase::SpawnDropItemToLocation(FVector Location, FName ItemID)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	int32 RandValue = FMath::RandRange(0, 6);
+	int32 RandValue2 = FMath::RandRange(0, RandValue);
+	
+	float RandLocationX = FMath::RandRange(0, 50);
+	float RandLocationY = FMath::RandRange(0, 50);
+	
+	Location.X += RandLocationX;
+	Location.Y += RandLocationY;
+	
+	FItemData DropItemData = UAuraAbilitySystemLibrary::GetItemDataByItemName(this, ItemID);
+	
+	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Location.ForwardVector, FVector::UpVector, 360.f, RandValue);
+	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
+	
+	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
+		DropItemClass,
+		Location,
+		RandRotation,
+		SpawnParams);
+
+	if (DropItemActor)
+	{
+		DropItemActor->InitializeItem(DropItemData);
+		DropItemActor->SetItemCount(1); // 아이템 갯수
+		// DropItemActor->SetOwner();
 	}
 }
 

@@ -62,6 +62,10 @@ void AAuraPlayerController::BeginPlay()
     {
         // IMC, 우선순위
         Subsystem->AddMappingContext(AuraContext, 0);
+        
+        // 튜토리얼에서 메뉴 단축키 사용 금지
+        if (!UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
+            Subsystem->AddMappingContext(MenuContext, 0);
     }
 
     // 마우스 커서 활성화

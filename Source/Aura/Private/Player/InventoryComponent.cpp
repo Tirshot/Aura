@@ -170,6 +170,71 @@ bool UInventoryComponent::CanPlaceItemToIndex(const FItemData& ItemData, int ind
 	return false;
 }
 
+bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, int TargetIndex, bool bIsItemMoved)
+{
+	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	{
+		auto ItemTable = AuraGI->GetItemInfos()->ItemTable;
+		int Width = ItemData.Size.X;
+		int Height = ItemData.Size.Y;
+		
+		int StartX = TargetIndex % InventoryWidth;
+		int StartY = TargetIndex / InventoryWidth;
+		
+		for (int Y = StartY; Y < StartY + Height; Y++)
+		{
+			for (int X = StartX; X < StartX + Width; X++)
+			{
+				int NewIndex = InventoryWidth * Y + X;
+
+				// 인벤토리 정보 채우기
+				int CurrentIndex = (Y * InventoryWidth) + X;
+            
+				if (!Slots.IsValidIndex(CurrentIndex))
+					return false;
+				
+				FInventorySlot& Slot = Slots[NewIndex];
+				
+				if (ItemTable)
+					Slot.ItemHandle.DataTable = ItemTable;
+						
+				Slot.bIsOccupied = true;
+				Slot.ItemHandle.RowName = ItemData.Name;
+				Slot.StartPoint = FIntPoint(StartX, StartY);
+				Slot.ItemSize = FIntPoint(Width, Height);
+				Slot.ItemData = ItemData;
+
+				// 첫 칸일때
+				if (X == StartX && Y == StartY)
+				{
+					if (AddCount == 0)
+						Slot.ItemCount++;
+					else if (AddCount > 0)
+						Slot.ItemCount = AddCount;
+								
+					Slot.ItemData.ItemCounts = Slot.ItemCount;
+								
+					OnItemGet.Broadcast(NewIndex, bIsItemMoved);
+				}
+			}
+		}
+		OnRep_Slots();
+		return true;
+	}
+	return false;
+}
+
+void UInventoryComponent::ClearItemAt(int TargetIndex)
+{
+	if (!Slots.IsValidIndex(TargetIndex))
+		return;
+	
+	FIntPoint TargetPoint = FIntPoint(TargetIndex % InventoryWidth, TargetIndex / InventoryWidth);
+	FIntPoint ItemSize = Slots[TargetIndex].ItemData.Size;
+	
+	ClearItemSpace_Internal(TargetPoint, ItemSize);
+}
+
 bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCount)
 {
 	if (!ItemData.Name.IsValid())
@@ -184,8 +249,6 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 	// - 장비라면 빈 공간에 추가하기
 	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
 	{
-		auto ItemTable = AuraGI->GetItemInfos()->ItemTable;
-	
 		// 해당 위치부터 아이템 크기에 따라 배치 가능 판단
 		if (IsItemStackable(ItemData))
 		{
@@ -217,43 +280,9 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 				FIntPoint Place;
 				if (CanPlaceItem(ItemData, Place))
 				{
-					int StartX = Place.X;
-					int StartY = Place.Y;
-		
-					for (int Y = StartY; Y < StartY + Height; Y++)
-					{
-						for (int X = StartX; X < StartX + Width; X++)
-						{
-							int NewIndex = InventoryWidth * Y + X;
-
-							// 인벤토리 정보 채우기
-							FInventorySlot& Slot = Slots[NewIndex];
-
-							if (ItemTable)
-								Slot.ItemHandle.DataTable = ItemTable;
-						
-							Slot.bIsOccupied = true;
-							Slot.ItemHandle.RowName = ItemData.Name;
-							Slot.StartPoint = FIntPoint(StartX, StartY);
-							Slot.ItemSize = FIntPoint(Width, Height);
-							Slot.ItemData = ItemData;
-
-							// 첫 칸일때
-							if (X == StartX && Y == StartY)
-							{
-								if (AddCount == 0)
-									Slot.ItemCount++;
-								else if (AddCount > 0)
-									Slot.ItemCount = AddCount;
-								
-								Slot.ItemData.ItemCounts = Slot.ItemCount;
-								
-								OnItemGet.Broadcast(NewIndex);
-							}
-						}
-					}
-					OnRep_Slots();
-					return true;
+					int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
+					if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
+						return false;
 				}
 			}
 		}
@@ -265,36 +294,9 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 				FIntPoint Place;
 				if (CanPlaceItem(ItemData, Place))
 				{
-					int StartX = Place.X;
-					int StartY = Place.Y;
-		
-					for (int Y = StartY; Y < StartY + Height; Y++)
-					{
-						for (int X = StartX; X < StartX + Width; X++)
-						{
-							int NewIndex = InventoryWidth * Y + X;
-
-							// 인벤토리 정보 채우기
-							FInventorySlot& Slot = Slots[NewIndex];
-			
-							if (ItemTable)
-								Slot.ItemHandle.DataTable = ItemTable;
-						
-							Slot.bIsOccupied = true;
-							Slot.ItemHandle.RowName = ItemData.Name;
-							Slot.StartPoint = FIntPoint(StartX, StartY);
-							Slot.ItemSize = FIntPoint(Width, Height);
-							Slot.ItemData = ItemData;
-
-							// 첫 칸일때
-							if (X == StartX && Y == StartY)
-							{
-								Slot.ItemCount = 1;
-								Slot.ItemData.ItemCounts = Slot.ItemCount;
-								OnItemGet.Broadcast(NewIndex);
-							}
-						}
-					}
+					int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
+					if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
+						return false;
 				}
 				else
 				{
@@ -329,29 +331,8 @@ bool UInventoryComponent::AddItemToIndex_Internal(const FItemData& ItemData, int
 		return false;
 
 	// 아이템 추가
-	for (int Y = StartY; Y < StartY + Height; Y++)
-	{
-		for (int X = StartX; X < StartX + Width; X++)
-		{
-			int NewIndex = InventoryWidth * Y + X;
-
-			// 인벤토리 정보 채우기
-			FInventorySlot& Slot = Slots[NewIndex];
-			
-			Slot.bIsOccupied = true;
-			Slot.ItemHandle.RowName = ItemData.Name;
-			Slot.StartPoint = FIntPoint(StartX, StartY);
-			Slot.ItemSize = FIntPoint(Width, Height);
-			Slot.ItemData = ItemData;
-
-			// 첫 칸에만 카운트 측정
-			if (X == StartX && Y == StartY)
-			{
-				Slot.ItemCount = ItemData.ItemCounts;
-				Slot.ItemData.ItemCounts = Slot.ItemCount;
-			}
-		}
-	}
+	if (!PlaceItemAt(ItemData, 1, index))
+		return false;
 	
 	OnRep_Slots();
 	return true;
@@ -394,7 +375,11 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 
 void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int TargetIndex)
 {
-	if (!Slots.IsValidIndex(OriginalIndex))
+	if (!Slots.IsValidIndex(OriginalIndex) || !Slots.IsValidIndex(TargetIndex))
+		return;
+	
+	// 제자리에 놓기
+	if (OriginalIndex == TargetIndex)
 		return;
 	
 	// 이동 전 슬롯의 데이터 가져오기
@@ -402,21 +387,20 @@ void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int 
 
 	PrevSlots = Slots;
 	
+	// 아이템 데이터 백업
 	FItemData MoveItem = OriginalSlot.ItemData;
-
-	// 기존 슬롯 제거
-	ClearItemSpace_Internal(OriginalSlot.StartPoint, OriginalSlot.ItemSize);
-
-	// 슬롯에 아이템 추가
-	if (AddItemToIndex_Internal(MoveItem, TargetIndex))
+	
+	// 아이템 먼저 제거
+	ClearItemAt(OriginalIndex);
+	
+	if (CanPlaceItemToIndex(MoveItem, TargetIndex))
 	{
-		// 이동 성공
-		OnRep_Slots();
+		PlaceItemAt(MoveItem, MoveItem.ItemCounts, TargetIndex, true);
 	}
-	else if (AddItemToIndex_Internal(MoveItem, OriginalIndex))
+	else
 	{
-		// 이동 실패, 원래 위치로 되돌림
-		OnRep_Slots();
+		// 배치 실패시 원상 복구
+		PlaceItemAt(MoveItem, MoveItem.ItemCounts, OriginalIndex, true);
 	}
 }
 
@@ -456,7 +440,6 @@ void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, c
 		}
 	}
 	
-	OnItemRemoved.Broadcast(RemovedItem);
 	OnRep_Slots();
 }
 
@@ -476,6 +459,7 @@ void UInventoryComponent::Server_RemoveItemToWorld_Implementation(int OriginalIn
 	// 기존 슬롯 제거
 	ClearItemSpace_Internal(OriginalSlot.StartPoint, OriginalSlot.ItemSize);
 	
+	OnItemRemoved.Broadcast(ItemData);
 	OnRep_Slots();
 	
 	// 월드에 아이템 액터 스폰

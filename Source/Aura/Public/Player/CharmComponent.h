@@ -27,7 +27,7 @@ public:
 
 public:
 	UFUNCTION()
-	void AddToCharmSlot(int SlotIndex);
+	void AddToCharmSlot(int SlotIndex, bool bIsItemMoved);
 	
 	UFUNCTION()
 	void RemoveFromCharmSlot(const FItemData& ItemData);

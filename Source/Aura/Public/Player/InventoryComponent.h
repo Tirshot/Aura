@@ -52,7 +52,7 @@ struct FInventorySlot
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventorySlotChanged, int32, SlotIndex);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemGet, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemGet, int32, SlotIndex, bool, bIsItemMoved);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemoved, const FItemData&, RemovedItemData);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -94,6 +94,8 @@ public:
 	// 아이템을 인덱스로 추가할 때 배치 가능 여부 판단
 	UFUNCTION(BlueprintCallable)
 	bool CanPlaceItemToIndex(const FItemData& ItemData, int index);
+	bool PlaceItemAt(const FItemData& ItemData, int AddCount, int TargetIndex, bool bIsItemMoved = false);
+	void ClearItemAt(int TargetIndex);
 
 	FInventorySlot* GetSlotByIndex(int index);
 

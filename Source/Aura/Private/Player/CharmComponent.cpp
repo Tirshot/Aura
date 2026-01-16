@@ -132,8 +132,12 @@ void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
 	}
 }
 
-void UCharmComponent::AddToCharmSlot(int SlotIndex)
+void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 {
+	// 아이템 추가가 인벤토리 내의 단순 이동이라면 리턴
+	if (bIsItemMoved)
+		return;
+	
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(GetOwner()))
 	{
 		FInventorySlot* InventorySlot = Inventory->GetSlotByIndex(SlotIndex);

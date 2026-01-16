@@ -97,8 +97,11 @@ public:
 	void SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const FItemData& DropItemData, FVector ItemSpawnLocation);
 	
 	UFUNCTION(BlueprintCallable)
-	void SpawnDropItemToActorLocation(AAuraCharacter* Character, FName ItemID);
-
+	void SpawnDropItemToActorLocation(AActor* Actor, FName ItemID);
+	
+	UFUNCTION(BlueprintCallable)
+	void SpawnDropItemToLocation(FVector Location, FName ItemID);
+	
 	// 아이템 드랍
 	UFUNCTION()
 	void DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharacter* KilledBy);
