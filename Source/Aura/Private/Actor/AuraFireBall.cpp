@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayCueManager.h"
 #include "AuraGameplayTags.h"
+#include "GameplayCueNotify_Static.h"
 #include "Components/AudioComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
@@ -17,20 +18,20 @@ void AAuraFireBall::BeginPlay()
 
 void AAuraFireBall::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// °ãÄ§ °ËÁõ
+	// ï¿½ï¿½Ä§ ï¿½ï¿½ï¿½ï¿½
 	if (IsValidOverlap(OtherActor) == false)
 		return;
 
 	if (HasAuthority())
 	{
-		// µ¥¹ÌÁö ÆÇÁ¤ - Gameplay Effect Handle
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ - Gameplay Effect Handle
 		if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
-			// »ç¸Á Ãæ°ÝÆÄ º¤ÅÍ °è»ê
+			// ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 			const FVector DeathImpulse = GetActorForwardVector() * DamageEffectParams.DeathImpulseMagnitude;
 			DamageEffectParams.DeathImpulse = DeathImpulse;
 
-			// Åõ»çÃ¼ÀÇ µ¥¹ÌÁö ÀÌÆåÆ® ÆÄ¶ó¹ÌÅÍ¿¡ Å¸°Ù ASC¸¦ ¼³Á¤
+			// ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Ä¶ï¿½ï¿½ï¿½Í¿ï¿½ Å¸ï¿½ï¿½ ASCï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 			DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
 			UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 		}
@@ -44,12 +45,12 @@ void AAuraFireBall::OnHit()
 		FGameplayCueParameters CueParams;
 		CueParams.Location = GetActorLocation();
 		UGameplayCueManager::ExecuteGameplayCue_NonReplicated(GetOwner(), FAuraGameplayTags::Get().GameplayCue_FireBlast, CueParams);
+		
+		// if (LoopingSoundComponent)
+		// {
+		// 	LoopingSoundComponent->Stop();
+		// 	LoopingSoundComponent->DestroyComponent();
+		// }
+		bHit = true;
 	}
-
-	if (LoopingSoundComponent)
-	{
-		LoopingSoundComponent->Stop();
-		LoopingSoundComponent->DestroyComponent();
-	}
-	bHit = true;
 }

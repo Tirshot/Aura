@@ -32,10 +32,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void AdditionalTargetDied(AActor* DeadActor);
 	
-protected:
 	void ShowMagicCircleAndRangeIndicator();
 
-private:
+protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraElectroSphere> ElectroSphereClass;
 	
@@ -54,10 +53,10 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	bool bFollowTarget = false;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float TraceRadius = 500.f;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float DamageRadius = 300.f;
 	
 	UPROPERTY(EditDefaultsOnly)

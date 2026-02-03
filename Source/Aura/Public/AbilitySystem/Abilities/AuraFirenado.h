@@ -62,5 +62,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float RangePerLevel = 80.f;
 
+	UPROPERTY()
 	FTimerHandle DestroyTimer;
 };

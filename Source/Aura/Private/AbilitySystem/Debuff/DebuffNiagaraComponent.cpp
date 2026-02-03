@@ -8,7 +8,7 @@
 
 UDebuffNiagaraComponent::UDebuffNiagaraComponent()
 {
-	// ¼öµ¿ È°¼ºÈ­
+	// ï¿½ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­
 	bAutoActivate = false;
 }
 
@@ -26,14 +26,15 @@ void UDebuffNiagaraComponent::BeginPlay()
 	{
 		CombatInterface->GetOnASCRegisteredDelegate().AddWeakLambda(this, [this](UAbilitySystemComponent* InASC)
 		{
-				InASC->RegisterGameplayTagEvent(DebuffTag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &UDebuffNiagaraComponent::DebuffTagChanged);
+			InASC->RegisterGameplayTagEvent(DebuffTag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &UDebuffNiagaraComponent::DebuffTagChanged);
 		});
 	}
 
-	if (CombatInterface)
-	{
-		CombatInterface->GetOnDeathDelegate().AddDynamic(this, &UDebuffNiagaraComponent::OnOwnerDeath);
-	}
+	// if (CombatInterface)
+	// {
+	// 	if (!CombatInterface->GetOnDeathDelegate()->IsAlreadyBound(this, &UDebuffNiagaraComponent::OnOwnerDeath))
+	// 		CombatInterface->GetOnDeathDelegate()->AddDynamic(this, &UDebuffNiagaraComponent::OnOwnerDeath);
+	// }
 }
 
 void UDebuffNiagaraComponent::DebuffTagChanged(const FGameplayTag CallbackTag, int32 NewCount)

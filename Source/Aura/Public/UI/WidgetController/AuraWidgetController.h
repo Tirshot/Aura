@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "AuraWidgetController.generated.h"
 
+struct FAuraAbilityInfo;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FAuraAbilityInfo&, Info);
 
 class UAttributeSet;
@@ -51,10 +52,21 @@ public:
 	virtual void BroadcastInitialValues() {};
 	virtual void BindCallbacksToDependencies() {};
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "GAS|Messages")
 	FAbilityInfoSignature AbilityInfoDelegate;
+	
+	UPROPERTY()
+	TArray<FAuraAbilityInfo> PendingInfos;
+	
+	UFUNCTION()
+	void BroadcastDelegates(const FGameplayAbilitySpec& AbilitySpec);
 
+	UFUNCTION()
 	void BroadcastAbilityInfo();
+	
+	// 부활 시에 달라지는 AS를 반영하기
+	UFUNCTION()
+	void SetAttributeSet(UAttributeSet* AS);
 
 protected:
 	// 어빌리티 정보
@@ -87,6 +99,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
 	TObjectPtr<UAuraAttributeSet> AuraAttributeSet;
 
+public:
 	// Get Aura PlayerController
 	AAuraPlayerController* GetAuraPC();
 

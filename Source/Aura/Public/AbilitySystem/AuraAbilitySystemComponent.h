@@ -7,14 +7,14 @@
 #include "AuraAbilitySystemComponent.generated.h"
 
 class ULoadScreenSaveGame;
-DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer& /*에셋 태그들*/);
-DECLARE_MULTICAST_DELEGATE(FAbilitiesGiven);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer&, AssetTags/*에셋 태그들*/);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAbilitiesGiven);
 DECLARE_DELEGATE_OneParam(FForEachAbility, const FGameplayAbilitySpec&);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FAbilityStatusChanged, const FGameplayTag& /*어빌리티 태그*/, const FGameplayTag& /*어빌리티 상태 태그*/, int32 /*어빌리티 레벨*/);
-DECLARE_MULTICAST_DELEGATE_FourParams(FAbilityEquipped, const FGameplayTag& /*어빌리티 태그*/, const FGameplayTag& /*어빌리티 상태*/, const FGameplayTag& /*슬롯*/, const FGameplayTag& /*이전 슬롯*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FDeactivatePassiveAbility, const FGameplayTag&/*어빌리티 태그*/);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FActivatePassiveEffect, const FGameplayTag&/*어빌리티 태그*/, bool/*bActivate*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FMessageTagReceived, const FGameplayTag&/*메시지 게임플레이 큐 태그*/);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAbilityStatusChanged, const FGameplayTag& ,AbilityTag, const FGameplayTag&, AbilityStatus, int32, AbilityLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FAbilityEquipped, const FGameplayTag&, AbilityTag, const FGameplayTag&, AbilityStatus, const FGameplayTag& /*슬롯*/, AbilitySlot, const FGameplayTag&, PrevSlot);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDeactivatePassiveAbility, const FGameplayTag&, AbilityTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActivatePassiveEffect, const FGameplayTag&, AbilityTag, bool, bActivate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageTagReceived, const FGameplayTag&, CueTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageRemoved, const FGameplayTag&, Tag/*메시지 게임플레이 큐 태그*/);
 
 UCLASS()
@@ -25,14 +25,31 @@ class AURA_API UAuraAbilitySystemComponent : public UAbilitySystemComponent
 public:
 	// 델리게이트 바인딩
 	void AbilityActorInfoSet();
+	
+	virtual void BeginDestroy() override;
 
+	UPROPERTY()
 	FEffectAssetTags EffectAssetTags;
+	
+	UPROPERTY()
 	FAbilitiesGiven AbilitiesGivenDelegate;
+	
+	UPROPERTY()
 	FAbilityStatusChanged AbilityStatusChanged;
+	
+	UPROPERTY()
 	FAbilityEquipped AbilityEquipped;
+	
+	UPROPERTY()
 	FDeactivatePassiveAbility DeactivePassiveAbility;
+	
+	UPROPERTY()
 	FActivatePassiveEffect ActivatePassiveEffect;
+	
+	UPROPERTY()
 	FMessageTagReceived OnMessageTagReceived;
+	
+	UPROPERTY()
 	FMessageRemoved OnMessageRemoved;
 
 	// 어빌리티 부여
@@ -93,7 +110,7 @@ public:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastActivatePassiveEffect(const FGameplayTag& AbilityTag, bool bActivate);
-
+	
 	UFUNCTION(BlueprintCallable)
 	void MessageRemove(const FGameplayTag& Tag);
 	
@@ -107,4 +124,9 @@ protected:
 
 	UFUNCTION(Client, Reliable)
 	void ClientUpdateAbilityStatus(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 AbilityLevel);
+
+protected:
+	UPROPERTY()
+	bool bStartAbilitiesGiven = false;
+
 };

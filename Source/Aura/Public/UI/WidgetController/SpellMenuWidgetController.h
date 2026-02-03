@@ -33,6 +33,9 @@ public:
 protected:
 	UFUNCTION()
 	void OnSpellPointChanged(int32 SpellPoints);
+	
+	UFUNCTION()
+	void OnAbilityStatusChanged(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 NewLevel);
 
 public:
 	UPROPERTY(BlueprintAssignable)
@@ -68,6 +71,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SpellRowGlobePressed(const FGameplayTag& SlotTag, const FGameplayTag& AbilityType);
 
+	UFUNCTION()
 	void OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot);
 	
 private:

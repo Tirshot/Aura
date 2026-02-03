@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/SaveGame.h"
+#include "Player/AuraPlayerState.h"
 #include "Player/EquipmentComponent.h"
 #include "Player/InventoryComponent.h"
 #include "LoadScreenSaveGame.generated.h"
@@ -156,14 +157,14 @@ public:
 	TArray<FSavedMap> SavedMaps;
 
 	UPROPERTY()
-	TMap<FGameplayTag, int32> SavedAbilityUpgrades;
+	FOwnedAbilityUpgradeList SavedAbilityUpgradeList;
 
 	// 인벤토리
 	UPROPERTY()
 	TArray<FInventorySlot> SavedInventorySlots;
 	
 	UPROPERTY()
-	TMap<EItemSubGroup, FEquipmentSlotInfo> SavedEquipmentSlotsMap;
+	FEquipmentSlotList SavedEquipmentSlots;
 
 	// 1회용 액터
 	UPROPERTY()

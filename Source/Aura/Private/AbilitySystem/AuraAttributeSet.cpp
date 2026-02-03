@@ -280,7 +280,7 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             {
                 // 사망
                 FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-                SourceASC->AddLooseGameplayTag(DeadTag); 
+                Props.TargetASC->AddLooseGameplayTag(DeadTag); 
                 
                 auto DeathImpulse = UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle);
                 

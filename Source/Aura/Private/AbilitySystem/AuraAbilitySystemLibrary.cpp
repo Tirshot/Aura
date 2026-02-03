@@ -38,16 +38,18 @@ bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldC
 		if (OutAuraHUD)
 		{
 			// PS, ASC, AS 가져오기
-			AAuraPlayerState* PS = PC->GetPlayerState<AAuraPlayerState>();
-			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-			UAttributeSet* AS = PS->GetAttributeSet();
+			if (AAuraPlayerState* PS = PC->GetPlayerState<AAuraPlayerState>())
+			{
+				UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+				UAttributeSet* AS = PS->GetAttributeSet();
 
-			// 파라미터 구조체를 채워서 내보내기
-			OutWCParams.PlayerState = PS;
-			OutWCParams.AbilitySystemComponent = ASC;
-			OutWCParams.AttributeSet = AS;
+				// 파라미터 구조체를 채워서 내보내기
+				OutWCParams.PlayerState = PS;
+				OutWCParams.AbilitySystemComponent = ASC;
+				OutWCParams.AttributeSet = AS;
 
-			return true;
+				return true;
+			}
 		}
 	}
 	return false;
@@ -304,6 +306,12 @@ void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContext
 	for (TSubclassOf<UGameplayAbility> AbilityClass : CharacterClassInfo->CommonAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+		FGameplayTagContainer ExcludeTags;
+		ExcludeTags.AddTag(FGameplayTag::RequestGameplayTag("Abilities.Passive"));
+		
+		if (AbilitySpec.Ability.Get()->GetAssetTags().HasAny(ExcludeTags))
+			continue;
+		
 		ASC->GiveAbility(AbilitySpec);
 	}
 
@@ -314,6 +322,12 @@ void UAuraAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContext
 		if (ASC->GetAvatarActor()->Implements<UCombatInterface>())
 		{
 			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, ICombatInterface::Execute_GetCharacterLevel(ASC->GetAvatarActor()));
+			FGameplayTagContainer ExcludeTags;
+			ExcludeTags.AddTag(FGameplayTag::RequestGameplayTag("Abilities.Passive"));
+		
+			if (AbilitySpec.Ability.Get()->GetAssetTags().HasAny(ExcludeTags))
+				continue;
+			
 			ASC->GiveAbility(AbilitySpec);
 		}
 	}
@@ -661,29 +675,29 @@ const FItemData UAuraAbilitySystemLibrary::GetItemDataByItemName(const UObject* 
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)
 {
-	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
-	if (AuraGameMode == nullptr)
+	UAuraGameInstance* AuraGI = WorldContextObject->GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
 		return nullptr;
 
-	return AuraGameMode->CharacterClassInfo;
+	return AuraGI->CharacterClassInfo;
 }
 
 UAbilityInfo* UAuraAbilitySystemLibrary::GetAbilityInfo(const UObject* WorldContextObject)
 {
-	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
-	if (AuraGameMode == nullptr)
+	UAuraGameInstance* AuraGI = WorldContextObject->GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
 		return nullptr;
 
-	return AuraGameMode->AbilityInfo;
+	return AuraGI->AbilityInfo;
 }
 
 UAbilityUpgradeInfo* UAuraAbilitySystemLibrary::GetAbilityUpgradeInfo(const UObject* WorldContextObject)
 {
-	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
-	if (AuraGameMode == nullptr)
+	UAuraGameInstance* AuraGI = WorldContextObject->GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
 		return nullptr;
 
-	return AuraGameMode->AbilityUpgradeInfo;
+	return AuraGI->AbilityUpgradeInfo;
 }
 
 FAuraAbilityUpgradeInfo UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(const UObject* WorldContextObject, const FGameplayTag& UpgradeTag)
@@ -700,11 +714,11 @@ FAuraAbilityUpgradeInfo UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgra
 
 ULootTiers* UAuraAbilitySystemLibrary::GetLootTiers(const UObject* WorldContextObject)
 {
-	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
-	if (AuraGameMode == nullptr)
+	UAuraGameInstance* AuraGI = WorldContextObject->GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
 		return nullptr;
 
-	return AuraGameMode->LootTiers;
+	return AuraGI->LootTiers;
 }
 
 bool UAuraAbilitySystemLibrary::IsBlockedHit(const FGameplayEffectContextHandle& EffectContextHandle)

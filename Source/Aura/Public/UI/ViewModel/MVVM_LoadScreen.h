@@ -4,9 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "UI/Widget/AuraUserWidget.h"
 #include "MVVM_LoadScreen.generated.h"
 
+class USaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlotSelected);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNetworkErrorReceived, const FString&, ErrorStr);
 
 class UMVVM_LoadSlot;
 
@@ -17,9 +20,11 @@ class AURA_API UMVVM_LoadScreen : public UMVVMViewModelBase
 
 public:
 	void InitializeLoadSlots();
-
-	UPROPERTY(BlueprintAssignable)
-	FSlotSelected SlotSelected;
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	UAuraUserWidget* CreatePopupWidget(FString& Str);
+	
+public:
 
 	UFUNCTION(BlueprintPure)
 	UMVVM_LoadSlot* GetLoadSlotViewModelByIndex(int32 Index);
@@ -44,6 +49,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void PlayButtonPressed();
 
+	// 게임 시작 버튼
+	UFUNCTION(BlueprintCallable)
+	void PlayMultiplayerButtonPressed();
+	
 	UFUNCTION(BlueprintCallable)
 	void TutorialButtonPressed();
 	
@@ -57,6 +66,12 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_LoadSlot> LoadSlotViewModelClass;
 
+	UPROPERTY(BlueprintAssignable)
+	FSlotSelected SlotSelected;
+	
+	UPROPERTY()
+	FNetworkErrorReceived NetworkErrorReceived;
+	
 private:
 	UPROPERTY()
 	TMap<int32, UMVVM_LoadSlot*> LoadSlots;

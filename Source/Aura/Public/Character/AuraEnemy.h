@@ -33,6 +33,7 @@ public:
 
 	// 전투 인터페이스 오버라이드
 	virtual int32 GetCharacterLevel_Implementation() override;
+	virtual FOnDeath* GetOnDeathDelegate() override;
 	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
@@ -40,6 +41,10 @@ public:
 	virtual bool IsXPOverridden_Implementation() const override;
     virtual float GetXPOverriddenValue_Implementation() const override;
 	// 전투 인터페이스 끝
+	
+	// 라이프 사이클, 데미지
+	FOnDeath OnDeath;
+	FOnDamageSignature OnDamageDelegate;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnHealthChanged;

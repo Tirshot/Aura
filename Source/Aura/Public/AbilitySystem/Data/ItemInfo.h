@@ -113,10 +113,6 @@ struct FItemData: public FTableRowBase
 {
 	GENERATED_BODY()
 	
-	// Item GUID Object <- 고유 이펙트 소스가 됨
-	UPROPERTY(Transient)
-	UObject* EffectSourceObject;
-
 	// !!각 행의 이름을 ItemID와 일치시켜야 함
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	FName Name = FName();
@@ -137,7 +133,7 @@ struct FItemData: public FTableRowBase
 	
 	// 인벤토리 내의 아이콘
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
-	UTexture2D* Image = nullptr;
+	TSoftObjectPtr<UTexture2D> Image;
 	
 	// 드롭 아이템 스태틱 메시
 	// 공통
@@ -153,7 +149,7 @@ struct FItemData: public FTableRowBase
 	
 	// 드롭 아이템 머티리얼
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
-	UMaterialInterface* Material = nullptr;
+	TSoftObjectPtr<UMaterialInstance> Material;
 	
 	// 설명
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (MultiLine = true), Category = "Item Data")

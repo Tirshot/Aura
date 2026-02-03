@@ -33,4 +33,11 @@ protected:
 		AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 	
+public:
+	UFUNCTION(Server, Reliable)
+	void Server_SaveWorldState();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_TravelToNextMap();
+	
 };

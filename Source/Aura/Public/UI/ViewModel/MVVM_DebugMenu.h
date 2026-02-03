@@ -14,6 +14,8 @@ class AURA_API UMVVM_DebugMenu : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
+	virtual UWorld* GetWorld() const override;
+	
 	UFUNCTION(BlueprintCallable)
 	void ViewModelInitialized();
 

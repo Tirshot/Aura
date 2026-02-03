@@ -25,8 +25,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Reset();
 	
-	UFUNCTION()
-	void ReInitializeSlotView();
+	UFUNCTION(BlueprintCallable)
+	void ReInitializeSlotView(const FItemData& ItemData);
 	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnSetIconDefault SetIconDefaultDelegate;
@@ -46,6 +46,10 @@ public:
 	
 	bool GetbEquipped() const {return bEquipped;}
 	void SetbEquipped(bool Inbool);
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	FItemData EquippedItemData;
 	
 protected:
 	UPROPERTY()

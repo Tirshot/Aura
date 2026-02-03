@@ -17,6 +17,7 @@ class AURA_API UAuraPassiveAbility : public UAuraGameplayAbility
 public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
+	UFUNCTION()
 	void ReceiveDeactivate(const FGameplayTag& AbilityTag);
 
 	int32 GetMaxLevel() const {return MaxLevel;}

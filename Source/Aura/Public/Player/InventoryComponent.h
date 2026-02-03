@@ -62,7 +62,7 @@ class AURA_API UInventoryComponent : public UActorComponent
 
 public:	
 	UInventoryComponent();
-
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
@@ -164,6 +164,8 @@ protected:
 	// 네트워크 환경에서 인벤토리
 	UPROPERTY(ReplicatedUsing = OnRep_Slots)
 	TArray<FInventorySlot> Slots;
+	
+	UPROPERTY()
 	TArray<FInventorySlot> PrevSlots;
 	
 	UPROPERTY(BlueprintReadWrite)

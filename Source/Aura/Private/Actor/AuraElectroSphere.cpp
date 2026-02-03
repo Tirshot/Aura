@@ -7,7 +7,6 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Character/AuraEnemy.h"
-#include "Components/AudioComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Interaction/CombatInterface.h"
@@ -50,11 +49,11 @@ void AAuraElectroSphere::OnHit()
 
 void AAuraElectroSphere::Destroyed()
 {
-	if (LoopingSoundComponent)
-	{
-		LoopingSoundComponent->Stop();
-		LoopingSoundComponent->DestroyComponent();
-	}
+	// if (LoopingSoundComponent)
+	// {
+	// 	LoopingSoundComponent->Stop();
+	// 	LoopingSoundComponent->DestroyComponent();
+	// }
 	
 	Super::Destroyed();
 }
@@ -128,7 +127,7 @@ void AAuraElectroSphere::DetectAdditionalTargets(TArray<AActor*> ActorsToIgnore)
 		ActorsToIgnore,
 		TraceRadius,
 		GetActorLocation());
-
+	
 	// 액터로부터 가장 가까운 어빌리티의 추가 타겟 갯수 만큼만 공격 
 	TArray<AActor*> CurrentClosestTargets;
 	UAuraAbilitySystemLibrary::GetClosestTargets(
@@ -136,6 +135,11 @@ void AAuraElectroSphere::DetectAdditionalTargets(TArray<AActor*> ActorsToIgnore)
 		CurrentOverlappingActors,
 		CurrentClosestTargets,
 		GetActorLocation());
+	
+	CurrentClosestTargets.RemoveAll([](AActor* OverlappingActor)
+	{
+		return OverlappingActor->ActorHasTag("Player");
+	});
 	
 	// 범위를 벗어난 적에게서 게임플레이 큐 제거
 	FGameplayTag GameplayCueTag = FGameplayTag::RequestGameplayTag("GameplayCue.ElectroSphere");

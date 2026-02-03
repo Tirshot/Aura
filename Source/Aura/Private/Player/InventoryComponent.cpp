@@ -551,13 +551,18 @@ FItemData* UInventoryComponent::GetItemData(FName ItemName)
 
 void UInventoryComponent::OnRep_Slots()
 {
-	// UI 갱신
-	for (int Index = 0; Index < Slots.Num(); Index++)
+	if (PrevSlots.Num() <= 0)
+		PrevSlots = Slots;
+	
+	if (Slots.Num() > 0)
 	{
-		if (PrevSlots[Index] != Slots[Index])
-			OnInventorySlotChanged.Broadcast(Index);
+		// UI 갱신
+		for (int Index = 0; Index < Slots.Num(); Index++)
+		{
+			if (PrevSlots[Index] != Slots[Index])
+				OnInventorySlotChanged.Broadcast(Index);
+		}
 	}
-
 	PrevSlots = Slots;
 }
 

@@ -68,7 +68,7 @@ public:
 	UAnimMontage* GetHitReactMontage();
 
 	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) = 0;
-	virtual FOnDeath& GetOnDeathDelegate() = 0;
+	virtual FOnDeath* GetOnDeathDelegate() = 0;
 	virtual FOnDamageSignature& GetOnDamageDelegate() = 0;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)

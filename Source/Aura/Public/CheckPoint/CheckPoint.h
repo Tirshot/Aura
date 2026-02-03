@@ -26,7 +26,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void CheckPointReached(UMaterialInstanceDynamic* DynamicMI, AActor* InteractedActor);
+	void CheckPointReached(UMaterialInstanceDynamic* InDynamicMI, AActor* InteractedActor);
 
 	UFUNCTION(BlueprintCallable)
 	void HandleGlowEffects(AActor* InteractedActor = nullptr);
@@ -78,4 +78,7 @@ public:
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> MoveToComponent;
+	
+	UPROPERTY()
+	UMaterialInstanceDynamic* DynamicMI;
 };

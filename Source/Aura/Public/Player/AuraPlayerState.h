@@ -6,11 +6,60 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Interaction/CombatInterface.h"
 #include "AuraPlayerState.generated.h"
 
 struct FAuraAbilityUpgradeInfo;
 class UAttributeSet;
 class ULevelUpInfo;
+
+USTRUCT(BlueprintType)
+struct FOwnedAbilityUpgrade : public FFastArraySerializerItem
+{
+	GENERATED_BODY()
+	
+public:
+	FOwnedAbilityUpgrade() {UpgradeTag = FGameplayTag::EmptyTag; UpgradeStack = 0;}
+	FOwnedAbilityUpgrade(FGameplayTag InTag, int32 InStack) : UpgradeTag(InTag), UpgradeStack(InStack) {}
+	FOwnedAbilityUpgrade(FGameplayTag InTag) : UpgradeTag(InTag), UpgradeStack(1) {}
+	
+	UPROPERTY()
+	FGameplayTag UpgradeTag = FGameplayTag::EmptyTag;
+	
+	UPROPERTY()
+	int32 UpgradeStack = 0;
+		
+	void PostReplicatedAdd(const struct FOwnedAbilityUpgradeList& InArraySerializer);
+	void PostReplicatedChange(const struct FOwnedAbilityUpgradeList& InArraySerializer);
+	void PreReplicatedRemove(const struct FOwnedAbilityUpgradeList& InArraySerializer);
+};
+
+USTRUCT(BlueprintType)
+struct FOwnedAbilityUpgradeList : public FFastArraySerializer
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY()
+	TArray<FOwnedAbilityUpgrade> OwnedAbilityUpgrades;
+	
+public:
+	bool FindOwnedAbilityUpgrade(const FGameplayTag& InTag);
+	FOwnedAbilityUpgrade* GetOwnedAbilityUpgrade(const FGameplayTag& InTag);
+	
+	// 직렬화
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+	{
+		return FFastArraySerializer::FastArrayDeltaSerialize<FOwnedAbilityUpgrade, FOwnedAbilityUpgradeList>(OwnedAbilityUpgrades, DeltaParms, *this);
+	}
+};
+
+// FastArray 등록
+template<>
+struct TStructOpsTypeTraits<FOwnedAbilityUpgradeList> : public TStructOpsTypeTraitsBase2<FOwnedAbilityUpgradeList>
+{
+	enum { WithNetDeltaSerializer = true };
+};
 
 // 플레이어 스테이트 초기화 완료
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitialized, AAuraPlayerState*, InitializedPlayerState);
@@ -36,7 +85,10 @@ public:
 
 	UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
-
+	FOnDeath* GetOnDeathDelegate() {return &OnDeath;}
+	FOnDamageSignature& GetOnDamageDelegate() {return OnDamageDelegate;}
+	
+public:
 	// 레벨 정보
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<ULevelUpInfo> LevelUpInfo;
@@ -48,6 +100,10 @@ public:
 	FOnPlayerStatChanged OnXPChangedDelegate;
 	FOnLevelChanged OnLevelChangedDelegate;
 
+	// 라이프 사이클, 데미지
+	FOnDeath OnDeath;
+	FOnDamageSignature OnDamageDelegate;
+	
 	UPROPERTY(BlueprintAssignable)
 	FOnPlayerStatChanged OnAttributePointChangedDelegate;
 	
@@ -60,6 +116,7 @@ public:
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnAbilityUpgradeTagsChanged OnAbilityUpgradeTagsChangedDelegate;
 	
+public:
 	FORCEINLINE int32 GetCharacterLevel() const { return Level; }
 	FORCEINLINE int32 GetXP() const { return XP; }
 	
@@ -87,16 +144,22 @@ public:
 
 	void SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>& NewCard);
 
-	TMap<FGameplayTag, int32>& GetAbilityUpgradeTagContainer(){ return OwnedAbilityUpgradeTags; }
-	void SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer);
+	FOwnedAbilityUpgradeList& GetOwnedAbilityUpgradeList(){ return OwnedAbilityUpgradeList; }
+	void SetAbilityUpgradeTagContainer(const FOwnedAbilityUpgradeList& InOwnedAbilityUpgradeList);
 	
 	void ResetAttributesToBaseValue();
 	
 public:
 	// 어빌리티 업그레이드
-	UPROPERTY()
-	TMap<FGameplayTag, int32> OwnedAbilityUpgradeTags;
-
+	UPROPERTY(Replicated)
+	FOwnedAbilityUpgradeList OwnedAbilityUpgradeList;
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SyncPlayerStatFromClient(int32 InLevel, int32 InXP, int32 InAttributePoints, int32 InSpellPoints);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SyncPlayerUpgradeListFromClient(const FOwnedAbilityUpgradeList& UpgradeList);
+	
 	UFUNCTION(Server, Reliable)
 	void Server_AddAbilityUpgradeTag(FGameplayTag UpgradeTag);
 	
@@ -137,6 +200,10 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UAttributeSet> AttributeSet;
+	
+public:
+	UPROPERTY()
+	bool bIsDataLoaded = false;
 
 private:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Level)
@@ -150,7 +217,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_SpellPoint)
 	int32 SpellPoints = 0;
-
+	
 	UFUNCTION()
 	void OnRep_Level(int32 OldLevel);
 

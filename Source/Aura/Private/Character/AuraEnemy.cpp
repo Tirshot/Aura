@@ -100,6 +100,11 @@ int32 AAuraEnemy::GetCharacterLevel_Implementation()
     return Level;
 }
 
+FOnDeath* AAuraEnemy::GetOnDeathDelegate()
+{
+    return &OnDeath;
+}
+
 void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
     // 랙돌 효과와 무기 드랍

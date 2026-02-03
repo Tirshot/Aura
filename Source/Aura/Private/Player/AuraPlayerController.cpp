@@ -25,8 +25,7 @@
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Game/AuraGameModeBase.h"
-#include "Game/AuraGameUserSettings.h"
-#include "GameFramework/GameUserSettings.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interaction/CombatInterface.h"
 #include "Interaction/HighlightInterface.h"
@@ -37,14 +36,12 @@
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/ViewModel/MVVM_TutorialDialogue.h"
 #include "UI/Widget/LoadScreenWidget.h"
-#include "UI/WidgetController/SettingsMenuWidgetController.h"
+#include "UI/WidgetController/GameOverWidgetController.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
     // 서버에서 발생한 변경 사항을 복제하여 모든 클라이언트로 전송(브로드 캐스팅)
     bReplicates = true;
-    //bEnableClickEvents = true;
-    // bEnableMouseOverEvents = true;
     
     // 길 찾기 스플라인
     Spline = CreateDefaultSubobject<USplineComponent>("Spline");
@@ -81,8 +78,9 @@ void AAuraPlayerController::BeginPlay()
     SetInputMode(InputModeData);
 
     // 델리게이트 바인딩
-    OnCardSelectedDelegate.AddUObject(this ,&AAuraPlayerController::HandleCardSelectionInitialized);
-
+    OnCardSelectedDelegate.AddUObject(this, &AAuraPlayerController::HandleCardSelectionInitialized);
+    OnReviveTimerEnd.AddDynamic(this, &AAuraPlayerController::Server_ReviveFromPlayerStart);
+    
     const FString CurrentLevelName = GetWorld()->GetMapName();
 
     // 튜토리얼 레벨에서만 위젯 컨트롤러 생성
@@ -98,7 +96,6 @@ void AAuraPlayerController::BeginPlay()
 void AAuraPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
-
     OnBossMonsterAdded.AddUObject(this, &AAuraPlayerController::BossMonsterBind);
 
     if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
@@ -109,6 +106,14 @@ void AAuraPlayerController::OnPossess(APawn* InPawn)
             OnBossMonsterAdded.Broadcast();
         }
     }
+}
+
+void AAuraPlayerController::AcknowledgePossession(APawn* P)
+{
+    Super::AcknowledgePossession(P);
+    
+    // TODO::클라이언트 또한 보스 몬스터 이벤트에 바인딩 해야함 
+    
 }
 
 
@@ -138,6 +143,12 @@ void AAuraPlayerController::SetupInputComponent()
 void AAuraPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
+    
+    if (GetASC())
+    {
+        if (GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+            return;
+    }
 
     // 커서 추적
     CursorTrace();
@@ -268,9 +279,14 @@ void AAuraPlayerController::BossMonsterBind()
         auto BossArray = AuraGameMode->GetBossCharactersArray();
         for (const auto Boss : BossArray)
         {
-            Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::OnBossEventStart);
-            Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::OnBossEventEnd);
-            Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
+            if (!Boss.Get()->OnBossEventStart.IsAlreadyBound(this, &AAuraPlayerController::OnBossEventStart))
+                Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::OnBossEventStart);
+            
+            if (!Boss.Get()->OnBossEventEnd.IsAlreadyBound(this, &AAuraPlayerController::OnBossEventEnd))
+                Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::OnBossEventEnd);
+            
+            if (!Boss.Get()->OnDeath.IsAlreadyBound(this, &AAuraPlayerController::OnBossDead))
+                Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
         }
     }
 }
@@ -613,11 +629,11 @@ void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgra
             AuraHUD->CardSelectionWidget = nullptr;
         }
     }
-
-    // 강제 저장
-    if (AAuraGameModeBase* GameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    
+    // 자동 저장??
+    if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
     {
-        GameMode->GameAutoSave();
+        AuraGM->Server_SaveWorldState(GetWorld());
     }
 }
 
@@ -635,7 +651,49 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
+    if (!HasAuthority())
+        return;
+    
     Server_CreateCardSelection(GetPawn());
+}
+
+void AAuraPlayerController::Client_ShowGameOverWidget_Implementation()
+{
+    UAuraAbilitySystemLibrary::GetGameOverWidgetController(this)->HandleOnDeath(GetPawn());
+}
+
+void AAuraPlayerController::Server_StartSpectating_Implementation()
+{
+    if (!HasAuthority())
+        return;
+    
+    if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+    {
+        AActor* SpectatingPawn = nullptr;
+        for (TSoftObjectPtr<AAuraPlayerController> SpectatingPlayer : AuraGM->GetPlayersArray())
+        {
+            SpectatingPawn = SpectatingPlayer->GetPawn();
+            if (SpectatingPawn && SpectatingPawn != GetPawn())
+            {
+                break;
+            }
+        }
+        
+        if (SpectatingPawn)
+            SetViewTargetWithBlend(SpectatingPawn, 0.5f);
+    }
+}
+
+void AAuraPlayerController::Server_ReviveFromPlayerStart_Implementation()
+{
+    if (!HasAuthority())
+        return;
+    
+    if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+    {
+        // 서버에서 부활
+        AuraGM->PlayerRespawn(this);
+    }
 }
 
 void AAuraPlayerController::Server_CharacterDebugInvincible_Implementation(bool bInvincible)
@@ -761,18 +819,24 @@ void AAuraPlayerController::Server_SelectUpgrade_Implementation(FGameplayTag Sel
     {
         // 플레이어 상태의 태그 컨테이너 내에 저장
         AuraPlayerState->Server_AddAbilityUpgradeTag(SelectedUpgradeTag);
+        
+        // 자동 저장
+        if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+        {
+            AuraGM->Server_GameAutoSave();
+        }
     }
 }
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {
-    // 입력 상태 태그 확인
-    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    UAbilitySystemComponent* ASC = GetASC();
+    if (ASC && ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
-        if (AAuraCharacter* Aura = Cast<AAuraCharacter>(GetASC()->GetAvatarActor()))
+        if (APawn* ControlledPawn = GetPawn())
         {
-            Aura->StopMovementInput();
-            StopAutoRun();
+            if (ACharacter* AuraCharacter = Cast<ACharacter>(ControlledPawn))
+                AuraCharacter->GetCharacterMovement()->StopMovementImmediately();
         }
         return;
     }
@@ -792,7 +856,6 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
         ControlledPawn->AddMovementInput(ForwardDirection, InputAxisVector.Y);
         ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
     }
-
 }
 
 void AAuraPlayerController::Zoom(const struct FInputActionValue& InputActionValue)
@@ -953,7 +1016,11 @@ void AAuraPlayerController::CursorTrace()
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
     // 입력 상태 태그 확인
-    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    if (!GetASC())
+        return;
+    
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
+        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
     {
         StopAutoRun();
         return;
@@ -1011,7 +1078,11 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
     // 입력 상태 태그 확인
-    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
+    if (!GetASC())
+        return;
+    
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
+        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
     {
         StopAutoRun();
         return;
@@ -1070,9 +1141,13 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
     // 입력 상태 태그 확인
-    if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
+    if (!GetASC())
+        return;
+    
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
+        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
     {
-        bAutoRunning = false;
+        StopAutoRun();
         return;
     }
 

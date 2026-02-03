@@ -9,7 +9,6 @@
 #include "Player/AuraPlayerState.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "AbilitySystem/Data/ItemInfo.h"
 
 void UOverlayWidgetController::BroadcastInitialValues()
 {
@@ -18,6 +17,10 @@ void UOverlayWidgetController::BroadcastInitialValues()
 
     OnManaChanged.Broadcast(GetAuraAS()->GetMana());
     OnMaxManaChanged.Broadcast(GetAuraAS()->GetMaxMana());
+    
+    int32 Level = GetAuraPS()->GetCharacterLevel();
+    OnPlayerLevelChangedDelegate.Broadcast(Level, false);
+    GetAuraPS()->OnXPChangedDelegate.Broadcast(GetAuraPS()->GetXP());
 }
 
 void UOverlayWidgetController::BindCallbacksToDependencies()
@@ -62,7 +65,7 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 
     if (GetAuraASC())
     {
-        GetAuraASC()->AbilityEquipped.AddUObject(this, &UOverlayWidgetController::OnAbilityEquipped);
+        GetAuraASC()->AbilityEquipped.AddDynamic(this, &UOverlayWidgetController::OnAbilityEquipped);
         if (GetAuraASC()->bStartupAbilitiesGiven)
         {
             // 콜백 함수 바인드 필요 없이 바로 호출
@@ -71,37 +74,32 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
         else
         {
             // 어빌리티 부여 이전이면 델리게이트에 함수 바인딩
-            GetAuraASC()->AbilitiesGivenDelegate.AddUObject(this, &UOverlayWidgetController::BroadcastAbilityInfo);
+            GetAuraASC()->AbilitiesGivenDelegate.AddDynamic(this, &UOverlayWidgetController::BroadcastAbilityInfo);
         }
         
-        GetAuraASC()->OnMessageTagReceived.AddLambda([this](const FGameplayTag& Tag)
-        {
-            const FUIWidgetRow* Row = GetDataTableRowByTag<FUIWidgetRow>(MessageWidgetDataTable, Tag);
-            if (Row)
-                MessageWidgetRowDelegate.Broadcast(*Row);
-        });
+        GetAuraASC()->OnMessageTagReceived.AddDynamic(this, &UOverlayWidgetController::OnMessageTagReceived);
 
         GetAuraASC()->OnMessageRemoved.AddDynamic(this, &UOverlayWidgetController::MessageRemove);
         
         // 플로팅 메세지
-        GetAuraASC()->EffectAssetTags.AddLambda(
-            [this](const FGameplayTagContainer& AssetTags)
-            {   /* 멤버 변수에 접근하려면 캡쳐 */
-                for (const FGameplayTag& Tag : AssetTags)
-                {
-                    // Tag = Massage.HealthPotion
-                    // "Message.HealthPotion".MatchesTag("Message")는 True
-                    // "Message".MatchesTag("Message.HealthPotion")는 False
-                    // 매개변수로 전달된 태그가 전부 같아야 함
-                    FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(FName("Message"));
-                    if (Tag.MatchesTag(MessageTag))
-                    {
-                        const FUIWidgetRow* Row = GetDataTableRowByTag<FUIWidgetRow>(MessageWidgetDataTable, Tag);
-                        MessageWidgetRowDelegate.Broadcast(*Row);
-                    }
-                }
-            }
-        );
+        GetAuraASC()->EffectAssetTags.AddDynamic(this, &UOverlayWidgetController::OnFloatingMessageReceived);
+    }
+}
+
+void UOverlayWidgetController::BeginDestroy()
+{
+    Super::BeginDestroy();
+}
+
+void UOverlayWidgetController::ProcessPendingAbilityInfos()
+{
+    if (PendingInfos.Num() > 0)
+    {
+        for (const auto& Info : PendingInfos)
+        {
+            AbilityInfoDelegate.Broadcast(Info);
+        }
+        PendingInfos.Empty();
     }
 }
 
@@ -202,6 +200,26 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
         Info->InputTag = Slot;
         Info->AbilityTag = AbilityTag;
         AbilityInfoDelegate.Broadcast(*Info);
+    }
+}
+
+void UOverlayWidgetController::OnMessageTagReceived(const FGameplayTag& Tag)
+{
+    const FUIWidgetRow* Row = GetDataTableRowByTag<FUIWidgetRow>(MessageWidgetDataTable, Tag);
+    if (Row)
+        MessageWidgetRowDelegate.Broadcast(*Row);
+}
+
+void UOverlayWidgetController::OnFloatingMessageReceived(const FGameplayTagContainer& TagContainer)
+{
+    FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(FName("Message"));
+    for (const FGameplayTag& Tag : TagContainer)
+    {
+        if (Tag.MatchesTag(MessageTag))
+        {
+            const FUIWidgetRow* Row = GetDataTableRowByTag<FUIWidgetRow>(MessageWidgetDataTable, Tag);
+            MessageWidgetRowDelegate.Broadcast(*Row);
+        }
     }
 }
 

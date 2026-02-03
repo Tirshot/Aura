@@ -35,6 +35,9 @@ UCLASS()
 class AURA_API AAuraGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
+	
+public:
+	AAuraGameModeBase();
 
 protected:
 	virtual void BeginPlay() override;
@@ -49,29 +52,35 @@ public:
 	/* 
 	 * 저장, 로드 관련
 	 */
-	void SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex);
 	static void DeleteSlot(const FString& SlotName, int32 SlotIndex);
 	ULoadScreenSaveGame* RetrieveInGameSaveData();
+	ULoadScreenSaveGame* RetrieveInGameSaveData(APlayerController* PC);
+	
 	void SaveInGameProgressData(ULoadScreenSaveGame* SaveObject);
 
 	// 월드 저장 및 불러오기
-	void SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
-	void LoadWorldState(UWorld* World);
+	UFUNCTION(Server, Reliable)
+	void Server_SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
+	
+	UFUNCTION(Client, Reliable)
+	void Client_SaveCharacterProgress();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_LoadWorldState(UWorld* World);
 	
 	void TravelToMap(UMVVM_LoadSlot* Slot);
 	void TravelToMap(FString MapName);
-
-	ULoadScreenSaveGame* GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const;
 	
-	void GameAutoSave();
-	
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<USaveGame> LoadScreenSaveGameClass;
+	UFUNCTION(Server, Reliable)
+	void Server_GameAutoSave();
 
-	void PlayerDied(ACharacter* DeadCharacter, float RemainingTime);
 	void RestartGameFromSaveData(ACharacter* DeadCharacter);
 	void RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject);
+	
+	void PlayerRespawn(AAuraPlayerController* DeadPC);
 
+public:
+	
 public:
 	/*
 	 * 로그라이크
@@ -107,35 +116,6 @@ public:
 	void DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharacter* KilledBy);
 	
 public:
-	UPROPERTY(EditDefaultsOnly, Category="Character Class Default")
-	TObjectPtr<UCharacterClassInfo> CharacterClassInfo;
-
-	UPROPERTY(EditDefaultsOnly, Category="Ability Info")
-	TObjectPtr<UAbilityInfo> AbilityInfo;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Ability Upgrade Info")
-	TObjectPtr<UAbilityUpgradeInfo> AbilityUpgradeInfo;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Ability Upgrade Info")
-	TObjectPtr<UEnemyAbilityUpgradeInfo> EnemyAbilityUpgradeInfo;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Item")
-	TObjectPtr<ULootTiers> LootTiers;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Item Drop")
-	TSubclassOf<AAuraDropItem> DropItemClass;
-	
-	// 기본 맵 이름
-	UPROPERTY(EditDefaultsOnly)
-	FString DefaultMapName;
-
-	// Soft Object Ptr : 존재하기 전까지 메모리에 적재하지 않음
-	UPROPERTY(EditDefaultsOnly)
-	TSoftObjectPtr<UWorld> DefaultMap;
-
-	UPROPERTY(EditDefaultsOnly)
-	FName DefaultPlayerStartTag;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
 
@@ -149,7 +129,7 @@ public:
 	UFUNCTION()
 	void AddMonsterToArray(AAuraEnemy* Enemy);
 	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
-
+	
 	UFUNCTION(BlueprintCallable)
 	int32 GetBossCharacterArrayLength() { return BossCharacters.Num(); }
 	
@@ -170,6 +150,8 @@ public:
 
 	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
 
+	TArray<TSoftObjectPtr<AAuraPlayerController>> GetPlayersArray(){return Players;}
+
 public:
 	// 몬스터에게 업그레이드 태그 부여
 	UFUNCTION(BlueprintCallable)
@@ -186,4 +168,7 @@ private:
 
 	UPROPERTY()
 	TArray<TSoftObjectPtr<AAuraBossMonster>> BossCharacters;
+	
+	UPROPERTY()
+	TArray<TSoftObjectPtr<AAuraPlayerController>> Players;
 };

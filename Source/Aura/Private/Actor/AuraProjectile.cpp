@@ -2,15 +2,12 @@
 
 
 #include "Actor/AuraProjectile.h"
-#include "NiagaraFunctionLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Aura/Aura.h"
-#include "Components/AudioComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameplayEffect.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 AAuraProjectile::AAuraProjectile()
@@ -40,33 +37,38 @@ void AAuraProjectile::BeginPlay()
 	SetReplicateMovement(true);
 
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraProjectile::OnSphereOverlap);
-
-	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
+	
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	{
+		FGameplayCueParameters CueParams;
+		CueParams.Location = GetActorLocation();
+		CueParams.Instigator = GetOwner();
+		CueParams.EffectCauser = this;
+		CueParams.SourceObject = this;
+		ASC->AddGameplayCue(LoopingGameplayCue, CueParams);
+	}
 }
 
 void AAuraProjectile::Destroyed()
 {
-	if (LoopingSoundComponent)
-	{
-		LoopingSoundComponent->Stop();
-		LoopingSoundComponent->DestroyComponent();
-	}
-	// Å¬¶óÀÌ¾ğÆ®
-	if (bHit == false && HasAuthority() == false)
+	if (bHit == false)
 		OnHit();
+	
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	{
+		FGameplayCueParameters CueParams;
+		CueParams.Location = GetActorLocation();
+		CueParams.Instigator = GetOwner();
+		CueParams.EffectCauser = this;
+		CueParams.SourceObject = this;
+		ASC->RemoveGameplayCue(LoopingGameplayCue);
+	}
 
 	Super::Destroyed();
 }
 
 void AAuraProjectile::OnHit()
 {
-	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-	if (LoopingSoundComponent)
-	{
-		LoopingSoundComponent->Stop();
-		LoopingSoundComponent->DestroyComponent();
-	}
 	bHit = true;
 }
 
@@ -78,33 +80,43 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 	if (bHit == false)
 		OnHit();
 
-	if (HasAuthority())
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
 	{
-		// µ¥¹ÌÁö ÆÇÁ¤ - Gameplay Effect Handle
-		if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+		FGameplayCueParameters CueParams;
+		CueParams.Location = GetActorLocation();
+		CueParams.Instigator = GetOwner();
+		CueParams.EffectCauser = this;
+		CueParams.SourceObject = this;
+		ASC->ExecuteGameplayCue(ImpactGameplayCue, CueParams);
+	}
+	
+	// ë°ë¯¸ì§€ íŒì •
+	ApplyDamage(OtherActor);
+	
+	// íŒŒê´´
+	Destroy();
+}
+
+void AAuraProjectile::ApplyDamage(AActor* OtherActor)
+{
+	if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
+	{
+		const FVector DeathImpulse = GetActorForwardVector() * DamageEffectParams.DeathImpulseMagnitude;
+		DamageEffectParams.DeathImpulse = DeathImpulse;
+
+		const bool bKnockback = FMath::RandRange(1, 100) < DamageEffectParams.KnockbackChance;
+		if (bKnockback)
 		{
-			// »ç¸Á Ãæ°İÆÄ º¤ÅÍ °è»ê
-			const FVector DeathImpulse = GetActorForwardVector() * DamageEffectParams.DeathImpulseMagnitude;
-			DamageEffectParams.DeathImpulse = DeathImpulse;
+			FRotator Rotation = GetActorRotation();
+			Rotation.Pitch = 45.f;
 
-			// ³Ë¹é °è»ê
-			const bool bKnockback = FMath::RandRange(1, 100) < DamageEffectParams.KnockbackChance;
-			if (bKnockback)
-			{
-				FRotator Rotation = GetActorRotation();
-				Rotation.Pitch = 45.f;
-
-				const FVector KnockbackDirection = Rotation.Vector();
-				const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
-				DamageEffectParams.KnockbackForce = KnockbackForce;
-			}
-
-			// Åõ»çÃ¼ÀÇ µ¥¹ÌÁö ÀÌÆåÆ® ÆÄ¶ó¹ÌÅÍ¿¡ Å¸°Ù ASC¸¦ ¼³Á¤
-			DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
-			UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
+			const FVector KnockbackDirection = Rotation.Vector();
+			const FVector KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
+			DamageEffectParams.KnockbackForce = KnockbackForce;
 		}
 
-		Destroy();
+		DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
+		UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 	}
 	else
 		bHit = true;
@@ -117,11 +129,9 @@ bool AAuraProjectile::IsValidOverlap(AActor* OtherActor)
 
 	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
 
-	// º»ÀÎ°úÀÇ Ãæµ¹ ¹æÁö
 	if (SourceAvatarActor == OtherActor)
 		return false;
 
-	// ¾Æ±º »ç°İ ¹æÁö
 	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor))
 		return false;
 

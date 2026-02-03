@@ -17,30 +17,39 @@ void UAuraWidgetController::SetWidgetControllerParams(const FWidgetControllerPar
     AttributeSet = WCParams.AttributeSet;
 }
 
+void UAuraWidgetController::BroadcastDelegates(const FGameplayAbilitySpec& AbilitySpec)
+{
+    FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(GetAuraASC()->GetAbilityTagFromSpec(AbilitySpec));
+
+    Info->InputTag = GetAuraASC()->GetInputTagFromSpec(AbilitySpec);
+    Info->StatusTag = GetAuraASC()->GetStatusFromSpec(AbilitySpec);
+
+    if (AbilityInfoDelegate.IsBound())
+    {
+        AbilityInfoDelegate.Broadcast(*Info);
+    }
+    else
+    {
+        // 바인딩이 더 늦으면 캐싱해뒀다가 다시 뿌려주기
+        PendingInfos.Add(*Info);
+    }
+}
+
 void UAuraWidgetController::BroadcastAbilityInfo()
 {
-    // �����Ƽ�� �־����� �ʾҴٸ� ����
     if (!GetAuraASC()->bStartupAbilitiesGiven)
         return;
 
-    // �����Ƽ�� ��ȸ���� �ʰ� ��������Ʈ�� ���
-    // �ݹ� �Լ� ���ε�
     FForEachAbility BroadcastDelegate;
-    BroadcastDelegate.BindLambda([this](const FGameplayAbilitySpec& AbilitySpec)
-        {
-            // �±׸� �̿��ؼ� �����Ƽ ���� ��������
-            FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(GetAuraASC()->GetAbilityTagFromSpec(AbilitySpec));
+    BroadcastDelegate.BindUObject(this, &UAuraWidgetController::BroadcastDelegates);
 
-            // �����Ƽ�� �Է� �±� �� ���� �±� �ο�
-            Info->InputTag = GetAuraASC()->GetInputTagFromSpec(AbilitySpec);
-            Info->StatusTag = GetAuraASC()->GetStatusFromSpec(AbilitySpec);
-
-            // ��������Ʈ ��������Ʈ�� ����
-            AbilityInfoDelegate.Broadcast(*Info);
-        });
-
-    // ��������Ʈ ����
     GetAuraASC()->ForEachAbility(BroadcastDelegate);
+}
+
+void UAuraWidgetController::SetAttributeSet(UAttributeSet* AS)
+{
+    AttributeSet = AS;
+    AuraAttributeSet = Cast<UAuraAttributeSet>(AS);
 }
 
 AAuraPlayerController* UAuraWidgetController::GetAuraPC()

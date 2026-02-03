@@ -12,7 +12,7 @@ void UAuraPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	// ASC�� ����
 	if (auto* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo())))
 	{
-		AuraASC->DeactivePassiveAbility.AddUObject(this, &UAuraPassiveAbility::ReceiveDeactivate);
+		AuraASC->DeactivePassiveAbility.AddDynamic(this, &UAuraPassiveAbility::ReceiveDeactivate);
 	}
 }
 

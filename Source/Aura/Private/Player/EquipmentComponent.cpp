@@ -15,21 +15,69 @@
 #include "UI/ViewModel/MVVM_Inventory.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
+void FEquipmentSlotEntry::PostReplicatedAdd(const struct FEquipmentSlotList& InArraySerializer)
+{
+	// 슬롯이 처음 로드(추가) 되었을 때 호출
+	// UI 갱신
+	for (int Index = 0; Index < InArraySerializer.Items.Num(); Index++)
+	{
+		if (InArraySerializer.OwnerComponent)
+		{
+			// 2. 델리게이트를 호출하기 전에 반드시 유효성 검사
+			if (InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.IsBound())
+			{
+				InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.Broadcast(Index);
+			}
+		}
+	}
+}
+
+void FEquipmentSlotEntry::PostReplicatedChange(const struct FEquipmentSlotList& InArraySerializer)
+{
+	// 슬롯의 데이터가 변경되었을 때 호출
+	// UI 갱신
+	for (int Index = 0; Index < InArraySerializer.Items.Num(); Index++)
+	{
+		if (InArraySerializer.OwnerComponent)
+		{
+			// 2. 델리게이트를 호출하기 전에 반드시 유효성 검사
+			if (InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.IsBound())
+			{
+				InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.Broadcast(Index);
+			}
+		}
+	}
+}
+
+void FEquipmentSlotEntry::PreReplicatedRemove(const struct FEquipmentSlotList& InArraySerializer)
+{
+	// 슬롯의 데이터가 삭제될 때 호출
+	// UI 갱신
+	for (int Index = 0; Index < InArraySerializer.Items.Num(); Index++)
+	{
+		if (InArraySerializer.OwnerComponent)
+		{
+			// 2. 델리게이트를 호출하기 전에 반드시 유효성 검사
+			if (InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.IsBound())
+			{
+				InArraySerializer.OwnerComponent->OnEquipmentSlotChanged.Broadcast(Index);
+			}
+		}
+	}
+}
+
 UEquipmentComponent::UEquipmentComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	
-	// 맵의 값을 빈 슬롯 데이터로 채우기
-	EquipmentMap.EquipSlotMap.Add(EItemSubGroup::Weapon, FEquipmentSlotInfo());
-	EquipmentMap.EquipSlotMap.Add(EItemSubGroup::Helmet, FEquipmentSlotInfo());
-	EquipmentMap.EquipSlotMap.Add(EItemSubGroup::Armor, FEquipmentSlotInfo());
-	EquipmentMap.EquipSlotMap.Add(EItemSubGroup::Boots, FEquipmentSlotInfo());
+	SetIsReplicatedByDefault(true);
 }
 
 
 void UEquipmentComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	EquipmentSlots.OwnerComponent = this;
 	
 	// ASC 연결
 	if (AActor* AvatarActor = GetOwner())
@@ -41,16 +89,29 @@ void UEquipmentComponent::BeginPlay()
 		{
 			InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(AvatarActor);
 		}
+		if (EquipmentSlots.Items.IsEmpty())
+		{
+			// 맵의 값을 빈 슬롯 데이터로 채우기
+			EquipmentSlots.Items.Add(FEquipmentSlotEntry(EItemSubGroup::Helmet));
+			EquipmentSlots.MarkItemDirty(EquipmentSlots.Items[0]);
+			
+			EquipmentSlots.Items.Add(FEquipmentSlotEntry(EItemSubGroup::Armor));
+			EquipmentSlots.MarkItemDirty(EquipmentSlots.Items[1]);
+			
+			EquipmentSlots.Items.Add(FEquipmentSlotEntry(EItemSubGroup::Boots));
+			EquipmentSlots.MarkItemDirty(EquipmentSlots.Items[2]);
+			
+			EquipmentSlots.Items.Add(FEquipmentSlotEntry(EItemSubGroup::Weapon));
+			EquipmentSlots.MarkItemDirty(EquipmentSlots.Items[3]);
+		}
 	}
-
 }
 
 void UEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(UEquipmentComponent, EquipmentMap);
-	DOREPLIFETIME(UEquipmentComponent, AuraASC);
+	DOREPLIFETIME(UEquipmentComponent, EquipmentSlots);
 }
 
 
@@ -64,16 +125,26 @@ void UEquipmentComponent::Server_ClearSlot_Implementation(EItemSubGroup Slot)
 {
 	if (GetOwner()->HasAuthority())
 	{
-		ClearSlot(GetSlot(Slot));
+		ClearSlot(GetSlotEntry(Slot));
+		
+		if (FEquipmentSlotEntry* Entry = GetSlotEntry(Slot))
+		{
+			ClearSlot(Entry);
+
+			Entry->ItemData = FItemData();
+			Entry->bIsSlotEquipped = false;
+			EquipmentSlots.MarkItemDirty(*Entry);
+		}
 	}
 }
 
 bool UEquipmentComponent::IsSlotEmpty(EItemSubGroup Slot) const
 {
-	return EquipmentMap.EquipSlotMap.Find(Slot)->IsEmpty();
+	int SlotIndex = static_cast<uint8>(Slot);
+	return EquipmentSlots.Items[SlotIndex].IsEmpty();
 }
 
-void UEquipmentComponent::ClearSlot(FEquipmentSlotInfo* Slot)
+void UEquipmentComponent::ClearSlot(FEquipmentSlotEntry* Slot)
 {
 	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
 	AuraASC->RemoveActiveGameplayEffectBySourceEffect(Slot->ItemData.ItemStatEffectClass, nullptr);
@@ -112,60 +183,84 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlotInfo* Slot)
 	
 	// 장착된 메시 제거
 	DetachItemMeshFromAuraCharacterMesh(Slot->ItemData.ItemSubGroup);
+}
+
+FEquipmentSlotEntry* UEquipmentComponent::GetSlotEntry(EItemSubGroup Slot)
+{
+	for (auto& Entry : EquipmentSlots.Items)
+	{
+		if (Entry.ItemSubGroup == Slot)
+		{
+			return &Entry;
+		}
+	}
+	return nullptr;
+}
+
+void UEquipmentComponent::SetItemDataToEquipmentSlotViewModels()
+{
+	if (UMVVM_Inventory* InventoryViewModel = UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this))
+	{
+		// 각 슬롯에 대해 실제 데이터를 사용해 필드 노티파이 갱신하기
+		for (const auto& SlotEntry : EquipmentSlots.Items)
+		{
+			const EItemSubGroup& ItemSubGroup = SlotEntry.ItemSubGroup;
+			const FItemData& SlotItemData = SlotEntry.ItemData;
+				
+			if (auto* EquipSlotVM = InventoryViewModel->GetEquipSlotViewModel(ItemSubGroup))
+			{
+				EquipSlotVM->SetItemID(SlotItemData.Name);
+				EquipSlotVM->SetIcon(SlotItemData.Image.Get());
+				EquipSlotVM->SetDescription(SlotItemData.Description);
+				EquipSlotVM->SetbEquipped(SlotEntry.bIsSlotEquipped);
+			}
+		}
 		
-	// 장착 슬롯 비우기
-	Slot->ItemData = FItemData();
-	Slot->AttachedMesh.Empty();
-	Slot->bIsSlotEquipped = false;
-	Slot->AbilityTags.Empty();
+	}
 }
 
-FEquipmentSlotInfo* UEquipmentComponent::GetSlot(EItemSubGroup Slot)
+void UEquipmentComponent::SetItemDataToEquipmentSlotViewModel(EItemSubGroup Slot)
 {
-	return EquipmentMap.EquipSlotMap.Find(Slot);
-}
-
-FEquipmentSlotInfo UEquipmentComponent::GetSlotByCopy(EItemSubGroup Slot)
-{
-	return EquipmentMap.EquipSlotMap.FindRef(Slot);
-}
-
-void UEquipmentComponent::SetEquipmentSlots(TMap<EItemSubGroup, FEquipmentSlotInfo> SavedEquipmentMap)
-{
-	// 세이브 로드 후 게임에 반영하는 함수
-	EquipmentMap.EquipSlotMap = SavedEquipmentMap;
-	
-	if (!AuraASC)
-		AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
-	
-	// 슬롯 뷰 모델을 가져오기
 	if (UMVVM_Inventory* InventoryViewModel = UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this))
 	{
 		TArray<UMVVM_EquipmentSlot*> EquipSlots = InventoryViewModel->GetAllEquipSlotViewModels();
 		if (!EquipSlots.IsEmpty())
 		{
-			// 각 슬롯에 대해 실제 데이터를 사용해 필드 노티파이 갱신하기
-			for (const auto& Pair : EquipmentMap.EquipSlotMap)
+			auto Slots = GetSlots();
+			const auto& SlotInfo = GetSlotEntry(Slot);
+			
+			if (auto EquipSlotVM = InventoryViewModel->GetEquipSlotViewModel(Slot))
 			{
-				EItemSubGroup ItemSubGroup = Pair.Key;
-				FEquipmentSlotInfo SlotInfo = Pair.Value;
-				
-				if (auto EquipSlotVM = InventoryViewModel->GetEquipSlotViewModel(ItemSubGroup))
-				{
-					EquipSlotVM->SetItemID(SlotInfo.ItemData.Name);
-					EquipSlotVM->SetIcon(SlotInfo.ItemData.Image);
-					EquipSlotVM->SetDescription(SlotInfo.ItemData.Description);
-					EquipSlotVM->SetbEquipped(SlotInfo.bIsSlotEquipped);
-				}
-				// 아이템 장착
-				EquipItem_Internal(SlotInfo.ItemData, -1);
+				EquipSlotVM->ReInitializeSlotView(SlotInfo->ItemData);
 			}
 		}
 	}
-	
 }
 
-void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlotInfo* Slot)
+void UEquipmentComponent::SetEquipmentSlots(FEquipmentSlotList SavedEquipmentMap)
+{
+	// 세이브 로드 후 게임에 반영하는 함수
+	EquipmentSlots = SavedEquipmentMap;
+	
+	if (!InventoryComponent)
+		InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(GetOwner());
+	
+	if (!AuraASC)
+		AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
+	
+	for (const auto& SlotEntry : SavedEquipmentMap.Items)
+	{
+		const auto& ItemData = SlotEntry.ItemData;
+				
+		if (ItemData.Name == "")
+			continue;
+		
+		// 아이템 장착
+		EquipItem_Internal(ItemData, -1);
+	}
+}
+
+void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlotEntry* Slot)
 {
 	FItemStat ItemStat = ItemData.ItemStat;
 	if (!ItemStat.IsEmpty())
@@ -213,7 +308,7 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			Slot->bIsSlotEquipped = true;
 		}
 	}
-	else if (Slot->ItemData.Name.IsValid())
+	else if (ItemData.Name.IsValid())
 	{
 		Slot->bIsSlotEquipped = true;
 	}
@@ -235,20 +330,16 @@ void UEquipmentComponent::AttachItemMeshToAuraCharacterMesh_Internal(const FItem
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 			SocketName);
 		
-		auto* Slot = GetSlot(ItemGroup);
-		if (!Slot)
-			return;
-		
-		Slot->AttachedMesh.Add(ItemMesh);
+		AttachedMesh.Add(ItemMesh);
 	}
 }
 
 void UEquipmentComponent::AttachBootsItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData,
 	AAuraCharacter* AuraCharacter)
 {
-	UStaticMeshComponent* LeftItemMesh = NewObject<UStaticMeshComponent>(GetOwner());
-	UStaticMeshComponent* RightItemMesh = NewObject<UStaticMeshComponent>(GetOwner());
-
+	UStaticMeshComponent* LeftItemMesh = NewObject<UStaticMeshComponent>(AuraCharacter);
+	UStaticMeshComponent* RightItemMesh = NewObject<UStaticMeshComponent>(AuraCharacter);
+	
 	RightItemMesh->SetStaticMesh(ItemData.RightFootMesh);
 	RightItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	RightItemMesh->SetCanEverAffectNavigation(false);
@@ -263,18 +354,14 @@ void UEquipmentComponent::AttachBootsItemMeshToAuraCharacterMesh_Internal(const 
 	LeftItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	LeftItemMesh->SetCanEverAffectNavigation(false);
 	LeftItemMesh->RegisterComponent();
-
+	
 	LeftItemMesh->AttachToComponent(
 		AuraCharacter->GetMesh(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		FName("LeftFootSocket"));
-		
-	auto* Slot = GetSlot(EItemSubGroup::Boots);
-	if (!Slot)
-		return;
-		
-	Slot->AttachedMesh.Add(LeftItemMesh);
-	Slot->AttachedMesh.Add(RightItemMesh);
+	
+	AttachedMesh.Add(LeftItemMesh);
+	AttachedMesh.Add(RightItemMesh);
 }
 
 void UEquipmentComponent::AttachItemMeshToAuraCharacterMesh(const FItemData& ItemData, AAuraCharacter* AuraCharacter)
@@ -286,19 +373,19 @@ void UEquipmentComponent::AttachItemMeshToAuraCharacterMesh(const FItemData& Ite
 
 void UEquipmentComponent::DetachItemMeshFromAuraCharacterMesh(EItemSubGroup ItemSubGroup)
 {
-	auto* Slot = GetSlot(ItemSubGroup);
+	auto Slot = GetSlotEntry(ItemSubGroup);
 	if (!Slot)
 		return;
 	
-	// TODO::메시가 nullptr로 표시됨
-	for (const auto& AttachedMesh : Slot->AttachedMesh)
-	{
-		if (AttachedMesh)
-		{
-			AttachedMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-			AttachedMesh->DestroyComponent();
-		}
-	}
+	// for (const auto& Mesh : AttachedMesh)
+	// {
+	// 	if (Mesh->GetStaticMesh())
+	// 	{
+	// 		Mesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	// 		Mesh->DestroyComponent();
+	// 		return;
+	// 	}
+	// }
 }
 
 void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int OriginIndex)
@@ -312,19 +399,29 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 	// 아이템 데이터에서 데이터 꺼내오기
 	EItemSubGroup ItemSubGroup = ItemData.ItemSubGroup;
 	
-	auto* Slot = GetSlot(ItemSubGroup);
-	if (!Slot)
+	auto* SlotEntry = GetSlotEntry(ItemSubGroup);
+	if (!SlotEntry)
 		return;
 	
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
 	if (!AuraCharacter)
 		return;
 	
-	// 아이템 장착 해제
-	UnEquipItem_Internal(Slot);
+	// 해당 슬롯에 기존에 장착된 아이템 장착 해제
+	// Index == -1, 저장 데이터에서 가져옴(아이템 추가할 필요 없음)
+	if (OriginIndex == -1)
+	{
+		// 아이템 장착 해제
+		Server_ClearSlot(ItemSubGroup);
+	}
+	else
+	{
+		// 아이템 장착 해제, 인벤토리에 추가
+		Server_UnequipItem(ItemSubGroup);
+	}
 		
 	// 스텟 적용
-	ApplyItemStat(ItemData, Slot);
+	ApplyItemStat(ItemData, SlotEntry);
 	
 	// 아이템이 어빌리티 태그들을 가지면 각 어빌리티를 ASC에 부여
 	for (const auto TagAndLevel : ItemData.AbilityTagAndLevel)
@@ -336,7 +433,7 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 		{
 			AuraASC->AddCharacterAbilityByTag(AbilityTag);
 		}
-		Slot->bIsSlotEquipped = true;
+		SlotEntry->bIsSlotEquipped = true;
 	}
 	
 	// 아이템이 게임플레이 이펙트 핸들을 가지면 이펙트를 ASC에 적용
@@ -349,7 +446,7 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
 		
 			// 장착 중
-			Slot->bIsSlotEquipped = true;
+			SlotEntry->bIsSlotEquipped = true;
 		}
 	}
 	
@@ -367,24 +464,29 @@ void UEquipmentComponent::EquipItem_Internal(const FItemData& ItemData, int Orig
 		}
 	}
 	
-	Slot->ItemData = ItemData;
-	
 	// 슬롯에 장착이 되었다면 기존 아이템은 인벤토리에서 제거
 	// DragOP에서 인덱스 전달, -1 == 인벤토리에서 장착하지 않는 경우
 	if (OriginIndex >= 0)
 		InventoryComponent->Server_RemoveItemToEquip(OriginIndex);
+	
+	SlotEntry->ItemData = ItemData;
+	SlotEntry->bIsSlotEquipped = true;
+	
+	// UI 반영
+	uint8 ItemIndex = static_cast<uint8>(ItemData.ItemSubGroup);
+	OnEquipmentSlotChanged.Broadcast(ItemIndex);
 	
 	// 툴팁 제거
 	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnItemToolTipActivated.Broadcast(FItemData(), false);
 	
 	// 아이템을 메시에 장착
 	AttachItemMeshToAuraCharacterMesh(ItemData, AuraCharacter);
-	
+		
 	// 아이템 장착 델리게이트 호출
 	OnItemEquipped.Broadcast(ItemData);
 }
 
-void UEquipmentComponent::UnEquipItem_Internal(FEquipmentSlotInfo* Slot)
+void UEquipmentComponent::UnEquipItem_Internal(FEquipmentSlotEntry* Slot)
 {
 	if (!AuraASC || !InventoryComponent || !Slot)
 		return;
@@ -392,12 +494,16 @@ void UEquipmentComponent::UnEquipItem_Internal(FEquipmentSlotInfo* Slot)
 	if (Slot->ItemData.ItemGroup != EItemGroup::Equipment)
 		return;
 	
-	// 장착 해제된 아이템 인벤토리에 추가
-	InventoryComponent->AddItem_Internal(Slot->ItemData);
-	
-	// 이미 장착 중인 아이템 효과 해제
 	if (Slot->bIsSlotEquipped)
-		Server_ClearSlot(Slot->ItemData.ItemSubGroup);
+	{
+		EItemSubGroup SubGroup = Slot->ItemData.ItemSubGroup;
+		
+		// 장착 해제된 아이템 인벤토리에 추가
+		InventoryComponent->AddItem_Internal(Slot->ItemData);
+		
+		// 이미 장착 중인 아이템 효과 해제
+		Server_ClearSlot(SubGroup);
+	}
 }
 
 void UEquipmentComponent::Server_EquipItem_Implementation(const FItemData& ItemData, int OriginIndex)
@@ -406,6 +512,18 @@ void UEquipmentComponent::Server_EquipItem_Implementation(const FItemData& ItemD
 		return;
 	
 	EquipItem_Internal(ItemData, OriginIndex);
+	
+	for (FEquipmentSlotEntry& Entry : EquipmentSlots.Items)
+	{
+		if (Entry.ItemSubGroup == ItemData.ItemSubGroup)
+		{
+			Entry.ItemData = ItemData;
+			Entry.bIsSlotEquipped = true;
+            
+			EquipmentSlots.MarkItemDirty(Entry); 
+			break;
+		}
+	}
 }
 
 void UEquipmentComponent::Server_UnequipItem_Implementation(EItemSubGroup Slot)
@@ -413,10 +531,10 @@ void UEquipmentComponent::Server_UnequipItem_Implementation(EItemSubGroup Slot)
 	if (!GetOwner()->HasAuthority())
 		return;
 	
-	auto* EquipSlot = GetSlot(Slot);
-	if (!EquipSlot)
-		return;
-	
-	UnEquipItem_Internal(EquipSlot);
+	auto EquipSlot = GetSlotEntry(Slot);
+	if (!EquipSlot->IsEmpty())
+	{
+		UnEquipItem_Internal(EquipSlot);
+	}
 }
 

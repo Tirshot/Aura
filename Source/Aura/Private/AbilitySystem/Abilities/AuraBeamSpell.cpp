@@ -55,7 +55,8 @@ void UAuraBeamSpell::StoreOwnerVariables()
 
 void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 {
-	check(OwnerCharacter);
+	if (!OwnerCharacter)
+		return;
 
 	if (MouseHitActor == OwnerCharacter)
 		return;
@@ -95,9 +96,9 @@ void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 	}
 	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(MouseHitActor))
 	{
-		if (CombatInterface->GetOnDeathDelegate().IsAlreadyBound(this, &UAuraBeamSpell::PrimaryTargetDied) == false)
+		if (CombatInterface->GetOnDeathDelegate()->IsAlreadyBound(this, &UAuraBeamSpell::PrimaryTargetDied) == false)
 		{
-			CombatInterface->GetOnDeathDelegate().AddDynamic(this, &UAuraBeamSpell::PrimaryTargetDied);
+			CombatInterface->GetOnDeathDelegate()->AddDynamic(this, &UAuraBeamSpell::PrimaryTargetDied);
 		}
 	}
 }
@@ -132,9 +133,9 @@ void UAuraBeamSpell::StoreAdditionalTarget(TArray<AActor*>& OutAdditionalTargets
 	{
 		if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Target))
 		{
-			if (CombatInterface->GetOnDeathDelegate().IsAlreadyBound(this, &UAuraBeamSpell::AdditionalTargetDied) == false)
+			if (CombatInterface->GetOnDeathDelegate()->IsAlreadyBound(this, &UAuraBeamSpell::AdditionalTargetDied) == false)
 			{
-				CombatInterface->GetOnDeathDelegate().AddDynamic(this, &UAuraBeamSpell::AdditionalTargetDied);
+				CombatInterface->GetOnDeathDelegate()->AddDynamic(this, &UAuraBeamSpell::AdditionalTargetDied);
 			}
 		}
 	}

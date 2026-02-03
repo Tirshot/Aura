@@ -19,6 +19,7 @@ class AURA_API UMVVM_Inventory : public UMVVMViewModelBase
 
 public:
 	void BindDependencies();
+	virtual UWorld* GetWorld() const override;
 
 public:
 	FOnItemDataMissing DataMissingSlotIndex;
@@ -28,6 +29,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void InventorySlotChanged(int Index);
+		
+	UFUNCTION(BlueprintCallable)
+	void EquipmentSlotChanged(int Index);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetInventorySlotEmpty(const FIntPoint& StartPoint, const FIntPoint& ItemSize);
@@ -63,6 +67,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly)
 	class UInventoryComponent* Inventory;
+	
+	UPROPERTY(BlueprintReadOnly)
+	class UEquipmentComponent* Equipment;
 	
 public:
 	UPROPERTY(BlueprintReadOnly)

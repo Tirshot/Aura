@@ -3,31 +3,42 @@
 
 #include "UI/WidgetController/GameOverWidgetController.h"
 
-#include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Blueprint/UserWidget.h"
-#include "Character/AuraCharacter.h"
-#include "Game/AuraGameInstance.h"
-#include "Game/AuraGameModeBase.h"
-#include "Game/LoadScreenSaveGame.h"
-#include "Kismet/GameplayStatics.h"
+#include "Player/AuraPlayerController.h"
 #include "UI/Widget/AuraUserWidget.h"
 
 void UGameOverWidgetController::BroadcastInitialValues()
 {
-
+	RemainingTime = ReviveTime;
 }
 
 void UGameOverWidgetController::BindCallbacksToDependencies()
 {
-	if (GetAuraASC())
-	{
-		if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAuraASC()->GetAvatarActor()))
-		{
-			FOnDeath& OnDeathDelegate = CombatInterface->GetOnDeathDelegate();
-			OnDeathDelegate.AddDynamic(this, &UGameOverWidgetController::HandleOnDeath);
-		}
-	}
+	RemainingTime = ReviveTime;
+	// if (GetAuraASC())
+	// {
+	// 	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAuraASC()->GetAvatarActor()))
+	// 	{
+	// 		FOnDeath* OnDeath = CombatInterface->GetOnDeathDelegate();
+	// 		OnDeath.RemoveDynamic(this, &UGameOverWidgetController::HandleOnDeath);
+	// 		OnDeath.AddDynamic(this, &UGameOverWidgetController::HandleOnDeath);
+	// 	}
+	// }
+}
+
+void UGameOverWidgetController::BeginDestroy()
+{
+	// if (GetAuraASC())
+	// {
+	// 	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAuraASC()->GetAvatarActor()))
+	// 	{
+	// 		FOnDeath* OnDeath = CombatInterface->GetOnDeathDelegate();
+	// 		OnDeath.RemoveDynamic(this, &UGameOverWidgetController::HandleOnDeath);
+	// 	}
+	// }
+	
+	Super::BeginDestroy();
 }
 
 void UGameOverWidgetController::HandleOnDeath(AActor* DeadActor)
@@ -42,34 +53,29 @@ void UGameOverWidgetController::HandleOnDeath(AActor* DeadActor)
 	// 기능 실행 및 뷰포트에 추가
 	BroadcastInitialValues();
 	Widget->AddToViewport();
+	
+	// 부활 타이머 시작
+	GetWorld()->GetTimerManager().SetTimer(RestartTimer, this, &UGameOverWidgetController::TimerStart, 1.0f, true);
 }
 
-void UGameOverWidgetController::SetRemainingTime(float InRemainingTime)
+void UGameOverWidgetController::TimerStart()
 {
-	RemainingTime = InRemainingTime;
-
-	// 타이머 시작
-	RestartTimer.Broadcast(InRemainingTime);
+	RemainingTime -= 1.0f;
+	if (RemainingTime <= 0.f)
+	{
+		ReviveFromRecentPlayerStart();
+		GetWorld()->GetTimerManager().ClearTimer(RestartTimer);
+		RemainingTime = ReviveTime;
+		
+		GameOverWidget->RemoveFromParent();
+	}
 }
 
-void UGameOverWidgetController::RestartGame()
+void UGameOverWidgetController::ReviveFromRecentPlayerStart()
 {
-	AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-	if (AuraGM == nullptr)
-		return;
-
-	// UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGM->GetGameInstance());
-	// if (AuraGameInstance == nullptr)
-	// 	return;
-	//
-	// const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
-	// const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
-	//
-	// ULoadScreenSaveGame* SaveGame = AuraGM->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
-	// if (IsValid(SaveGame) == false)
-	// 	return;
-	//
-	// UGameplayStatics::OpenLevel(GameOverWidget, )
-
-	AuraGM->RestartGameFromSaveDataWithWorldContextObject(GameOverWidget);
+	// 사망자의 플레이어 컨트롤러의 서버 RPC 호출 델리게이트 발사
+	if (IsValid(GetAuraPC()))
+	{
+		GetAuraPC()->Server_ReviveFromPlayerStart();
+	}
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interaction/CombatInterface.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "GameOverWidgetController.generated.h"
 
@@ -18,25 +19,30 @@ class AURA_API UGameOverWidgetController : public UAuraWidgetController
 public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
+	virtual void BeginDestroy() override;
 
 	UFUNCTION()
 	void HandleOnDeath(AActor* DeadActor);
-
-	void SetRemainingTime(float InRemainingTime);
-
-	UPROPERTY(BlueprintAssignable)
-	FRestartTimer RestartTimer;
+	
+	UFUNCTION()
+	void TimerStart();
 
 	UFUNCTION(BlueprintCallable)
-	void RestartGame();
+	void ReviveFromRecentPlayerStart();
 	
+public:
+	UPROPERTY(BlueprintReadOnly)
+	FTimerHandle RestartTimer;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float ReviveTime = 5.f;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	float RemainingTime = 0.f;
 private:
 	UPROPERTY()
 	TObjectPtr<UAuraUserWidget> GameOverWidget;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAuraUserWidget> GameOverWidgetClass;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = true))
-	float RemainingTime = 0.f;
 };

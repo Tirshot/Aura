@@ -23,62 +23,10 @@ void USpellMenuWidgetController::BroadcastInitialValues()
 void USpellMenuWidgetController::BindCallbacksToDependencies()
 {
 	// 어빌리티 상태가 변경
-	GetAuraASC()->AbilityStatusChanged.AddLambda([this](const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, int32 NewLevel) 
-		{
-			// 어빌리티를 찾아 UI에 반영
-			if (SelectedAbility.Ability.MatchesTagExact(AbilityTag))
-			{
-				SelectedAbility.Status = StatusTag;
-
-				bool bEnableSpendPoints = false;
-				bool bEnableEquip = false;
-				
-				// 버튼 활성화 확인
-				// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
-				if (AbilityTag.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
-				{
-					if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(AbilityTag))
-					{
-						int32 MaxLevel = 1;
-						if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
-						{
-							MaxLevel = Passive->GetMaxLevel();
-						}
-						
-						int32 CurrentLevel = Spec->Level;
-						if (CurrentLevel >= MaxLevel)
-						{
-							ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
-						}
-						else
-						{
-							ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-						}
-					}
-				}
-				else
-				{
-					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-				}
-
-				FString Description;
-				FString NextLevelDescription;
-				GetAuraASC()->GetDescriptionsByAbilityTag(AbilityTag, Description, NextLevelDescription);
-
-				// 글로브 선택 상태 변경
-				OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
-			}
-
-			if (AbilityInfo)
-			{
-				FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
-				Info->StatusTag = StatusTag;
-				AbilityInfoDelegate.Broadcast(*Info);
-			}
-		});
+	GetAuraASC()->AbilityStatusChanged.AddDynamic(this, &USpellMenuWidgetController::OnAbilityStatusChanged);
 
 	// 어빌리티 장착
-	GetAuraASC()->AbilityEquipped.AddUObject(this, &USpellMenuWidgetController::OnAbilityEquipped);
+	GetAuraASC()->AbilityEquipped.AddDynamic(this, &USpellMenuWidgetController::OnAbilityEquipped);
 
 	// 스펠 포인트 변경
 	GetAuraPS()->OnSpellPointChangedDelegate.AddDynamic(this, &USpellMenuWidgetController::OnSpellPointChanged);
@@ -127,6 +75,61 @@ void USpellMenuWidgetController::OnSpellPointChanged(int32 SpellPoints)
 
 	// �������Ʈ�� ��ε�ĳ����
 	OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
+}
+
+void USpellMenuWidgetController::OnAbilityStatusChanged(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag,
+	int32 NewLevel)
+{
+	// 어빌리티를 찾아 UI에 반영
+	if (SelectedAbility.Ability.MatchesTagExact(AbilityTag))
+	{
+		SelectedAbility.Status = StatusTag;
+
+		bool bEnableSpendPoints = false;
+		bool bEnableEquip = false;
+				
+		// 버튼 활성화 확인
+		// 패시브 어빌리티일 경우 최대 레벨 이상 찍을 수 없음
+		if (AbilityTag.MatchesTag(FAuraGameplayTags::Get().Abilities_Passive))
+		{
+			if (auto* Spec = GetAuraASC()->GetSpecFromAbilityTag(AbilityTag))
+			{
+				int32 MaxLevel = 1;
+				if (UAuraPassiveAbility* Passive = Cast<UAuraPassiveAbility>(Spec->Ability.Get()))
+				{
+					MaxLevel = Passive->GetMaxLevel();
+				}
+						
+				int32 CurrentLevel = Spec->Level;
+				if (CurrentLevel >= MaxLevel)
+				{
+					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
+				}
+				else
+				{
+					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+				}
+			}
+		}
+		else
+		{
+			ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
+		}
+
+		FString Description;
+		FString NextLevelDescription;
+		GetAuraASC()->GetDescriptionsByAbilityTag(AbilityTag, Description, NextLevelDescription);
+
+		// 글로브 선택 상태 변경
+		OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
+	}
+
+	if (AbilityInfo)
+	{
+		FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+		Info->StatusTag = StatusTag;
+		AbilityInfoDelegate.Broadcast(*Info);
+	}
 }
 
 void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityTag)
@@ -350,6 +353,9 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 	LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
 	AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
+	if (!AbilityTag.IsValid())
+		return;
+	
 	if (FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
 	{
 		Info->StatusTag = Status;
@@ -357,9 +363,6 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 		Info->AbilityTag = AbilityTag;
 		AbilityInfoDelegate.Broadcast(*Info);
 	}
-
-	if (!AbilityTag.IsValid())
-		return;
 	
 	StopWaitForEquipDelegate.Broadcast(AbilityInfo->FindAbilityInfoForTag(AbilityTag)->AbilityType);
 	

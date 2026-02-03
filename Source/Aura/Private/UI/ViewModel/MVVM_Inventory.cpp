@@ -3,7 +3,12 @@
 
 #include "UI/ViewModel/MVVM_Inventory.h"
 
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "Character/AuraCharacter.h"
+#include "Player/AuraPlayerController.h"
+#include "Player/EquipmentComponent.h"
 #include "Player/InventoryComponent.h"
+#include "UI/HUD/AuraHUD.h"
 #include "UI/ViewModel/MVVM_EquipmentSlot.h"
 
 void UMVVM_Inventory::BindDependencies()
@@ -11,12 +16,49 @@ void UMVVM_Inventory::BindDependencies()
 
 }
 
+UWorld* UMVVM_Inventory::GetWorld() const
+{
+	if (const UObject* Outer = GetOuter())
+	{
+		return Outer->GetWorld();
+	}
+	return nullptr;
+}
+
 void UMVVM_Inventory::InitializeSlots(UInventoryComponent* InventoryComponent, UEquipmentComponent* EquipmentComponent)
 {
-	Inventory = InventoryComponent;
-	SlotViewModels.Empty();
+	 if (InventoryComponent)
+	 	Inventory = InventoryComponent;
+	 if (EquipmentComponent)
+	 	Equipment = EquipmentComponent;
 	
-	int Size = Inventory->GetInventorySize();
+	if (!Inventory || !Equipment)
+	{
+		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetOuter()))
+		{
+			if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(AuraHUD->GetOwningPlayerController()))
+			{
+				if (APawn* PlayerPawn = PC->GetPawn()) 
+				{
+					if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(PlayerPawn))
+					{
+						if (!Inventory)
+							Inventory = IPlayerInterface::Execute_GetInventoryComponent(AuraCharacter);
+						
+						if (!Equipment)
+							Equipment = IPlayerInterface::Execute_GetEquipmentComponent(AuraCharacter);
+					}
+				}
+			}
+		}
+	}
+	if (!IsValid(Inventory) || !IsValid(Equipment))
+		return;
+	
+
+	const int32 Size = Inventory->GetSlots().Num(); 
+	SlotViewModels.Empty();
+	SlotViewModels.SetNum(Size);
 
 	// 모든 슬롯에 대해 각자의 뷰 모델 연결
 	for (int i = 0; i < Size; i++)
@@ -27,7 +69,7 @@ void UMVVM_Inventory::InitializeSlots(UInventoryComponent* InventoryComponent, U
 		NewSlotViewModel->Initialize(Inventory, i);
 
 		// 슬롯 뷰 모델들을 배열로 관리
-		SlotViewModels.Add(NewSlotViewModel);
+		SlotViewModels[i] = NewSlotViewModel;
 	}
 
 	Inventory->OnInventorySlotChanged.RemoveDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
@@ -39,19 +81,23 @@ void UMVVM_Inventory::InitializeSlots(UInventoryComponent* InventoryComponent, U
 		InventorySlotChanged(i);
 	}
 	
-	// TODO::이미 장착된 장비슬롯 초기화하기
 	// 장착 슬롯 뷰모델 생성 후 연결
-	for (int i = 0; i < 4; i++)
+	if (EquipSlotViewModels.Num() <= 0)
 	{
-		UMVVM_EquipmentSlot* NewSlotViewModel = NewObject<UMVVM_EquipmentSlot>(this);
+		for (int i = 0; i < 4; i++)
+		{
+			UMVVM_EquipmentSlot* NewSlotViewModel = NewObject<UMVVM_EquipmentSlot>(this);
 
-		// 뷰 모델에 인덱스와 장착 컴포넌트 포인터 넘겨주기
-		NewSlotViewModel->Initialize(EquipmentComponent, i);
+			// 뷰 모델에 인덱스와 장착 컴포넌트 포인터 넘겨주기
+			NewSlotViewModel->Initialize(EquipmentComponent, i);
 
-		// 슬롯 뷰 모델들을 배열로 관리
-		EquipSlotViewModels.Add(NewSlotViewModel);
+			// 슬롯 뷰 모델들을 배열로 관리
+			EquipSlotViewModels.Add(NewSlotViewModel);
+		}
 	}
-
+	
+	Equipment->OnEquipmentSlotChanged.RemoveDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
+	Equipment->OnEquipmentSlotChanged.AddDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
 }
 
 void UMVVM_Inventory::InventorySlotChanged(int Index)
@@ -79,7 +125,7 @@ void UMVVM_Inventory::InventorySlotChanged(int Index)
 
 		if (auto FoundRow = SlotData.ItemHandle.GetRow<FItemData>(TEXT("InventorySlotChanged")))
 		{
-			SlotViewModel->SetItemImage(FoundRow->Image);
+			SlotViewModel->SetItemImage(FoundRow->Image.Get());
 
 			float ImageWidth = 67 * SlotData.ItemSize.X;
 			float ImageHeight = 67 * SlotData.ItemSize.Y;
@@ -88,6 +134,20 @@ void UMVVM_Inventory::InventorySlotChanged(int Index)
 
 			SlotViewModel->SetItemDescription(FoundRow->Description);
 		}
+	}
+}
+
+void UMVVM_Inventory::EquipmentSlotChanged(int Index)
+{
+	const auto& EquipmentSlotEntry = Equipment->GetSlots();
+
+	if (!EquipmentSlotEntry.Items.IsValidIndex(Index))
+		return;
+	
+	UMVVM_EquipmentSlot* SlotViewModel = EquipSlotViewModels[Index];
+	if (SlotViewModel)
+	{
+		SlotViewModel->ReInitializeSlotView(EquipmentSlotEntry.Items[Index].ItemData);
 	}
 }
 

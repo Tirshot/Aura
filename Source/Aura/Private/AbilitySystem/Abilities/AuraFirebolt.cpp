@@ -65,11 +65,6 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level, const UObject* World
 
 void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, bool bNumProjectileOverride, int32 NumProjectileOverride, AActor* HomingTarget)
 {
-	// 서버 상에 있는지 확인
-	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
-	if (!bIsServer)
-		return;
-
 	// 무기의 소켓 위치 가져오기
 	const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(
 		GetAvatarActorFromActorInfo(),

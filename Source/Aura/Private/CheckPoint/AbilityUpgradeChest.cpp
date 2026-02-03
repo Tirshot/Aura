@@ -7,6 +7,7 @@
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 AAbilityUpgradeChest::AAbilityUpgradeChest(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -15,6 +16,41 @@ AAbilityUpgradeChest::AAbilityUpgradeChest(const FObjectInitializer& ObjectIniti
 
 void AAbilityUpgradeChest::LoadActor_Implementation()
 {
+	if (UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance()))
+	{
+		if (auto* SaveObject = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
+		{
+			FString WorldName = GetWorld()->GetMapName();
+			WorldName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
+        	
+			// 저장된 데이터 가져오기
+			const FSavedMap& SavedMap = SaveObject->GetSavedMapWithMapName(WorldName);
+			
+			// 찾기 시작
+			const FSavedActor* FoundSavedActor = nullptr;
+			const FName Name = GetFName();
+
+			for (const FSavedActor& SavedActorData : SavedMap.SavedActors)
+			{
+				if (SavedActorData.ActorName == Name)
+				{
+					FoundSavedActor = &SavedActorData;
+					break;
+				}
+			}
+        		
+			if (FoundSavedActor && FoundSavedActor->Bytes.Num() > 0)
+			{
+				FMemoryReader MemoryReader(FoundSavedActor->Bytes);
+				FObjectAndNameAsStringProxyArchive Archive(MemoryReader, true);
+				Archive.ArIsSaveGame = true;
+
+				this->Serialize(Archive); 
+				ForceNetUpdate();
+			}
+		}
+	}
+	
 	if (bReached)
 		Destroy();
 }

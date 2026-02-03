@@ -155,7 +155,7 @@ void AAuraDropItem::OnRep_ItemData()
 		Mesh->SetStaticMesh(StaticMesh);
 	}
 
-	if (UMaterialInterface* Mat = DropItemData.Material)
+	if (UMaterialInterface* Mat = DropItemData.Material.Get())
 	{
 		Mesh->SetMaterial(0, Mat);
 	}

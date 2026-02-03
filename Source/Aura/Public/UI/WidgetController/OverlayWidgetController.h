@@ -68,6 +68,10 @@ class AURA_API UOverlayWidgetController : public UAuraWidgetController
 public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
+	virtual void BeginDestroy() override;
+	
+	UFUNCTION(BlueprintCallable)
+	void ProcessPendingAbilityInfos();
 
 	// 델리게이트일 경우에 Assignable
 	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
@@ -182,8 +186,15 @@ protected:
 	void OnXPChanged(int32 NewXP);
 
 	// 어빌리티 장착 표시
+	UFUNCTION()
 	void OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot);
 
+	UFUNCTION()
+	void OnMessageTagReceived(const FGameplayTag& Tag);
+	
+	UFUNCTION()
+	void OnFloatingMessageReceived(const FGameplayTagContainer& TagContainer);
+	
 	// 메시지 제거
 	UFUNCTION()
 	void MessageRemove(const FGameplayTag& Tag);

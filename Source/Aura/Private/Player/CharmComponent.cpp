@@ -51,11 +51,8 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 	if (!AuraASC)
 		return;
 	
-	FGameplayEffectQuery GEQuery;
-	GEQuery.EffectSource = CharmItem.EffectSourceObject;
-	
 	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
-	AuraASC->RemoveActiveEffects(GEQuery);
+	AuraASC->RemoveActiveGameplayEffectBySourceEffect(CharmItem.ItemStatEffectClass, nullptr, 1);
 	
 	// 게임플레이 이펙트 제거
 	for (const auto EffectAndStack : CharmItem.EffectAndStacks)
@@ -87,9 +84,6 @@ void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
 	if (!AuraCharacter)
 		return;
-	
-	if (!CharmItem.EffectSourceObject)
-		CharmItem.EffectSourceObject = NewObject<UCharmInstance>(this);
 	
 	// 스텟 적용
 	ApplyItemStat(CharmItem);
@@ -180,11 +174,7 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 	if (!AuraASC)
 		return;
 	
-	if (!ItemData.EffectSourceObject)
-		return;
-	
 	FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
-	Context.AddSourceObject(ItemData.EffectSourceObject);
 	Context.AddInstigator(AuraASC->GetAvatarActor(), nullptr);
 		
 	auto SpecHandle = AuraASC->MakeOutgoingSpec(ItemData.ItemStatEffectClass, 1.f, Context);

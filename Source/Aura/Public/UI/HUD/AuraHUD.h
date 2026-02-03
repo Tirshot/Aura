@@ -44,9 +44,13 @@ public:
 	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
 	UMVVM_DebugMenu* GetDebugMenuViewModel() { return DebugMenuViewModel; }
+	UMVVM_Inventory* GetInventoryViewModel();
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
-
+	
+	UFUNCTION()
+	void ResetWidgetControllerAndViewModels();
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -57,10 +61,7 @@ public:
 public:	
 	void CreateSaveProgressWidget();
 	void RemoveSaveProgressWidget();
-
-	// UFUNCTION()
-	// void HandleRandomAbilityUpgrade(FGameplayTag UpgradeTag0, FGameplayTag UpgradeTag1, FGameplayTag UpgradeTag2);
-
+	
 	UFUNCTION()
 	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
 
@@ -72,6 +73,9 @@ public:
 	
 	UFUNCTION()
 	UAuraUserWidget* GetOverlayWidget() {return OverlayWidget;}
+	
+	UFUNCTION()
+	UAuraUserWidget* GetSaveProgressWidget() {return SaveProgressWidget;}
 	
 private:
 	UPROPERTY()

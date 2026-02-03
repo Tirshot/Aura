@@ -10,7 +10,7 @@ public class AuraTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V5; 
 		Type = TargetType.Game;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
-
+        
         CppStandard = CppStandardVersion.Cpp20;
 
         ExtraModuleNames.AddRange( new string[] { "Aura" } );

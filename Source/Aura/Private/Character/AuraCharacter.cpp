@@ -18,6 +18,7 @@
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
@@ -34,7 +35,8 @@ AAuraCharacter::AAuraCharacter()
     GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
     GetCharacterMovement()->bConstrainToPlane = true;
     GetCharacterMovement()->bSnapToPlaneAtStart = true;
-
+    SetReplicateMovement(true);
+    
     // bUseControllerRotationPitch = false;
     // bUseControllerRotationRoll = false;
     bUseControllerRotationYaw = false;
@@ -75,9 +77,17 @@ void AAuraCharacter::BeginPlay()
 {
     Super::BeginPlay();
     
-    if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+    if (const UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet))
     {
         GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
+    }
+    
+    // 내 미니맵만 켜기
+    if (MiniMapCapture)
+    {
+        // 로컬 플레이어가 조종하는 캐릭터인 경우에만 캡처 활성화
+        if (!IsLocallyControlled())
+            MiniMapCapture->Deactivate();
     }
 }
 
@@ -92,46 +102,66 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
 
-    // 서버를 위해 어빌리티 액터 정보 초기화
-    InitAbilityActorInfo();
-
-    // 저장 데이터 불러오기
-    LoadProgress();
-
-    // 저장 월드 상태 불러오기
-    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+    // 리슨 서버라면
+    if (HasAuthority())
     {
-        AuraGameMode->LoadWorldState(GetWorld());
+        InitAbilityActorInfo();
+
+        AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>();
+        if (AuraPS && !AuraPS->bIsDataLoaded) 
+        {
+            // 게임 시작 시 저장 데이터 불러옴
+            LoadProgress();
+            
+            if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+            {
+                AuraGameMode->Server_LoadWorldState(GetWorld());
+            }
+
+            // 플레이어 스테이트는 1회만 불러오면 됨
+            AuraPS->bIsDataLoaded = true;
+        }
+        else
+        {
+            InitializeDefaultAttributes();
+        }
     }
 }
 
 void AAuraCharacter::LoadProgress()
 {
-    // 게임 모드에 접근
-    AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-
-    if (AuraGameMode)
+    // 게임 인스턴스에 접근
+    if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
     {
         // 저장 슬롯 찾기
-        ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+        const FString InGameLoadSlotName = AuraGI->LoadSlotName;
+        const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
+
+        ULoadScreenSaveGame* SaveData = AuraGI->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
         if (SaveData == nullptr)
             return;
-
+        
+        UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+        if (!AuraASC)
+            return;
+        
+        // 사망 태그 제거
+        FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+        AuraASC->RemoveLooseGameplayTag(DeadTag); 
+        
         // 첫 로딩일 때
         if (SaveData->bFirstTimeLoading)
         {
-            // 기본 1차 속성 적용
-            InitializeDefaultAttributes();
-            AddCharacterAbilites();
+            
+            if (AuraASC)
+            {
+                // 기본 1차 속성 적용
+                InitializeDefaultAttributes();
+                AddCharacterAbilites();
+            }
         }
         else
         {
-            UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
-            
-            // 서버에서만 실행
-            if (HasAuthority() == false)
-                return;
-            
             // 저장된 세이브에서 어빌리티 불러오기
             AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
             
@@ -142,11 +172,19 @@ void AAuraCharacter::LoadProgress()
                 AuraPlayerState->SetXP(SaveData->XP);
                 AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
                 AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
-                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgrades);
+                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
+                
+                // 클라이언트에서 작동 중이면
+                if (IsLocallyControlled())
+                {
+                    // 서버에서 동기화
+                    AuraPlayerState->Server_SyncPlayerStatFromClient(SaveData->PlayerLevel, SaveData->XP, SaveData->AttributePoints, SaveData->SpellPoints);
+                    AuraPlayerState->Server_SyncPlayerUpgradeListFromClient(SaveData->SavedAbilityUpgradeList);
+                }
                 
                 // 인벤토리 불러오기
                 IPlayerInterface::Execute_GetInventoryComponent(this)->SetInventorySlots(SaveData->SavedInventorySlots);
-                IPlayerInterface::Execute_GetEquipmentComponent(this)->SetEquipmentSlots(SaveData->SavedEquipmentSlotsMap);
+                IPlayerInterface::Execute_GetEquipmentComponent(this)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
             }
             // 1차 속성, 2차 속성 적용
             UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
@@ -158,15 +196,23 @@ void AAuraCharacter::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // 클라이언트를 위해 어빌리티 액터 정보 초기화
-    // InitAbilityActorInfo();
+    // 어빌리티 액터 정보 초기화
+    InitAbilityActorInfo();
+    
+    // 저장 데이터 불러오기
+    LoadProgress();
+}
+
+void AAuraCharacter::OnRep_Controller()
+{
+    Super::OnRep_Controller();
 }
 
 void AAuraCharacter::AddToXP_Implementation(int32 InXP)
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    AuraPlayerState->AddToXP(InXP);
+    if (AuraPlayerState)
+        AuraPlayerState->AddToXP(InXP);
 }
 
 void AAuraCharacter::LevelUp_Implementation()
@@ -191,83 +237,98 @@ void AAuraCharacter::MulticastLevelUpParticles_Implementation() const
 int32 AAuraCharacter::GetXP_Implementation() const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->GetXP();
+    if (AuraPlayerState)
+        return AuraPlayerState->GetXP();
+    
+    return 0;
 }
 
 int32 AAuraCharacter::FindLevelForXP_Implementation(int32 InXP) const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->LevelUpInfo->FindLevelForXP(InXP);
+    if (AuraPlayerState)
+        return AuraPlayerState->LevelUpInfo->FindLevelForXP(InXP);
+    
+    return 0;
 }
 
 int32 AAuraCharacter::FindXPForLevel_Implementation(int32 InLevel) const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->LevelUpInfo->FindXPForLevel(InLevel) - AuraPlayerState->GetXP();
+    if (AuraPlayerState)
+        return AuraPlayerState->LevelUpInfo->FindXPForLevel(InLevel) - AuraPlayerState->GetXP();
+    
+    return 0;
 }
 
 int32 AAuraCharacter::GetAttributePointsReward_Implementation(int32 Level) const
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].AttributePointAward;
+    if (AuraPlayerState)
+        return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].AttributePointAward;
+    
+    return 0;
 }
 
 int32 AAuraCharacter::GetSpellPointsReward_Implementation(int32 Level) const
 {
     const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].SpellPointAward;
+    if (AuraPlayerState)
+        return AuraPlayerState->LevelUpInfo->LevelUpInformation[Level].SpellPointAward;
+    
+    return 0;
 }
 
 void AAuraCharacter::AddToPlayerLevel_Implementation(int32 InLevel)
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    AuraPlayerState->AddToLevel(InLevel);
-
     if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()))
     {
-        AuraASC->UpdateAbilityStatus(AuraPlayerState->GetCharacterLevel());
+        if (AuraPlayerState)
+        {
+            AuraPlayerState->AddToLevel(InLevel);
+            AuraASC->UpdateAbilityStatus(AuraPlayerState->GetCharacterLevel());
+        }
     }
 }
 
 void AAuraCharacter::AddToAttributePoints_Implementation(int32 InAttributePoints)
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    AuraPlayerState->AddToAttributePoints(InAttributePoints);
+    if (AuraPlayerState)
+        AuraPlayerState->AddToAttributePoints(InAttributePoints);
 }
 
 void AAuraCharacter::AddToSpellPoints_Implementation(int32 InSpellPoints)
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    AuraPlayerState->AddToSpellPoints(InSpellPoints);
+    if (AuraPlayerState)
+        AuraPlayerState->AddToSpellPoints(InSpellPoints);
 }
 
 int32 AAuraCharacter::GetAttributePoints_Implementation() const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->GetAttributePoints();
+    if (AuraPlayerState)
+        return AuraPlayerState->GetAttributePoints();
+    
+    return 0;
 }
 
 int32 AAuraCharacter::GetSpellPoints_Implementation() const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->GetSpellPoints();
+    if (AuraPlayerState)
+        return AuraPlayerState->GetSpellPoints();
+    
+    return 0;
 }
 
 void AAuraCharacter::SetSpellPoints_Implementation(int32 InPoints) const
 {
     AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
-    check(AuraPlayerState);
-    return AuraPlayerState->SetSpellPoints(InPoints);
+    if (AuraPlayerState)
+        return AuraPlayerState->SetSpellPoints(InPoints);
 }
 
 void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial, float InRange , float InRadius) const
@@ -307,13 +368,13 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         }
     }
     
-    // 게임 모드에 접근
-    AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-    
-    if (AuraGameMode)
+    // 게임 인스턴스에 접근
+    if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
     {
-        // 저장 슬롯 찾기
-        ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+       const FString InGameLoadSlotName = AuraGI->LoadSlotName;
+       const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
+
+       ULoadScreenSaveGame* SaveData = AuraGI->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
         if (SaveData == nullptr)
             return;
 
@@ -341,9 +402,6 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         SaveData->Mana = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetManaAttribute());
         
         SaveData->bFirstTimeLoading = false;
-
-        if (HasAuthority() == false)
-            return;
         
         // 델리게이트 생성 및 바인딩
         FForEachAbility SaveAbilityDelegate;
@@ -377,22 +435,28 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         // 어빌리티 업그레이드 저장
         if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
         {
-            SaveData->SavedAbilityUpgrades = AuraPS->GetAbilityUpgradeTagContainer();
+            SaveData->SavedAbilityUpgradeList = AuraPS->GetOwnedAbilityUpgradeList();
         }
+        
+        // 소환 위치 저장
+        AuraGI->PlayerStartTag = SaveData->PlayerStartTag;
 
         // 인벤토리 저장
         SaveData->SavedInventorySlots = IPlayerInterface::Execute_GetInventoryComponent(this)->GetSlots();
-        SaveData->SavedEquipmentSlotsMap = IPlayerInterface::Execute_GetEquipmentComponent(this)->GetSlots().EquipSlotMap;
-        AuraGameMode->SaveInGameProgressData(SaveData);
+        SaveData->SavedEquipmentSlots = IPlayerInterface::Execute_GetEquipmentComponent(this)->GetSlots();
+        
+        // 데이터 저장
+        UGameplayStatics::SaveGameToSlot(SaveData, InGameLoadSlotName, InGameLoadSlotIndex);
         
         // 저장중 위젯 제거
-        if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController()))
-        {
-            if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(AuraPC->GetHUD()))
-            {
-                AuraHUD->RemoveSaveProgressWidget();
-            }
-        }
+        // if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(GetController()))
+        // {
+        //     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(AuraPC->GetHUD()))
+        //     {
+        //         if (AuraHUD->GetSaveProgressWidget())
+        //             AuraHUD->RemoveSaveProgressWidget();
+        //     }
+        // }
     }
 }
 
@@ -414,34 +478,28 @@ int32 AAuraCharacter::GetCharacterLevel_Implementation()
     return AuraPlayerState->GetCharacterLevel();
 }
 
+FOnDeath* AAuraCharacter::GetOnDeathDelegate()
+{
+    return Cast<AAuraPlayerState>(GetPlayerState())->GetOnDeathDelegate();
+}
+
 void AAuraCharacter::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
     // 랙돌 효과 발생
     Super::Die(DeathImpulse, KilledBy);
-
-    AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-    if (AuraGM == nullptr)
-        return;
-
-    // 타이머 종료 후 저장 데이터를 불러와 게임 재시작
-    FTimerDelegate DeathTimerDelegate;
-    DeathTimerDelegate.BindLambda([this, AuraGM]()
-    {
-        if (IsValid(AuraGM))
-        {
-            AuraGM->RestartGameFromSaveData(this);
-        }
-    });
-    
-    // 타이머 설정
-    GetWorldTimerManager().SetTimer(DeathTimer, DeathTimerDelegate, DeathTime, false);
-
-    // 사망과 관련된 처리들
-    float RemainingTime = GetWorldTimerManager().GetTimerRemaining(DeathTimer);
-    AuraGM->PlayerDied(this, RemainingTime);
     
     // 카메라 추락 방지
     Camera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+    MiniMapCapture->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+    
+    GetOnDeathDelegate()->Broadcast(this);
+    
+    // 관전
+    if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
+    {
+        AuraPlayerController->Client_ShowGameOverWidget();
+        AuraPlayerController->Server_StartSpectating();
+    }
 }
 
 void AAuraCharacter::ShowDamageNumber_Implementation(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed)
@@ -517,5 +575,11 @@ void AAuraCharacter::InitAbilityActorInfo()
         {
             AuraHUD->InitOverlay(AuraPlayerController, AuraPlayerState, AbilitySystemComponent, AttributeSet);
         }
+    }
+    
+    // 속도 맞추기
+    if (UAuraAttributeSet* AS = Cast<UAuraAttributeSet>(GetAttributeSet()))
+    {
+        GetCharacterMovement()->MaxWalkSpeed = AS->GetMovementSpeed();
     }
 }

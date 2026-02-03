@@ -3,7 +3,6 @@
 
 #include "UI/Widget/AuraOverlayWidget.h"
 
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "UI/Widget/AuraCenterDescriptionWidget.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
@@ -11,7 +10,10 @@ void UAuraOverlayWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnCenterDescriptionRemoved.AddDynamic(this, &UAuraOverlayWidget::RemoveCenterDescriptionText);
+	if (UOverlayWidgetController* OverlayWC = Cast<UOverlayWidgetController>(WidgetController))
+	{
+		OverlayWC->OnCenterDescriptionRemoved.AddDynamic(this, &UAuraOverlayWidget::RemoveCenterDescriptionText);
+	}
 }
 
 void UAuraOverlayWidget::ClearKeyboardFocus()

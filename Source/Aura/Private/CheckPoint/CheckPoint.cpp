@@ -7,9 +7,12 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Character/AuraCharacter.h"
 #include "Components/SphereComponent.h"
+#include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/LoadScreenSaveGame.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 ACheckPoint::ACheckPoint(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -51,6 +54,40 @@ void ACheckPoint::SetMoveToLocation_Implementation(FVector& OutDestination)
 
 void ACheckPoint::LoadActor_Implementation()
 {
+	if (UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance()))
+	{
+		if (auto* SaveObject = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
+		{
+			FString WorldName = GetWorld()->GetMapName();
+			WorldName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
+        	
+			// 저장된 데이터 가져오기
+			const FSavedMap& SavedMap = SaveObject->GetSavedMapWithMapName(WorldName);
+			
+			// 찾기 시작
+			const FSavedActor* FoundSavedActor = nullptr;
+			const FName Name = GetFName();
+
+			for (const FSavedActor& SavedActorData : SavedMap.SavedActors)
+			{
+				if (SavedActorData.ActorName == Name)
+				{
+					FoundSavedActor = &SavedActorData;
+					break;
+				}
+			}
+        		
+			if (FoundSavedActor && FoundSavedActor->Bytes.Num() > 0)
+			{
+				FMemoryReader MemoryReader(FoundSavedActor->Bytes);
+				FObjectAndNameAsStringProxyArchive Archive(MemoryReader, true);
+				Archive.ArIsSaveGame = true;
+
+				this->Serialize(Archive); 
+				ForceNetUpdate();
+			}
+		}
+	}
 	// 이미 도달한 적 있으면 이펙트 활성화
 	if (bReached)
 	{
@@ -93,7 +130,7 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 				FString MapName = World->GetMapName();
 				MapName.RemoveFromStart(World->StreamingLevelsPrefix);
 			
-				AuraGM->SaveWorldState(GetWorld(), MapName);
+				AuraGM->Server_SaveWorldState(GetWorld(), MapName);
 			}
 			IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
 		}
@@ -116,7 +153,10 @@ void ACheckPoint::HandleGlowEffects(AActor* InteractedActor)
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 동적 머티리얼 생성
-	UMaterialInstanceDynamic* DynamicMI = UMaterialInstanceDynamic::Create(CheckpointMesh->GetMaterial(0), this);
+	if (DynamicMI)
+		return;
+	
+	DynamicMI = UMaterialInstanceDynamic::Create(CheckpointMesh->GetMaterial(0), this);
 
 	// 메시의 머티리얼을 동적 머티리얼로 지정
 	CheckpointMesh->SetMaterial(0, DynamicMI);

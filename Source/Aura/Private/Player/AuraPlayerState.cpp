@@ -9,10 +9,47 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-#include "Interaction/CombatInterface.h"
 #include "Net/UnrealNetwork.h"
-#include "UI/HUD/AuraHUD.h"
 
+
+void FOwnedAbilityUpgrade::PostReplicatedAdd(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+{
+    
+}
+
+void FOwnedAbilityUpgrade::PostReplicatedChange(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+{
+    
+}
+
+void FOwnedAbilityUpgrade::PreReplicatedRemove(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+{
+    
+}
+
+bool FOwnedAbilityUpgradeList::FindOwnedAbilityUpgrade(const FGameplayTag& InTag)
+{
+    for (auto& OwnedAbilityUpgrade : OwnedAbilityUpgrades)
+    {
+        if (OwnedAbilityUpgrade.UpgradeTag == InTag)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+FOwnedAbilityUpgrade* FOwnedAbilityUpgradeList::GetOwnedAbilityUpgrade(const FGameplayTag& InTag)
+{
+    for (auto& OwnedAbilityUpgrade : OwnedAbilityUpgrades)
+    {
+        if (OwnedAbilityUpgrade.UpgradeTag == InTag)
+        {
+            return &OwnedAbilityUpgrade;
+        }
+    }
+    return nullptr;
+}
 
 AAuraPlayerState::AAuraPlayerState()
 {
@@ -45,7 +82,7 @@ void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(AAuraPlayerState, XP);
     DOREPLIFETIME(AAuraPlayerState, AttributePoints);
     DOREPLIFETIME(AAuraPlayerState, SpellPoints);
-    DOREPLIFETIME(AAuraPlayerState, OwnedAbilityUpgradeTags);
+    DOREPLIFETIME(AAuraPlayerState, OwnedAbilityUpgradeList);
     DOREPLIFETIME(AAuraPlayerState, ReplicatedCardInfo);
 }
 
@@ -124,9 +161,10 @@ void AAuraPlayerState::SetUpgradeCardInfo(const TArray<FAuraAbilityUpgradeInfo>&
     OnUpgradeCardsInitializedDelegate.Broadcast(ReplicatedCardInfo);
 }
 
-void AAuraPlayerState::SetAbilityUpgradeTagContainer(const TMap<FGameplayTag, int32>& InTagContainer)
+void AAuraPlayerState::SetAbilityUpgradeTagContainer(const FOwnedAbilityUpgradeList& InOwnedAbilityUpgradeList)
 {
-    OwnedAbilityUpgradeTags = InTagContainer;
+    OwnedAbilityUpgradeList = InOwnedAbilityUpgradeList;
+    OwnedAbilityUpgradeList.MarkArrayDirty();
 }
 
 void AAuraPlayerState::ResetAttributesToBaseValue()
@@ -142,34 +180,64 @@ void AAuraPlayerState::ResetAttributesToBaseValue()
     }
 }
 
+void AAuraPlayerState::Server_SyncPlayerStatFromClient_Implementation(int32 InLevel, int32 InXP,
+                                                                      int32 InAttributePoints, int32 InSpellPoints)
+{
+    SetLevel(InLevel);
+    SetXP(InXP);
+    SetAttributePoints(InAttributePoints);
+    SetSpellPoints(InSpellPoints);
+}
+
+void AAuraPlayerState::Server_SyncPlayerUpgradeListFromClient_Implementation(
+    const FOwnedAbilityUpgradeList& UpgradeList)
+{
+    SetAbilityUpgradeTagContainer(UpgradeList);
+}
+
 void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
 {
-    // 태그 추가
-    int32& CountRef = OwnedAbilityUpgradeTags.FindOrAdd(Tag);
-
-    // 값 1 증가
-    CountRef++;
-
-    OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, CountRef);
+    int32 UpgradeStack = 0;
+    
+    if (FOwnedAbilityUpgrade* OwnedAbilityUpgrade = OwnedAbilityUpgradeList.GetOwnedAbilityUpgrade(Tag))
+    {
+        // 이미 존재하는 업그레이드
+        OwnedAbilityUpgrade->UpgradeStack++;
+        UpgradeStack = OwnedAbilityUpgrade->UpgradeStack;
+        OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, UpgradeStack);
+        OwnedAbilityUpgradeList.MarkArrayDirty();
+    }
+    else
+    {
+        // 존재하지 않으면 추가
+        OwnedAbilityUpgradeList.OwnedAbilityUpgrades.Add(Tag);
+        OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, 1);
+        OwnedAbilityUpgradeList.MarkArrayDirty();
+    }
 }
 
 void AAuraPlayerState::RemoveUpgradeTag(const FGameplayTag& Tag)
 {
     // 태그 제거
-    int32* Count = OwnedAbilityUpgradeTags.Find(Tag);
 
-    if (Count != nullptr)
+    if (FOwnedAbilityUpgrade* OwnedAbilityUpgrade = OwnedAbilityUpgradeList.GetOwnedAbilityUpgrade(Tag))
     {
-        // 중첩 갯수 감소
-        *Count -= 1;
-
-        // 중첩 갯수가 0이 되면 제거
-        if (*Count < 1)
+        int32 UpgradeStack = 0;
+        
+        // 이미 존재하는 업그레이드
+        OwnedAbilityUpgrade->UpgradeStack--;
+        UpgradeStack = FMath::Max(0, OwnedAbilityUpgrade->UpgradeStack);
+    
+        // 업그레이드 스택이 0보다 작으면 업그레이드 제거
+        if (UpgradeStack <= 0)
         {
-            OwnedAbilityUpgradeTags.Remove(Tag);
-            OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, 0);
-            return;
+            OwnedAbilityUpgradeList.OwnedAbilityUpgrades.RemoveAll([&Tag](const FOwnedAbilityUpgrade& Upgrade)
+            {
+                return Upgrade.UpgradeTag.MatchesTagExact(Tag);
+            });
         }
+        OwnedAbilityUpgradeList.MarkArrayDirty();
+        OnAbilityUpgradeTagsChangedDelegate.Broadcast(Tag, UpgradeStack);
     }
 }
 
@@ -178,15 +246,17 @@ int32 AAuraPlayerState::GetUpgradeTagCount(FGameplayTag UpgradeTag)
     if (!UpgradeTag.IsValid())
         return 0;
 
-    if (OwnedAbilityUpgradeTags.Find(UpgradeTag))
-        return *OwnedAbilityUpgradeTags.Find(UpgradeTag);
+    if (auto* Upgrade = OwnedAbilityUpgradeList.GetOwnedAbilityUpgrade(UpgradeTag))
+    {
+        return Upgrade->UpgradeStack;
+    }
 
     return 0;
 }
 
 bool AAuraPlayerState::HasUpgradeTag(FGameplayTag UpgradeTag)
 {
-    return OwnedAbilityUpgradeTags.Find(UpgradeTag) ? true : false;
+    return OwnedAbilityUpgradeList.FindOwnedAbilityUpgrade(UpgradeTag);
 }
 
 void AAuraPlayerState::HandleAbilitiesSet()

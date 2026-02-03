@@ -32,7 +32,6 @@ class AURA_API UAttributeInfo : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	// �±׸� ������ Array���� ã��
 	FAuraAttributeInfo FindAttributeInfoForTag(const FGameplayTag& AttributeTag, bool bLogNotFound = false) const;
 
 	FText GetAttributeNameForTag(const FGameplayTag& AttributeTag);

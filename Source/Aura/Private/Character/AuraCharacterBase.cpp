@@ -1,12 +1,11 @@
 #include "Character/AuraCharacterBase.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "AuraAbilityTypes.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
 #include "AuraGameplayTags.h"
-#include "NiagaraSystem.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
@@ -14,8 +13,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/Passive/PassiveNiagaraComponent.h"
-#include "Actor/AuraEffectActor.h"
-#include "AI/NavigationModifier.h"
 #include "Game/AuraGameInstance.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerController.h"
@@ -86,7 +83,7 @@ void AAuraCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 float AAuraCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	OnDamageDelegate.Broadcast(DamageTaken);
+	GetOnDamageDelegate().Broadcast(DamageTaken);
 	return DamageTaken;
 }
 
@@ -105,6 +102,7 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse, AAuraCharacter* Killed
 	// 소환수 모두 제거
 	RemoveAllMinions();
 	
+	bDead = true;
 }
 
 void AAuraCharacterBase::RemoveAllMinions()
@@ -115,8 +113,6 @@ void AAuraCharacterBase::RemoveAllMinions()
 		{
 			if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(CharacterBase->GetAbilitySystemComponent()))
 			{
-				float MaxHealth = UAuraAbilitySystemLibrary::GetAttributeValue(CharacterBase, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
-				
 				// Gameplay Effect Context 생성
 				FGameplayEffectContextHandle EffectContextHandle = AuraASC->MakeEffectContext();
 				EffectContextHandle.AddSourceObject(this);
@@ -125,8 +121,7 @@ void AAuraCharacterBase::RemoveAllMinions()
 				const FGameplayEffectSpecHandle EffectSpecHandle = AuraASC->MakeOutgoingSpec(DamageGameplayEffectClass, 1, EffectContextHandle);
 	
 				// Gameplay Effect Spec을 본인에게 적용
-				const FActiveGameplayEffectHandle ActiveEffectHandle = AuraASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
-	
+				AuraASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
 			}
 		}
 	}
@@ -153,10 +148,8 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation(const FVector& Deat
 	// ĳ���� �浹 ��Ȱ��ȭ
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Dissolve();
-	bDead = true;
 	BurnDebuffComponent->Deactivate();
 	StunDebuffComponent->Deactivate();
-	OnDeath.Broadcast(this);
 }
 
 void AAuraCharacterBase::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
@@ -197,7 +190,7 @@ void AAuraCharacterBase::BeginPlay()
 
 void AAuraCharacterBase::InitAbilityActorInfo()
 {
-	// ASC�� ��ȿ���� Ȯ���ϱ� ���� �ڽ� Ŭ������ ������ ȣ���� ��.
+	
 }
 
 FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
@@ -225,6 +218,11 @@ FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGamepl
 bool AAuraCharacterBase::IsDead_Implementation() const
 {
 	return bDead;
+}
+
+FOnDeath* AAuraCharacterBase::GetOnDeathDelegate()
+{
+	return nullptr;
 }
 
 AActor* AAuraCharacterBase::GetAvatar_Implementation()
@@ -272,11 +270,6 @@ FOnASCRegistered& AAuraCharacterBase::GetOnASCRegisteredDelegate()
 	return OnASCRegistered;
 }
 
-FOnDeath& AAuraCharacterBase::GetOnDeathDelegate()
-{
-	return OnDeath;
-}
-
 USkeletalMeshComponent* AAuraCharacterBase::GetWeapon_Implementation()
 {
 	return Weapon;
@@ -299,7 +292,7 @@ UAttributeSet* AAuraCharacterBase::GetAttributeSet_Implementation()
 
 FOnDamageSignature& AAuraCharacterBase::GetOnDamageDelegate()
 {
-	return OnDamageDelegate;
+	return Cast<AAuraPlayerState>(GetPlayerState())->GetOnDamageDelegate();
 }
 
 void AAuraCharacterBase::ShowRangeIndicator_Implementation(bool bAttachToActor, ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, const FVector& RGB)
@@ -504,8 +497,11 @@ void AAuraCharacterBase::StopMovementInput()
 
 void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const
 {
-	check(IsValid(GetAbilitySystemComponent()));
-	check(GameplayEffectClass);
+	if (!GetAbilitySystemComponent())
+		return;
+	
+	if (!GameplayEffectClass)
+		return;
 
 	// ���ؽ�Ʈ �ڵ�
 	FGameplayEffectContextHandle ContextHandle = GetAbilitySystemComponent()->MakeEffectContext();

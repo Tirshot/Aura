@@ -10,6 +10,15 @@
 #include "Player/AuraPlayerController.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
+UWorld* UMVVM_DebugMenu::GetWorld() const
+{
+	if (const UObject* Outer = GetOuter())
+	{
+		return Outer->GetWorld();
+	}
+	return nullptr;
+}
+
 void UMVVM_DebugMenu::ViewModelInitialized()
 {
 	// 초기 값 가져오기
@@ -101,6 +110,6 @@ void UMVVM_DebugMenu::OnForcingSaveButtonPressed()
 {
 	if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
 	{
-		AuraGM->GameAutoSave();
+		AuraGM->Server_GameAutoSave();
 	}
 }

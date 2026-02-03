@@ -7,8 +7,14 @@
 
 UTargetDataUnderMouse* UTargetDataUnderMouse::CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility)
 {
+	if (!OwningAbility)
+		return nullptr;
+	
 	UTargetDataUnderMouse* MyObj = NewAbilityTask<UTargetDataUnderMouse>(OwningAbility);
-	return MyObj;
+	if (MyObj)
+		return MyObj;
+	
+	return nullptr;
 }
 
 void UTargetDataUnderMouse::Activate()
@@ -44,12 +50,12 @@ void UTargetDataUnderMouse::Activate()
 
 void UTargetDataUnderMouse::SendMouseCursorData()
 {
-	// ����
 	FScopedPredictionWindow ScopedPrediction(AbilitySystemComponent.Get());
 
 	APlayerController* PC = Ability->GetCurrentActorInfo()->PlayerController.Get();
+	if (!PC)
+		return;
 	
-	// ���콺 Ŀ�� ������
 	FHitResult CursorHit;
 	PC->GetHitResultUnderCursor(ECC_Target, false, CursorHit);
 
@@ -59,7 +65,6 @@ void UTargetDataUnderMouse::SendMouseCursorData()
 	Data->HitResult = CursorHit;
 	DataHandle.Add(Data);
 
-	// ������ ������ ����
 	AbilitySystemComponent->ServerSetReplicatedTargetData(
 		GetAbilitySpecHandle(),
 		GetActivationPredictionKey(),
@@ -69,7 +74,6 @@ void UTargetDataUnderMouse::SendMouseCursorData()
 
 	if (ShouldBroadcastAbilityTaskDelegates())
 	{
-		// �����Ƽ�� ���� Ȱ��ȭ ���ΰ�
 		ValidData.Broadcast(DataHandle);
 	}
 }

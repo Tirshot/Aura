@@ -40,6 +40,7 @@ public:
 	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
 	virtual bool IsDead_Implementation() const override;
+	virtual FOnDeath* GetOnDeathDelegate() override;
 	virtual AActor* GetAvatar_Implementation() override;
 	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
 	virtual UNiagaraSystem* GetBloodEffect_Implementation() override;
@@ -48,7 +49,6 @@ public:
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	virtual ECharacterClass GetCharacterClass_Implementation() override;
 	virtual FOnASCRegistered& GetOnASCRegisteredDelegate() override;
-	virtual FOnDeath& GetOnDeathDelegate() override;
 	virtual USkeletalMeshComponent* GetWeapon_Implementation() override;
 	virtual bool IsBeingShocked_Implementation() override;
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
@@ -73,9 +73,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void StopMovementInput();
 	
-	FOnDeath OnDeath;
-	FOnDamageSignature OnDamageDelegate;
-
 	UFUNCTION(BlueprintCallable)
 	void RemoveAllMinions();
 
@@ -162,6 +159,9 @@ public:
 		
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
 	TSubclassOf<UGameplayEffect> InfiniteManaGameplayEffectClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
+	TSubclassOf<UGameplayEffect> DeadEffectClass;
 	
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	

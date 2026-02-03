@@ -11,10 +11,12 @@ void USpellUpgradesWidgetController::BroadcastInitialValues()
 	UpgradeInfo.Empty();
 	
 	// PlayerState로부터 업그레이드 배열 받아오기
-	for (auto& Pair :GetAuraPS()->GetAbilityUpgradeTagContainer())
+	FOwnedAbilityUpgradeList& List = GetAuraPS()->GetOwnedAbilityUpgradeList();
+	
+	for (auto Upgrade : List.OwnedAbilityUpgrades)
 	{
-		FGameplayTag UpgradeTag = Pair.Key;
-		int32 Stack = Pair.Value;
+		FGameplayTag UpgradeTag = Upgrade.UpgradeTag;
+		int32 Stack = Upgrade.UpgradeStack;
 
 		auto InfoStruct = UAuraAbilitySystemLibrary::GetAbilityUpgradeInfoForUpgradeTag(this, UpgradeTag);
 		FString UpgradeName = InfoStruct.UpgradeName;

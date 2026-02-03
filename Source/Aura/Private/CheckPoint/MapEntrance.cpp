@@ -30,16 +30,34 @@ void AMapEntrance::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAc
 	if (OtherActor->Implements<UPlayerInterface>())
 	{
 		bReached = true;
+		
+		// 캐릭터 저장
+		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
+		
+		// 맵 상태 저장
+		Server_SaveWorldState();
+		
+		// 맵 이동
+		Server_TravelToNextMap();
+	}
+}
 
-		// 월드 상태 저장
+void AMapEntrance::Server_TravelToNextMap_Implementation()
+{
+	if (HasAuthority())
+	{
+		GetWorld()->ServerTravel(DestinationMap.ToSoftObjectPath().GetAssetName());
+	}
+}
+
+void AMapEntrance::Server_SaveWorldState_Implementation()
+{
+	if (HasAuthority())
+	{
 		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
 		{
 			// 목적지 맵의 상태를 저장
-			AuraGM->SaveWorldState(GetWorld(), DestinationMap.ToSoftObjectPath().GetAssetName());
+			AuraGM->Server_SaveWorldState(GetWorld(), DestinationMap.ToSoftObjectPath().GetAssetName());
 		}
-		IPlayerInterface::Execute_SaveProgress(OtherActor, PlayerStartTag);
-
-		// 맵 이동
-		UGameplayStatics::OpenLevelBySoftObjectPtr(this, DestinationMap);
 	}
 }

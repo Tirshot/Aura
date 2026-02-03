@@ -34,6 +34,7 @@ enum class ETargetingStatus : uint8
 
 DECLARE_MULTICAST_DELEGATE(FOnCardSelected);
 DECLARE_MULTICAST_DELEGATE(FOnBossMonsterAddedToGameMode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReviveTimerEnd);
 
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
@@ -46,6 +47,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
@@ -78,6 +80,7 @@ public:
 	bool IsShiftKeyDown() { return bShiftKeyDown; }
 	FHitResult& GetHitResult() {return CursorHit;}
 
+	UAuraAbilitySystemComponent* GetASC();
 	
 public:
 	/*
@@ -129,7 +132,18 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_CharacterInfiniteMana(bool bInfiniteMana);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ReviveFromPlayerStart();
 
+	// 사망 후 관전
+	UFUNCTION(Server, UnReliable)
+	void Server_StartSpectating();
+	
+	// 클라이언트 RPC 함수
+	UFUNCTION(Client, Reliable)
+	void Client_ShowGameOverWidget();
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> AuraContext;
@@ -196,8 +210,6 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAuraAbilitySystemComponent> AuraAbilitySystemComponent;
 
-	UAuraAbilitySystemComponent* GetASC();
-
 	/* 클릭으로 이동 */
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
@@ -234,7 +246,8 @@ public:
 public:
 	// 보스 이벤트 바인딩
 	FOnBossMonsterAddedToGameMode OnBossMonsterAdded;
-
+	FOnReviveTimerEnd OnReviveTimerEnd;
+	
 	UFUNCTION()
 	void BossMonsterBind();
 	

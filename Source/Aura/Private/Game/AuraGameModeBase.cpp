@@ -4,7 +4,6 @@
 #include "Game/AuraGameModeBase.h"
 
 #include "AuraGameplayTags.h"
-#include "AuraLogChannels.h"
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
@@ -19,18 +18,19 @@
 #include "Game/AuraGameInstance.h"
 #include "Interaction/SaveInterface.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
-#include "GameFramework/Character.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
-#include "UI/WidgetController/GameOverWidgetController.h"
+
+AAuraGameModeBase::AAuraGameModeBase()
+{
+	bUseSeamlessTravel = true;
+}
 
 void AAuraGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
-
-	Maps.Add(DefaultMapName, DefaultMap);
 
 	OnAllActorsInvincible.AddDynamic(this, &AAuraGameModeBase::SetAllActorsInvincible);
 }
@@ -38,13 +38,15 @@ void AAuraGameModeBase::BeginPlay()
 void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-
+	
 	if (NewPlayer)
 	{
 		if (AAuraPlayerState* AuraPS = NewPlayer->GetPlayerState<AAuraPlayerState>())
 		{
 			AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraGameModeBase::HandlePlayerStateInitialized);
 		}
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(NewPlayer))
+			Players.AddUnique(AuraPC);
 	}
 }
 
@@ -77,29 +79,6 @@ AActor* AAuraGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 	return nullptr;
 }
 
-void AAuraGameModeBase::SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex)
-{
-	// 이미 게임이 존재하면 데이터 삭제
-	if (UGameplayStatics::DoesSaveGameExist(LoadSlot->GetLoadSlotName(), SlotIndex))
-	{
-		UGameplayStatics::DeleteGameInSlot(LoadSlot->GetLoadSlotName(), SlotIndex);
-	}
-
-	// 저장 오브젝트 생성
-	USaveGame* SaveGameObject = UGameplayStatics::CreateSaveGameObject(LoadScreenSaveGameClass);
-
-	// 데이터를 집어넣기
-	ULoadScreenSaveGame* LoadScreenSaveGame = Cast<ULoadScreenSaveGame>(SaveGameObject);
-	LoadScreenSaveGame->PlayerName = LoadSlot->GetPlayerName();
-	LoadScreenSaveGame->MapName = LoadSlot->GetMapName();
-	LoadScreenSaveGame->SaveSlotStatus = Taken;
-	LoadScreenSaveGame->PlayerStartTag = LoadSlot->PlayerStartTag;
-	LoadScreenSaveGame->MapAssetName = LoadSlot->MapAssetName;
-
-	// 최종 저장
-	UGameplayStatics::SaveGameToSlot(LoadScreenSaveGame, LoadSlot->GetLoadSlotName(), SlotIndex);
-}
-
 void AAuraGameModeBase::DeleteSlot(const FString& SlotName, int32 SlotIndex)
 {
 	if (UGameplayStatics::DoesSaveGameExist(SlotName, SlotIndex))
@@ -115,30 +94,55 @@ ULoadScreenSaveGame* AAuraGameModeBase::RetrieveInGameSaveData()
 	const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
 	const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
 
-	return GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
+	return AuraGameInstance->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
+}
+
+ULoadScreenSaveGame* AAuraGameModeBase::RetrieveInGameSaveData(APlayerController* PC)
+{
+	if (!PC)
+		return nullptr;
+	
+	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(PC->GetGameInstance());
+
+	const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
+	const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
+
+	return AuraGameInstance->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
 }
 
 void AAuraGameModeBase::SaveInGameProgressData(ULoadScreenSaveGame* SaveObject)
 {
-	UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(GetGameInstance());
-
-	const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
-	const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
-	AuraGameInstance->PlayerStartTag = SaveObject->PlayerStartTag;
-
-	UGameplayStatics::SaveGameToSlot(SaveObject, InGameLoadSlotName, InGameLoadSlotIndex);
+	// UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(GetGameInstance());
+	//
+	// const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
+	// const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
+	// AuraGameInstance->PlayerStartTag = SaveObject->PlayerStartTag;
+	//
+	// UGameplayStatics::SaveGameToSlot(SaveObject, InGameLoadSlotName, InGameLoadSlotIndex);
 }
 
-void AAuraGameModeBase::SaveWorldState(UWorld* World, const FString& DestinationMapAssetName)
+void AAuraGameModeBase::Client_SaveCharacterProgress_Implementation()
 {
+	auto* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
+	if (Actor->Implements<UPlayerInterface>())
+		IPlayerInterface::Execute_SaveProgress(Actor, "");
+}
+
+void AAuraGameModeBase::Server_SaveWorldState_Implementation(UWorld* World, const FString& DestinationMapAssetName)
+{
+	if (!HasAuthority())
+		return;
+	
 	// 접두사를 제외한 실제 이름만 가져오기
 	FString WorldName = World->GetMapName();
 	WorldName.RemoveFromStart(World->StreamingLevelsPrefix);
 
 	UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
-	check(AuraGI);
+	if (!AuraGI)
+		return;
 	
-	if (ULoadScreenSaveGame* SaveGame = GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
+	if (ULoadScreenSaveGame* SaveGame = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
 	{
 		// 맵의 이름 지정
 		if (DestinationMapAssetName != FString(""))
@@ -160,13 +164,15 @@ void AAuraGameModeBase::SaveWorldState(UWorld* World, const FString& Destination
 		SavedMap.SavedActors.Empty();
 
 		// 월드 내의 모든 액터 순회
-		// 최적화를 위해 특정 조건을 만들수도 있음
 		for (FActorIterator It(World); It; ++It)
 		{
 			AActor* Actor = *It;
 
 			// 사망 상태가 아닐 때 또는 저장 인터페이스를 상속받지 않을 때 패스
 			if (IsValid(Actor) == false || Actor->Implements<USaveInterface>() == false)
+				continue;
+			
+			if (Actor->Implements<UPlayerInterface>())
 				continue;
 
 			FSavedActor SavedActor;
@@ -198,107 +204,77 @@ void AAuraGameModeBase::SaveWorldState(UWorld* World, const FString& Destination
 	}
 }
 
-void AAuraGameModeBase::LoadWorldState(UWorld* World)
+void AAuraGameModeBase::Server_LoadWorldState_Implementation(UWorld* World)
 {
-	// 접두사를 제외한 실제 이름만 가져오기
+	if (!HasAuthority() || !World)
+		return;
+
+	// 1. 세이브 데이터 가져오기
+	UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
+	if (!AuraGI)
+		return;
+
+	if (!UGameplayStatics::DoesSaveGameExist(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
+		return;
+
+	ULoadScreenSaveGame* SaveGame = Cast<ULoadScreenSaveGame>(UGameplayStatics::LoadGameFromSlot(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex));
+	if (!SaveGame)
+		return;
+	
 	FString WorldName = World->GetMapName();
 	WorldName.RemoveFromStart(World->StreamingLevelsPrefix);
-
-	UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
-	check(AuraGI);
 	
-	if (UGameplayStatics::DoesSaveGameExist(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
+	// 저장된 맵 가져오기
+	const FSavedMap& CurrentSavedMap = SaveGame->GetSavedMapWithMapName(WorldName);
+    
+	// 현재 맵의 저장된 액터 데이터 가져옴
+	TMap<FName, const FSavedActor*> SavedActorMap;
+	for (const FSavedActor& SavedActorData : CurrentSavedMap.SavedActors)
 	{
-		ULoadScreenSaveGame* SaveGame = Cast<ULoadScreenSaveGame>(UGameplayStatics::LoadGameFromSlot(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex));
-		if (SaveGame == nullptr)
+		SavedActorMap.Add(SavedActorData.ActorName, &SavedActorData);
+	}
+
+	// 가져온 액터 순회
+	for (FActorIterator It(World); It; ++It)
+	{
+		AActor* Actor = *It;
+
+		if (!IsValid(Actor) || !Actor->Implements<USaveInterface>()) 
+			continue;
+
+		// Map에서 해당 액터의 데이터가 있는지 확인
+		if (const FSavedActor* FoundData = SavedActorMap.FindRef(Actor->GetFName()))
 		{
-			UE_LOG(LogAura, Error, TEXT("Failed to load slot"));
-			return;
-		}
-		
-		for (FActorIterator It(World); It; ++It)
-		{
-			AActor* Actor = *It;
-
-			// 저장 인터페이스가 없는 액터는 스킵
-			if (Actor->Implements<USaveInterface>() == false)
-				continue;
-
-			// 저장된 액터 배열 순회
-			for (FSavedActor SavedActor : SaveGame->GetSavedMapWithMapName(WorldName).SavedActors)
-			{
-				// 저장된 액터가 순회 중인 월드의 액터와 일치
-				if (SavedActor.ActorName == Actor->GetFName())
-				{
-					// 트랜스폼을 불러와야 하면 불러오기
-					if (ISaveInterface::Execute_ShouldLoadTransform(Actor))
-					{
-						Actor->SetActorTransform(SavedActor.Transform);
-					}
-
-					// 역직렬화
-					FMemoryReader MemoryReader(SavedActor.Bytes);
-					FObjectAndNameAsStringProxyArchive Archive(MemoryReader, true);
-					Archive.ArIsSaveGame = true;
-
-					Actor->Serialize(Archive); // Bytes를 변수로 다시 변환
-
-					// 액터의 불러오기 함수 호출
-					ISaveInterface::Execute_LoadActor(Actor);
-				}
-			}
+			// 트랜스폼 불러오기
+			if (ISaveInterface::Execute_ShouldLoadTransform(Actor))
+				Actor->SetActorTransform(FoundData->Transform);
+			
+			// 액터 불러오기
+			ISaveInterface::Execute_LoadActor(Actor); 
 		}
 	}
 }
 
 void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 {
-	const FString SlotName = Slot->GetLoadSlotName();
-	const int32 SlotIndex = Slot->SlotIndex;
-
-	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()));
+	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()), true, TEXT("?listen"));
 }
 
 void AAuraGameModeBase::TravelToMap(FString MapName)
 {
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Maps.FindChecked(MapName));
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Maps.FindChecked(MapName), true, TEXT("?listen"));
 }
 
-ULoadScreenSaveGame* AAuraGameModeBase::GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const
-{
-	USaveGame* SaveGameObject = nullptr;
-	if (UGameplayStatics::DoesSaveGameExist(SlotName, SlotIndex))
-	{
-		// 데이터가 있으면 불러오기
-		SaveGameObject = UGameplayStatics::LoadGameFromSlot(SlotName, SlotIndex);
-	}
-	else
-	{
-		// 데이터가 없으면 생성
-		SaveGameObject = UGameplayStatics::CreateSaveGameObject(LoadScreenSaveGameClass);
-	}
 
-	// 커스텀 세이브로 캐스팅 후 리턴
-	ULoadScreenSaveGame* LoadScreenSaveGame = Cast<ULoadScreenSaveGame>(SaveGameObject);
-	return LoadScreenSaveGame;
-}
-
-void AAuraGameModeBase::GameAutoSave()
+void AAuraGameModeBase::Server_GameAutoSave_Implementation()
 {
 	// 월드 상태 저장
-	if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
-	{
-		const UWorld* World = GetWorld();
-		FString MapName = World->GetMapName();
-		MapName.RemoveFromStart(World->StreamingLevelsPrefix);
-			
-		AuraGM->SaveWorldState(GetWorld(), MapName);
-
-		auto* PlayerController = GetWorld()->GetFirstPlayerController();
-		AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
-		if (Actor->Implements<UPlayerInterface>())
-			IPlayerInterface::Execute_SaveProgress(Actor, "");
-	}
+	UWorld* World = GetWorld();
+	FString MapName = World->GetMapName();
+	MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+	
+	Server_SaveWorldState(World, MapName);
+	Client_SaveCharacterProgress();
 }
 
 FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetName)
@@ -314,7 +290,7 @@ FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetNam
 void AAuraGameModeBase::OnBossMonsterDead(AActor* DeadActor)
 {
 	// 월드 상태 저장
-	GameAutoSave();
+	Server_GameAutoSave();
 }
 
 void AAuraGameModeBase::AddMonsterToArray(AAuraEnemy* Enemy)
@@ -327,7 +303,7 @@ void AAuraGameModeBase::AddMonsterToArray(AAuraEnemy* Enemy)
 		// 보스 사망 델리게이트 구독 -> 게임 강제 저장
 		Boss->OnDeath.AddDynamic(this, &AAuraGameModeBase::OnBossMonsterDead);
 
-		if (AAuraPlayerController* AuraPC = GetWorld()->GetFirstPlayerController<AAuraPlayerController>())
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(UGameplayStatics::GetPlayerController(this, 0)))
 		{
 			AuraPC->OnBossMonsterAdded.Broadcast();
 		}
@@ -392,14 +368,6 @@ void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
 	}
 }
 
-void AAuraGameModeBase::PlayerDied(ACharacter* DeadCharacter, float RemainingTime)
-{
-	if (UGameOverWidgetController* GameOverWC = UAuraAbilitySystemLibrary::GetGameOverWidgetController(DeadCharacter))
-	{
-		GameOverWC->SetRemainingTime(RemainingTime);
-	}
-}
-
 void AAuraGameModeBase::RestartGameFromSaveData(ACharacter* DeadCharacter)
 {
 	// 저장 오브젝트 불러와 마지막 저장 확인
@@ -418,6 +386,36 @@ void AAuraGameModeBase::RestartGameFromSaveDataWithWorldContextObject(UObject* W
 		return;
 
 	UGameplayStatics::OpenLevel(WorldContextObject, FName(SaveGame->MapAssetName));
+}
+
+void AAuraGameModeBase::PlayerRespawn(AAuraPlayerController* DeadPC)
+{
+	if (!DeadPC)
+		return;
+
+	// 아직 안사라졌으면 확실히 제거
+	if (APawn* DeadPawn = DeadPC->GetPawn())
+	{
+		DeadPC->UnPossess();
+		DeadPawn->Destroy();
+	}
+	
+	// 저장된 플레이어 스타트에서 재시작
+	if (AActor* SavedPlayerStart = ChoosePlayerStart(DeadPC))
+	{
+		RestartPlayerAtPlayerStart(DeadPC, SavedPlayerStart);
+	}
+	else
+	{
+		// 저장된 플레이어 스타트가 없으면 그냥 부활
+		RestartPlayer(DeadPC);
+	}
+	
+	// 사망 태그 부여 이펙트 제거
+	if (UAbilitySystemComponent* ASC = DeadPC->GetASC())
+	{
+		ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead")));
+	}
 }
 
 void AAuraGameModeBase::HandleInitializeCards(APlayerController* PC)
@@ -490,8 +488,12 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 
 	while (RandomUpgradeInfos.Num() < 3)
 	{
+		UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
+		if (AuraGI == nullptr)
+			return TArray<FAuraAbilityUpgradeInfo>();
+
 		// 주어진 어빌리티 태그에 대해 랜덤한 업그레이드 태그 뽑기
-		if (UAbilityUpgradeInfo* Info = AbilityUpgradeInfo)
+		if (UAbilityUpgradeInfo* Info = AuraGI->GetAbilityUpgradeInfo())
 		{
 			int CommonProbability = Info->UpgradeProbability[EUpgradeRarity::Common];
 			int RareProbability = Info->UpgradeProbability[EUpgradeRarity::Rare];
@@ -602,7 +604,7 @@ bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, FName Ite
 		{
 			if (const FItemData* FoundRow = AuraGI->GetItemData(ItemID))
 			{
-				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image);
+				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image.Get());
 				return Inventory->AddItem_Internal(*FoundRow, ItemCount);
 			}
 		}
@@ -627,8 +629,12 @@ void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const
 	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
 	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 	
+	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
+		return;
+	
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
-		DropItemClass,
+		AuraGI->DropItemClass,
 		ItemSpawnLocation,
 		RandRotation,
 		SpawnParams);
@@ -662,8 +668,12 @@ void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FName ItemID
 	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
 	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 	
+	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
+		return;
+	
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
-		DropItemClass,
+		AuraGI->DropItemClass,
 		ItemSpawnLocation,
 		RandRotation,
 		SpawnParams);
@@ -694,9 +704,13 @@ void AAuraGameModeBase::SpawnDropItemToLocation(FVector Location, FName ItemID)
 	
 	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Location.ForwardVector, FVector::UpVector, 360.f, RandValue);
 	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
+		
+	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
+	if (AuraGI == nullptr)
+		return;
 	
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
-		DropItemClass,
+		AuraGI->DropItemClass,
 		Location,
 		RandRotation,
 		SpawnParams);
