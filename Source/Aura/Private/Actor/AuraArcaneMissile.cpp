@@ -7,10 +7,12 @@
 #include "AbilitySystem/Abilities/AuraArcaneOrbit.h"
 #include "Character/AuraCharacterBase.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AAuraArcaneMissile::AAuraArcaneMissile()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("StaticMesh");
 	Mesh->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
@@ -29,6 +31,8 @@ AAuraArcaneMissile::AAuraArcaneMissile()
 void AAuraArcaneMissile::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	SetReplicateMovement(false);
 
 	if (Owner)
 	{
@@ -107,6 +111,15 @@ void AAuraArcaneMissile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponen
 	Super::OnSphereOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 }
 
+void AAuraArcaneMissile::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAuraArcaneMissile, OrbitRadius);
+	DOREPLIFETIME(AAuraArcaneMissile, OrbitSpeed);
+	DOREPLIFETIME(AAuraArcaneMissile, InitialAngle);
+}
+
 void AAuraArcaneMissile::HomingNearestTarget(float DeltaTime)
 {
 	TimeElapsed += DeltaTime;
@@ -119,20 +132,23 @@ void AAuraArcaneMissile::HomingNearestTarget(float DeltaTime)
 	ActorsToIgnore.Add(Owner);
 	ActorsToIgnore.Add(this);
 
-	UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(
+	UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius
+	(
 		this,
 		OutOverlappingActors,
 		ActorsToIgnore, FollowRadius, GetActorLocation());
 
 	for (AActor* Actor : OutOverlappingActors)
 	{
+		// 아군 추적 금지
+		if (Actor->ActorHasTag(FName("Player")))
+			continue;
+		
 		if (ProjectileMovement->HomingTargetComponent == nullptr)
 		{
 			ProjectileMovement->bIsHomingProjectile = true;
 			ProjectileMovement->HomingTargetComponent = Actor->GetRootComponent();
-
 			ProjectileMovement->Activate();
-			
 			SetHasTarget(true);
 		}
 	}
@@ -140,7 +156,6 @@ void AAuraArcaneMissile::HomingNearestTarget(float DeltaTime)
 	if (ProjectileMovement->HomingTargetComponent == nullptr)
 	{
 		ProjectileMovement->Deactivate();
-			
 		SetHasTarget(false);
 	}
 }

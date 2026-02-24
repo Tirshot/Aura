@@ -108,10 +108,7 @@ UItemInfo* UAuraGameInstance::GetItemInfos()
 {
 	if (!ItemInfos)
 	{
-		if (!ItemInfoDataAsset.IsNull())
-		{
-			ItemInfos = ItemInfoDataAsset.LoadSynchronous();
-		}
+		ItemInfos = NewObject<UItemInfo>(this, ItemInfosClass);
 	}
 	
 	return ItemInfos;
@@ -119,6 +116,9 @@ UItemInfo* UAuraGameInstance::GetItemInfos()
 
 const FItemData* UAuraGameInstance::GetItemData(FName ItemName)
 {
+	if (ItemName.IsNone()) 
+		return nullptr;
+	
 	if (auto ItemData = GetItemInfos()->GetItemDataByID(ItemName))
 	{
 		return ItemData;

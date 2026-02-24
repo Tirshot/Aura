@@ -8,6 +8,7 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "EquipmentComponent.generated.h"
 
+struct FEquipmentSlotList;
 class AAuraCharacter;
 class UAuraAbilitySystemComponent;
 class UInventoryComponent;
@@ -33,6 +34,9 @@ public:
 	
 public:
 	UPROPERTY()
+	int32 SlotID = -1;
+	
+	UPROPERTY()
 	EItemSubGroup ItemSubGroup;
 	
 	// 아이템 데이터
@@ -44,9 +48,9 @@ public:
 	
 	bool IsEmpty() const { return ItemData.Name.IsNone(); }
 	
-	void PostReplicatedAdd(const struct FEquipmentSlotList& InArraySerializer);
-	void PostReplicatedChange(const struct FEquipmentSlotList& InArraySerializer);
-	void PreReplicatedRemove(const struct FEquipmentSlotList& InArraySerializer);
+	void PostReplicatedAdd(const FEquipmentSlotList& InArraySerializer);
+	void PostReplicatedChange(const FEquipmentSlotList& InArraySerializer);
+	void PreReplicatedRemove(const FEquipmentSlotList& InArraySerializer);
 };
 
 USTRUCT(BlueprintType)
@@ -59,11 +63,13 @@ struct FEquipmentSlotList : public FFastArraySerializer
 
 	UPROPERTY()
 	class UEquipmentComponent* OwnerComponent = nullptr;
+	
+	void EquipmentSlotChanged(FEquipmentSlotEntry& Slot);
 
 	// 직렬화
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FEquipmentSlotEntry, FEquipmentSlotList>(Items, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FEquipmentSlotEntry, FEquipmentSlotList>(Items, DeltaParms, *this);
 	}
 };
 

@@ -121,6 +121,16 @@ void AAuraGameModeBase::SaveInGameProgressData(ULoadScreenSaveGame* SaveObject)
 	// UGameplayStatics::SaveGameToSlot(SaveObject, InGameLoadSlotName, InGameLoadSlotIndex);
 }
 
+void AAuraGameModeBase::Server_SaveWorldStateAndTravel_Implementation(UWorld* World,
+	const FString& DestinationMapAssetName)
+{
+	if (!HasAuthority())
+		return;
+	
+	Server_SaveWorldState(World, DestinationMapAssetName);
+	ServerTravelToMap(DestinationMapAssetName);
+}
+
 void AAuraGameModeBase::Client_SaveCharacterProgress_Implementation()
 {
 	auto* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
@@ -255,6 +265,18 @@ void AAuraGameModeBase::Server_LoadWorldState_Implementation(UWorld* World)
 	}
 }
 
+void AAuraGameModeBase::Multicast_SaveCharacterProgress_Implementation()
+{
+	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (!PC) return;
+
+	APawn* Pawn = PC->GetPawn();
+	if (Pawn && Pawn->Implements<UPlayerInterface>())
+	{
+		IPlayerInterface::Execute_SaveProgress(Pawn, "");
+	}
+}
+
 void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 {
 	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()), true, TEXT("?listen"));
@@ -262,7 +284,20 @@ void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 
 void AAuraGameModeBase::TravelToMap(FString MapName)
 {
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Maps.FindChecked(MapName), true, TEXT("?listen"));
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, Maps.FindChecked(MapName), false, TEXT("?listen"));
+}
+
+void AAuraGameModeBase::ServerTravelToMap(FString MapName)
+{
+	if (auto Map = Maps.Find(MapName))
+	{
+		if (Map)
+		{
+			FString Path = Map->ToSoftObjectPath().GetLongPackageName();
+			FString TravelURL = FString::Printf(TEXT("%s?listen"), *Path);
+			GetWorld()->ServerTravel(TravelURL);
+		}
+	}
 }
 
 
@@ -274,7 +309,7 @@ void AAuraGameModeBase::Server_GameAutoSave_Implementation()
 	MapName.RemoveFromStart(World->StreamingLevelsPrefix);
 	
 	Server_SaveWorldState(World, MapName);
-	Client_SaveCharacterProgress();
+	Multicast_SaveCharacterProgress();
 }
 
 FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetName)
@@ -415,6 +450,16 @@ void AAuraGameModeBase::PlayerRespawn(AAuraPlayerController* DeadPC)
 	if (UAbilitySystemComponent* ASC = DeadPC->GetASC())
 	{
 		ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead")));
+		
+		// 부활 후 절반 체력 및 절반 마나 회복
+		if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+		{
+			TSubclassOf<UGameplayEffect> ReviveEffectClass = AuraGI->ReviveEffect;
+			FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+			FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ReviveEffectClass, 1.f, Context);
+			
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
 	}
 }
 
@@ -426,9 +471,6 @@ void AAuraGameModeBase::HandleInitializeCards(APlayerController* PC)
 		{
 			auto RandomUpgradeInfos = GetRandomUpgradeInfosForActivatedAbility_Three(AuraPS);
 			AuraPS->SetUpgradeCardInfo(RandomUpgradeInfos);
-
-			// 카드 내 선택 버튼 브로드캐스트
-			AuraPC->OnCardSelectedDelegate.Broadcast();
 		}
 	}
 }
@@ -596,18 +638,12 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
     return RandomUpgradeInfos;
 }
 
-bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, FName ItemID, int ItemCount)
+bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, const FItemData& ItemData, int ItemCount)
 {
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Character))
 	{
-		if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
-		{
-			if (const FItemData* FoundRow = AuraGI->GetItemData(ItemID))
-			{
-				UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.GetItem"), Character, FoundRow->DisplayName, FoundRow->Image.Get());
-				return Inventory->AddItem_Internal(*FoundRow, ItemCount);
-			}
-		}
+		UAuraAbilitySystemLibrary::AddMessageToActor(Character, FGameplayTag::RequestGameplayTag("Message.GetItem"), ItemData.DisplayName, ItemData.Image);
+		return Inventory->AddItem_Internal(ItemData, ItemCount);
 	}
 	return false;
 }
@@ -665,6 +701,8 @@ void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FName ItemID
 	
 	FItemData DropItemData = UAuraAbilitySystemLibrary::GetItemDataByItemName(this, ItemID);
 	
+	// 아이템에 Guid 설정
+	DropItemData.UniqueID = FGuid::NewGuid();
 	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
 	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 	
@@ -702,6 +740,8 @@ void AAuraGameModeBase::SpawnDropItemToLocation(FVector Location, FName ItemID)
 	
 	FItemData DropItemData = UAuraAbilitySystemLibrary::GetItemDataByItemName(this, ItemID);
 	
+	// 아이템에 Guid 설정
+	DropItemData.UniqueID = FGuid::NewGuid();
 	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Location.ForwardVector, FVector::UpVector, 360.f, RandValue);
 	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 		
@@ -843,6 +883,10 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 							}
 						}
 					}
+	
+					// 아이템에 Guid 설정
+					DropItemData.UniqueID = FGuid::NewGuid();
+					
 					// 월드에 아이템 드랍
 					FVector ItemSpawnLocation = DeadEnemy->GetActorLocation();
 					SpawnDropItemActor(KilledBy, DropItemData, ItemSpawnLocation);

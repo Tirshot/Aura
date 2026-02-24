@@ -63,26 +63,24 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
             }
         );
 
-    if (GetAuraASC())
+    if (auto* AuraASC = GetAuraASC())
     {
-        GetAuraASC()->AbilityEquipped.AddDynamic(this, &UOverlayWidgetController::OnAbilityEquipped);
-        if (GetAuraASC()->bStartupAbilitiesGiven)
+        AuraASC->AbilityEquipped.AddDynamic(this, &UOverlayWidgetController::OnAbilityEquipped);
+        if (AuraASC->bStartupAbilitiesGiven)
         {
             // 콜백 함수 바인드 필요 없이 바로 호출
             BroadcastAbilityInfo();
         }
-        else
-        {
-            // 어빌리티 부여 이전이면 델리게이트에 함수 바인딩
-            GetAuraASC()->AbilitiesGivenDelegate.AddDynamic(this, &UOverlayWidgetController::BroadcastAbilityInfo);
-        }
         
-        GetAuraASC()->OnMessageTagReceived.AddDynamic(this, &UOverlayWidgetController::OnMessageTagReceived);
-
-        GetAuraASC()->OnMessageRemoved.AddDynamic(this, &UOverlayWidgetController::MessageRemove);
+        // 어빌리티 부여 이전이면 델리게이트에 함수 바인딩
+        if (!AuraASC->AbilitiesGivenDelegate.IsAlreadyBound(this, &UOverlayWidgetController::BroadcastAbilityInfo))
+            AuraASC->AbilitiesGivenDelegate.AddDynamic(this, &UOverlayWidgetController::BroadcastAbilityInfo);
+        
+        AuraASC->OnMessageTagReceived.AddDynamic(this, &UOverlayWidgetController::OnMessageTagReceived);
+        AuraASC->OnMessageRemoved.AddDynamic(this, &UOverlayWidgetController::MessageRemove);
         
         // 플로팅 메세지
-        GetAuraASC()->EffectAssetTags.AddDynamic(this, &UOverlayWidgetController::OnFloatingMessageReceived);
+        AuraASC->EffectAssetTags.AddDynamic(this, &UOverlayWidgetController::OnFloatingMessageReceived);
     }
 }
 
@@ -226,6 +224,14 @@ void UOverlayWidgetController::OnFloatingMessageReceived(const FGameplayTagConta
 void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)
 {
     OnMessageRemoved.Broadcast(Tag);
+}
+
+void UOverlayWidgetController::SetXPBarPercentToOwnValue()
+{
+    if (AuraPlayerState)
+    {
+        OnXPChanged(AuraPlayerState->GetXP());
+    }
 }
 
 void UOverlayWidgetController::RemoveCenterDescriptionMessage()

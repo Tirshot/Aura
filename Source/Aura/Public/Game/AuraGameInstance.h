@@ -108,9 +108,13 @@ protected:
 	bool bAuraInfiniteMana = false;
 
 public:
+	// 사운드 믹스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundMix> SoundMix;
+	
 	// 아이템 정보
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
-	TSoftObjectPtr<UItemInfo> ItemInfoDataAsset;
+	TSubclassOf<UItemInfo> ItemInfosClass;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Item Data")
 	TObjectPtr<UItemInfo> ItemInfos;
@@ -140,6 +144,12 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Item Drop")
 	TSubclassOf<class AAuraDropItem> DropItemClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Revive Effect")
+	TSubclassOf<UGameplayEffect> ReviveEffect;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "LevelUp Effect")
+	TSubclassOf<UGameplayEffect> FullHPMPEffect;
 	
 	FTimerHandle LoadMapTimer;
 };

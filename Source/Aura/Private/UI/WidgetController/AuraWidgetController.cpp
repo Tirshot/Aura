@@ -35,10 +35,10 @@ void UAuraWidgetController::BroadcastDelegates(const FGameplayAbilitySpec& Abili
     }
 }
 
-void UAuraWidgetController::BroadcastAbilityInfo()
+void UAuraWidgetController:: BroadcastAbilityInfo()
 {
-    if (!GetAuraASC()->bStartupAbilitiesGiven)
-        return;
+    // if (!GetAuraASC()->bStartupAbilitiesGiven)
+    //     return;
 
     FForEachAbility BroadcastDelegate;
     BroadcastDelegate.BindUObject(this, &UAuraWidgetController::BroadcastDelegates);

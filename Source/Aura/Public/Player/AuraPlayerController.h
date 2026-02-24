@@ -9,6 +9,7 @@
 #include "Actor/MagicCircle.h"
 #include "AuraPlayerController.generated.h"
 
+class AAuraDropItem;
 class UAuraUserWidget;
 class UMVVM_TutorialDialogue;
 class UGameplayAbility;
@@ -35,6 +36,7 @@ enum class ETargetingStatus : uint8
 DECLARE_MULTICAST_DELEGATE(FOnCardSelected);
 DECLARE_MULTICAST_DELEGATE(FOnBossMonsterAddedToGameMode);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReviveTimerEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCharacterInit, ACharacter*, AvatarCharacter);
 
 UCLASS()
 class AURA_API AAuraPlayerController : public APlayerController
@@ -44,18 +46,28 @@ class AURA_API AAuraPlayerController : public APlayerController
 public:
 	AAuraPlayerController();
 	
+public:
+	UPROPERTY()
+	FOnCharacterInit OnCharacterInit;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
+	
+public:
+	UFUNCTION()
+	void CharacterInitialized(ACharacter* InCharacter);
 
 public:
 	UFUNCTION(Client, Reliable)
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed = false);
 
 	// 범위 지정 데칼
+	bool GetHitResultUnderMagicCircle(ECollisionChannel TraceChannel, bool bTraceComplex, FHitResult& HitResult) const;
+	
 	UFUNCTION(BlueprintCallable)
 	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr, float InRange = 0.f, float InRadius = 200.f);
 
@@ -87,9 +99,6 @@ public:
 	 * 어빌리티 업그레이드 카드
 	 */
 	// 카드 선택 UI 초기화 완료시 호출되는 델리게이트
-	
-	FOnCardSelected OnCardSelectedDelegate;
-
 	UFUNCTION()
 	void HandleCardSelectionInitialized();
 	
@@ -108,6 +117,12 @@ public:
 	/*
 	//	서버 RPC 함수
 	*/
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_TryPickUpItem(AAuraDropItem* DropItem, AAuraPlayerController* OwnerPC);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_TryRemoveItem(int32 SlotIndex);
+	
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_CreateCardSelection(AActor* InteractedActor);
 	
@@ -143,6 +158,9 @@ public:
 	// 클라이언트 RPC 함수
 	UFUNCTION(Client, Reliable)
 	void Client_ShowGameOverWidget();
+
+	UFUNCTION(Client, Unreliable)
+	void Client_CreateMessageWidget(const FGameplayTag& MessageTag, const FText& AppendText, UTexture2D* Icon);
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
@@ -196,6 +214,10 @@ protected:
 	FHitResult CursorHit;
 	TObjectPtr<AActor> LastActor;
 	TObjectPtr<AActor> ThisActor;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FVector LastMagicCircleLocation;
+	
 	static void HighlightActor(AActor* InActor);
 	static void UnHighlightActor(AActor* InActor);
 

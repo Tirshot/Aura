@@ -4,11 +4,11 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
-#include "AuraLogChannels.h"
 #include "Interaction/PlayerInterface.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
+#include "Character/AuraCharacter.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/CombatInterface.h"
 
@@ -72,10 +72,13 @@ void UAuraAbilitySystemComponent::AddCharacterAbilitiesFromSaveData(ULoadScreenS
         }
         else if (Data.AbilityType == FAuraGameplayTags::Get().Abilities_Type_Passive)
         {
-            if (Data.AbilityStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped)
-                || Data.AbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.Passive.ListenForEvent")))
+            if (Data.AbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag("Abilities.Passive.ListenForEvent")))
             {
                 GiveAbility(LoadedAbilitySpec);
+                TryActivateAbility(LoadedAbilitySpec.Handle);
+            }
+            if (Data.AbilityStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
+            {
                 GiveAbilityAndActivateOnce(LoadedAbilitySpec);
             }
             
@@ -123,16 +126,8 @@ void UAuraAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf
             AbilitySpec.GetDynamicSpecSourceTags().AddTag(StartupInputTag);
             AbilitySpec.GetDynamicSpecSourceTags().AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);
             
-            if (ExistingSpec)
-            {
-                // 이미 보유중이면 넘기기
-                ExistingSpec->Level = AbilitySpec.Ability->GetAbilityLevel();
-            }
-            else
-            {
-                GiveAbility(AbilitySpec);
-            }
-
+            GiveAbility(AbilitySpec);
+            
             // 시작 태그가 동일할 경우 덮어씌우기
             FScopedAbilityListLock ActiveScopeLoc(*this);
             for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
@@ -747,7 +742,7 @@ void UAuraAbilitySystemComponent::ServerSpendSpellPoint_Implementation(const FGa
         int32 SpellPoints = IPlayerInterface::Execute_GetSpellPoints(GetAvatarActor());
         if (SpellPoints <= 0)
         {
-            UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.NotEnoughSpellPoints"), GetAvatarActor());
+            UAuraAbilitySystemLibrary::AddMessageToActor(Cast<AAuraCharacter>(GetAvatarActor()), FGameplayTag::RequestGameplayTag("Message.NotEnoughSpellPoints"));
             IPlayerInterface::Execute_SetSpellPoints(GetAvatarActor(), 0);
             return;
         }

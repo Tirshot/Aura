@@ -99,10 +99,16 @@ void UAuraFirenado::CalculateRange()
 
 AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 {
+	HideMagicCircleAndRangeIndicator();
+	StopAutoRun();
+	
+	if (!GetAvatarActorFromActorInfo()->HasAuthority())
+		return nullptr;
+	
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(Location);
 
-	// 월드에 파이어볼 생성
+	// 월드에 생성
 	AAuraFireTornado* Tornado = GetWorld()->SpawnActorDeferred<AAuraFireTornado>(
 		FireTornadoClass,
 		SpawnTransform,
@@ -137,15 +143,17 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 	}
 	
 	FireTornado = Tornado;
-
-	HideMagicCircleAndRangeIndicator();
-	StopAutoRun();
-	
+	K2_CommitAbilityCost();
 	return Tornado;
 }
 
-void UAuraFirenado::StoreMouseLocation()
+void UAuraFirenado::StoreMouseLocation(const FVector& InLocation)
 {
+	if (!InLocation.IsNearlyZero())
+	{
+		MouseLocation = InLocation;
+		return;
+	}
 	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
 	{
 		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
@@ -162,10 +170,10 @@ void UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility()
 {
 	// 사운드 재생
 	UGameplayStatics::PlaySoundAtLocation(this, DestroySound, FireTornado->GetActorLocation());
+	if (IsValid(FireTornado))
+		FireTornado->Destroy();
 
-	FireTornado->Destroy();
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 
-	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

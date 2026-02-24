@@ -7,6 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "CharmComponent.generated.h"
 
+struct FActiveGameplayEffectHandle;
 class UInventoryComponent;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -22,8 +23,9 @@ protected:
 
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	void RemoveCharmItemEffect(const FItemData& CharmItem);
-	void ApplyCharmItemEffect(FItemData& CharmItem);
+	void ApplyCharmItemEffect(const FItemData& CharmItem);
 
 public:
 	UFUNCTION()
@@ -35,5 +37,6 @@ public:
 	void ApplyItemStat(const FItemData& ItemData);
 		
 protected:
-	TArray<FItemData> CharmSlotArray;
+	UPROPERTY()
+	TArray<FActiveGameplayEffectHandle> StatEffectHandleArray;
 };

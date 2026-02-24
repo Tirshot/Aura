@@ -9,6 +9,7 @@
 #include "UI/Widget/ItemToolTipWidget.h"
 #include "MVVM_Inventory.generated.h"
 
+struct FWidgetControllerParams;
 class UEquipmentComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemDataMissing, int, DataMissingSlotIndex);
 
@@ -18,14 +19,13 @@ class AURA_API UMVVM_Inventory : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	void BindDependencies();
-	virtual UWorld* GetWorld() const override;
+	void BindDependencies(const FWidgetControllerParams& WCParams);
 
 public:
 	FOnItemDataMissing DataMissingSlotIndex;
 	
 	UFUNCTION(BlueprintCallable)
-	void InitializeSlots(class UInventoryComponent* InventoryComponent, UEquipmentComponent* EquipmentComponent);
+	void InitializeSlots();
 	
 	UFUNCTION(BlueprintCallable)
 	void InventorySlotChanged(int Index);
@@ -77,5 +77,18 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemToolTipWidget> ItemToolTipWidgetClass;
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<APlayerController> PlayerController = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<APlayerState> PlayerState = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<class UAbilitySystemComponent> AbilitySystemComponent = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<class UAttributeSet> AttributeSet = nullptr;
 	
 };

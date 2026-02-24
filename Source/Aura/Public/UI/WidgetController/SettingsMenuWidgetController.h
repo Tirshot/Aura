@@ -72,6 +72,33 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void SetShadowQuality(int32 Value);
+	
+public:
+	// 사운드 설정
+	UFUNCTION(BlueprintCallable)
+	void SetMasterVolume(USoundClass* SoundClass, float Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetBackgroundVolume(USoundClass* SoundClass, float Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetFXVolume(USoundClass* SoundClass, float Value);
+
+	UFUNCTION(BlueprintCallable)
+	void SetUIVolume(USoundClass* SoundClass, float Value);	
+	
+	// 사운드 설정
+	UFUNCTION(BlueprintCallable)
+	void SetMasterVolumeChecked(USoundClass* SoundClass, bool Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetBackgroundVolumeChecked(USoundClass* SoundClass, bool Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void SetFXVolumeChecked(USoundClass* SoundClass, bool Value);
+
+	UFUNCTION(BlueprintCallable)
+	void SetUIVolumeChecked(USoundClass* SoundClass, bool Value);
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -94,7 +121,25 @@ public:
 	FIntPoint LastResolution;
 	EWindowMode::Type LastWindowMode;
 	int32 LastTextureQuality;
-
 	int32 LastAntiAliasingQuality;
 	int32 LastShadowQuality;
+	
+	// 사운드 설정 멤버 변수
+	UPROPERTY(BlueprintReadOnly)
+	float LastMasterVolume;
+	UPROPERTY(BlueprintReadOnly)
+	float LastUIVolume;
+	UPROPERTY(BlueprintReadOnly)
+	float LastFXVolume;
+	UPROPERTY(BlueprintReadOnly)
+	float LastBackgroundVolume;
+	
+	UPROPERTY(BlueprintReadOnly)
+	bool LastMasterVolumeChecked;
+	UPROPERTY(BlueprintReadOnly)
+	bool LastUIVolumeChecked;
+	UPROPERTY(BlueprintReadOnly)
+	bool LastFXVolumeChecked;
+	UPROPERTY(BlueprintReadOnly)
+	bool LastBackgroundVolumeChecked;
 };

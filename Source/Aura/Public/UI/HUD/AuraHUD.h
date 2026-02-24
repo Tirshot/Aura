@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "GameFramework/HUD.h"
 #include "UI/ViewModel/MVVM_Inventory.h"
+#include "UI/Widget/AuraOverlayWidget.h"
 #include "UI/Widget/ItemToolTipWidget.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "AuraHUD.generated.h"
@@ -42,9 +43,9 @@ public:
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
 	USettingsMenuWidgetController* GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams);
 	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
-	UMVVM_CardSelection* GetCardSelectionViewModel() { return CardSelectionViewModel; }
+	UMVVM_CardSelection* GetCardSelectionViewModel();
 	UMVVM_DebugMenu* GetDebugMenuViewModel() { return DebugMenuViewModel; }
-	UMVVM_Inventory* GetInventoryViewModel();
+	UMVVM_Inventory* GetInventoryViewModel(const FWidgetControllerParams& WCParams);
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 	
@@ -61,6 +62,7 @@ public:
 public:	
 	void CreateSaveProgressWidget();
 	void RemoveSaveProgressWidget();
+	void CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetClass, FText Message, UTexture2D* Icon);
 	
 	UFUNCTION()
 	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
@@ -79,7 +81,7 @@ public:
 	
 private:
 	UPROPERTY()
-	TObjectPtr<UAuraUserWidget> OverlayWidget;
+	TObjectPtr<UAuraOverlayWidget> OverlayWidget;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAuraUserWidget> OverlayWidgetClass;

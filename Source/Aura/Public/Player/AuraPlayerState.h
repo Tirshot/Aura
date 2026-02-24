@@ -9,6 +9,8 @@
 #include "Interaction/CombatInterface.h"
 #include "AuraPlayerState.generated.h"
 
+class UEquipmentComponent;
+class UInventoryComponent;
 struct FAuraAbilityUpgradeInfo;
 class UAttributeSet;
 class ULevelUpInfo;
@@ -50,7 +52,7 @@ public:
 	// 직렬화
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FOwnedAbilityUpgrade, FOwnedAbilityUpgradeList>(OwnedAbilityUpgrades, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FOwnedAbilityUpgrade, FOwnedAbilityUpgradeList>(OwnedAbilityUpgrades, DeltaParms, *this);
 	}
 };
 
@@ -79,6 +81,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void CopyProperties(APlayerState* PlayerState) override;
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -87,6 +90,8 @@ public:
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 	FOnDeath* GetOnDeathDelegate() {return &OnDeath;}
 	FOnDamageSignature& GetOnDamageDelegate() {return OnDamageDelegate;}
+	UInventoryComponent* GetInventoryComponent() {return Inventory;}
+	UEquipmentComponent* GetEquipmentComponent() {return Equipment;}
 	
 public:
 	// 레벨 정보
@@ -149,16 +154,11 @@ public:
 	
 	void ResetAttributesToBaseValue();
 	
+	void InitializeDefaultAttributesFromAttributeSet(UAbilitySystemComponent* NewASC, UAttributeSet* AS);
 public:
 	// 어빌리티 업그레이드
 	UPROPERTY(Replicated)
 	FOwnedAbilityUpgradeList OwnedAbilityUpgradeList;
-	
-	UFUNCTION(Server, Reliable)
-	void Server_SyncPlayerStatFromClient(int32 InLevel, int32 InXP, int32 InAttributePoints, int32 InSpellPoints);
-	
-	UFUNCTION(Server, Reliable)
-	void Server_SyncPlayerUpgradeListFromClient(const FOwnedAbilityUpgradeList& UpgradeList);
 	
 	UFUNCTION(Server, Reliable)
 	void Server_AddAbilityUpgradeTag(FGameplayTag UpgradeTag);
@@ -202,9 +202,10 @@ protected:
 	TObjectPtr<UAttributeSet> AttributeSet;
 	
 public:
+	// 세이브, 로드
 	UPROPERTY()
 	bool bIsDataLoaded = false;
-
+	
 private:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Level)
 	int32 Level = 1;
@@ -235,4 +236,14 @@ private:
 
 	UFUNCTION()
 	void OnRep_UpgradeCardInfo();
+	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<class UInventoryComponent> Inventory;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<class UEquipmentComponent> Equipment;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
+	TObjectPtr<class UCharmComponent> Charm;
 };

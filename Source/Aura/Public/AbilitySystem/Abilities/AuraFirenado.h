@@ -29,7 +29,7 @@ public:
 	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
 
 	UFUNCTION(BlueprintCallable)
-	void StoreMouseLocation();
+	void StoreMouseLocation(const FVector& InLocation);
 
 	UFUNCTION(BlueprintCallable)
 	void DestroyTornadoAndCommitCooldownEndAbility();

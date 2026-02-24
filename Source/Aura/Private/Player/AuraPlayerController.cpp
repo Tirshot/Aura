@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Input/AuraInputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemGlobals.h"
 #include "Components/SplineComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
@@ -24,6 +25,7 @@
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -78,11 +80,11 @@ void AAuraPlayerController::BeginPlay()
     SetInputMode(InputModeData);
 
     // 델리게이트 바인딩
-    OnCardSelectedDelegate.AddUObject(this, &AAuraPlayerController::HandleCardSelectionInitialized);
     OnReviveTimerEnd.AddDynamic(this, &AAuraPlayerController::Server_ReviveFromPlayerStart);
     
     const FString CurrentLevelName = GetWorld()->GetMapName();
 
+    OnCharacterInit.AddDynamic(this, &AAuraPlayerController::CharacterInitialized);
     // 튜토리얼 레벨에서만 위젯 컨트롤러 생성
     if (CurrentLevelName.Contains(TEXT("Tutorial")))
     {
@@ -171,10 +173,50 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
             FVector ItemLocation = DropItem->GetActorLocation();
             
             float Distance = FVector::Dist(AuraLocation, ItemLocation);
-            if (Distance <= 130.f)
+            if (Distance <= 150.f)
             {
-                DropItem->Server_AddItemToCharacter(GetPawn());
+                Server_TryPickUpItem(DropItem, this);
                 TargetItem = nullptr;
+            }
+        }
+    }
+}
+
+void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
+{
+    if (!IsLocalController())
+        return;
+
+    if (!InCharacter)
+        return;
+    
+    if (!InCharacter->IsLocallyControlled())
+        return;
+    
+    UEquipmentComponent* EquipmentComponent = nullptr;
+    UInventoryComponent* InventoryComponent = nullptr;
+    if (GetPawn()->Implements<UPlayerInterface>())
+    {
+        EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(InCharacter);
+        InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(InCharacter);
+    }
+    
+    // 인벤토리의 각 슬롯 뷰 모델 생성 및 초기화
+    if (InventoryComponent)
+    {
+        if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
+        {
+            FWidgetControllerParams WCParams;
+            WCParams.PlayerController = this;
+            WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InCharacter);
+            WCParams.PlayerState = GetPlayerState<APlayerState>();
+            if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(WCParams.PlayerState))
+            {
+                WCParams.AttributeSet = AuraPS->GetAttributeSet();
+            }
+            if (UMVVM_Inventory* ViewModel = AuraHUD->GetInventoryViewModel(WCParams))
+            {
+                ViewModel->InitializeSlots();
             }
         }
     }
@@ -480,18 +522,56 @@ void AAuraPlayerController::UpdateRangeIndicatorRotation()
 
 void AAuraPlayerController::HighlightActor(AActor* InActor)
 {
-    if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
-    {
+    if (!IsValid(InActor) || InActor->IsPendingKillPending()) 
+        return;
+    
+    if (InActor->Implements<UHighlightInterface>())
         IHighlightInterface::Execute_HighlightActor(InActor);
-    }
 }
 
 void AAuraPlayerController::UnHighlightActor(AActor* InActor)
 {
-    if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
-    {
+    if (!IsValid(InActor) || InActor->IsPendingKillPending()) 
+        return;
+    
+    if (InActor->Implements<UHighlightInterface>())
         IHighlightInterface::Execute_UnHighlightActor(InActor);
+}
+
+bool AAuraPlayerController::GetHitResultUnderMagicCircle(ECollisionChannel TraceChannel, bool bTraceComplex,
+    FHitResult& HitResult) const
+{
+    ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
+    bool bHit = false;
+    if (LocalPlayer && LocalPlayer->ViewportClient)
+    {
+        FVector MagicCircleLocation;
+        if (MagicCircle)
+        {
+            MagicCircleLocation = MagicCircle->GetActorLocation();
+            bHit = GetWorld()->LineTraceSingleByChannel
+            (
+                HitResult,
+                MagicCircleLocation + FVector(0, 0, 500),
+                MagicCircleLocation - FVector(0, 0, 500),
+                TraceChannel);
+        }
+        else
+        {
+            bHit = GetWorld()->LineTraceSingleByChannel(
+                HitResult,
+                LastMagicCircleLocation + FVector(0, 0, 500),
+                LastMagicCircleLocation - FVector(0, 0, 500),
+                TraceChannel);
+        }
     }
+
+    if(!bHit)
+    {
+        HitResult = FHitResult();
+    }
+
+    return bHit;
 }
 
 void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial, float InRange,  float InRadius)
@@ -524,8 +604,11 @@ void AAuraPlayerController::HideMagicCircle()
         if (!AvatarActor)
             return;
         
+        LastMagicCircleLocation = MagicCircle->GetActorLocation();
         MagicCircle->RemoveCircle.Broadcast(AvatarActor);
         MagicCircle->Destroy();
+        
+        UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn())->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag("Player.Abilities.WaitForExecute"));
     }
 }
 
@@ -533,8 +616,8 @@ const FVector AAuraPlayerController::GetMagicCircleLocation()
 {
     if (!IsValid(MagicCircle))
         {
-            UE_LOG(LogTemp, Warning, TEXT("MagicCircle is InValid!!!"));
-            return FVector();
+            UE_LOG(LogTemp, Warning, TEXT("MagicCircle is InValid, return LastLocation"));
+            return LastMagicCircleLocation;
         }
     
     return MagicCircle->GetActorLocation();
@@ -583,14 +666,14 @@ void AAuraPlayerController::HandleCardSelectionInitialized()
         if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
         {
             // 리롤 버튼
-            if (!CardSelectionViewModel->OnRerollSelectedDelegate.IsBound())
+            if (!CardSelectionViewModel->OnRerollSelectedDelegate.IsAlreadyBound(this, &AAuraPlayerController::HandleAbilityCardRerollSelected))
                 CardSelectionViewModel->OnRerollSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardRerollSelected);
             
             for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
             {
                 if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
                 {
-                    if (!CardViewModel->OnUpgradeSelectedDelegate.IsBound())
+                    if (!CardViewModel->OnUpgradeSelectedDelegate.IsAlreadyBound(this, &AAuraPlayerController::HandleAbilityCardSelected))
                         CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
                 }
             }
@@ -629,12 +712,6 @@ void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgra
             AuraHUD->CardSelectionWidget = nullptr;
         }
     }
-    
-    // 자동 저장??
-    if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
-    {
-        AuraGM->Server_SaveWorldState(GetWorld());
-    }
 }
 
 void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpgradeInfo>& SelectedUpgradeInfo)
@@ -651,15 +728,72 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
-    if (!HasAuthority())
-        return;
-    
     Server_CreateCardSelection(GetPawn());
 }
 
-void AAuraPlayerController::Client_ShowGameOverWidget_Implementation()
+void AAuraPlayerController::Server_TryRemoveItem_Implementation(int32 SlotIndex)
 {
-    UAuraAbilitySystemLibrary::GetGameOverWidgetController(this)->HandleOnDeath(GetPawn());
+    // 서버가 아니면 리턴
+    if (!HasAuthority())
+        return;
+    
+    UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(GetPawn());
+	if (!Inventory)
+	    return;
+    
+    auto& InventorySlots = Inventory->GetSlots();
+    
+    if (!InventorySlots.IsValidIndex(SlotIndex))
+        return;
+	
+    const FInventorySlot& TargetSlot = InventorySlots[SlotIndex];
+    const FItemData ItemDataToDrop = TargetSlot.ItemData;
+    const FIntPoint StartPoint = TargetSlot.StartPoint;
+    const FIntPoint ItemSize = TargetSlot.ItemSize;
+			
+    Inventory->ClearItemSpace_Internal(StartPoint, ItemSize);
+    Inventory->OnItemRemoved.Broadcast(ItemDataToDrop);
+    
+    // 월드에 아이템 액터 스폰
+    if (auto AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+    {
+        if (auto AuraCharacter = Cast<AAuraCharacter>(GetPawn()))
+            AuraGM->SpawnDropItemActor(AuraCharacter, ItemDataToDrop, AuraCharacter->GetActorLocation());
+    }
+}
+
+void AAuraPlayerController::Server_TryPickUpItem_Implementation(AAuraDropItem* DropItem, AAuraPlayerController* OwnerPC)
+{
+    if (!OwnerPC || !DropItem)
+        return;
+    
+    FVector AuraLocation = OwnerPC->GetPawn()->GetActorLocation();
+    FVector ItemLocation = DropItem->GetActorLocation();
+            
+    float Distance = FVector::Dist(AuraLocation, ItemLocation);
+    if (Distance <= 200.f)
+    {
+        if (IsValid(DropItem))
+        {
+            const FItemData& DropItemData = DropItem->DropItemData;
+            if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+            {
+                if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetPawn()))
+                {
+                    if (AuraGM->GiveItemToCharacter(AuraCharacter, DropItemData, DropItemData.ItemCounts))
+                    {
+                        DropItem->Destroy();
+                    }
+                    else
+                    {
+                        // 슬롯 부족, 또는 아이템 데이터 검색 실패
+                        UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(FGameplayTag::RequestGameplayTag("Message.InventoryFull"), AuraCharacter, FText());
+                    }
+                }
+                TargetItem = nullptr;
+            }
+        }
+    }
 }
 
 void AAuraPlayerController::Server_StartSpectating_Implementation()
@@ -828,6 +962,34 @@ void AAuraPlayerController::Server_SelectUpgrade_Implementation(FGameplayTag Sel
     }
 }
 
+void AAuraPlayerController::Client_ShowGameOverWidget_Implementation()
+{
+    UAuraAbilitySystemLibrary::GetGameOverWidgetController(this)->HandleOnDeath(GetPawn());
+}
+
+void AAuraPlayerController::Client_CreateMessageWidget_Implementation(const FGameplayTag& MessageTag, const FText& AppendText, UTexture2D* Icon)
+{
+    if (auto* GI = Cast<UAuraGameInstance>(this->GetGameInstance()))
+    {
+        if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message"))
+        {
+            TSubclassOf<UAuraUserWidget> MessageWidgetClass = FoundRow->MessageWidget;
+            FText FoundMessage = FoundRow->Message;
+            FText FinalMessage = FText();
+            if (!FoundMessage.IsEmpty())
+            {
+                FFormatOrderedArguments Args;
+                Args.Add(AppendText);
+                FinalMessage = FText::Format(FoundMessage, Args);
+            }
+            if (auto AuraHUD = GetHUD<AAuraHUD>())
+            {
+                AuraHUD->CreateMessageWidget(MessageWidgetClass, FinalMessage, Icon);
+            }
+        }
+    }
+}
+
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {
     UAbilitySystemComponent* ASC = GetASC();
@@ -965,6 +1127,9 @@ void AAuraPlayerController::ShowItemTitle(const FInputActionValue& Value)
 
 void AAuraPlayerController::CursorTrace()
 {
+    if (GetWorld() && GetWorld()->bIsTearingDown) 
+        return;
+    
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_CursorTrace))
     {

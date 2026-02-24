@@ -16,28 +16,10 @@ void UGameOverWidgetController::BroadcastInitialValues()
 void UGameOverWidgetController::BindCallbacksToDependencies()
 {
 	RemainingTime = ReviveTime;
-	// if (GetAuraASC())
-	// {
-	// 	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAuraASC()->GetAvatarActor()))
-	// 	{
-	// 		FOnDeath* OnDeath = CombatInterface->GetOnDeathDelegate();
-	// 		OnDeath.RemoveDynamic(this, &UGameOverWidgetController::HandleOnDeath);
-	// 		OnDeath.AddDynamic(this, &UGameOverWidgetController::HandleOnDeath);
-	// 	}
-	// }
 }
 
 void UGameOverWidgetController::BeginDestroy()
 {
-	// if (GetAuraASC())
-	// {
-	// 	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAuraASC()->GetAvatarActor()))
-	// 	{
-	// 		FOnDeath* OnDeath = CombatInterface->GetOnDeathDelegate();
-	// 		OnDeath.RemoveDynamic(this, &UGameOverWidgetController::HandleOnDeath);
-	// 	}
-	// }
-	
 	Super::BeginDestroy();
 }
 

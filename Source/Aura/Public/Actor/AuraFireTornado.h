@@ -17,6 +17,7 @@ class AURA_API AAuraFireTornado : public AActor
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Destroyed() override;
 
@@ -30,6 +31,9 @@ protected:
 	void ApplyDamageAndKnockback();
 	
 	bool IsValidOverlap(AActor* OtherActor);
+	
+	UFUNCTION()
+	void OnRep_DamageRadius();
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta=(ExposeOnSpawn = true))
@@ -58,7 +62,7 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	float FollowRadius = 600.f;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(ReplicatedUsing = OnRep_DamageRadius)
 	float DamageRadius = 200.f;
 
 	UPROPERTY(EditDefaultsOnly)

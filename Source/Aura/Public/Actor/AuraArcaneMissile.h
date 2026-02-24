@@ -31,17 +31,18 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Destroyed() override;
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
-
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	void HomingNearestTarget(float DeltaTime);
 	
 public:
-	UPROPERTY(VisibleAnywhere, Category = "Orbit")
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Orbit")
 	float OrbitRadius = 100.f;
 
-	UPROPERTY(VisibleAnywhere, Category = "Orbit")
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Orbit")
 	float OrbitSpeed = 500.f;
 
-	UPROPERTY(VisibleAnywhere, Category = "Orbit")
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Orbit")
 	float InitialAngle = 0.f;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Orbit")

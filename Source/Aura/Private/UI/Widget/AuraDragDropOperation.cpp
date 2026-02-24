@@ -15,7 +15,7 @@ void UAuraDragDropOperation::DragCancelled_Implementation(const FPointerEvent& P
 		return;
 	
 	if (Inventory)
-		Inventory->Server_RemoveItemToWorld(OriginalIndex);
+		Inventory->RemoveItemToWorld(OriginalIndex);
 	else
 	{
 		//

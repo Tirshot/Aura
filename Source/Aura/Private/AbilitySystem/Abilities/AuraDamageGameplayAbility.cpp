@@ -261,19 +261,19 @@ FVector UAuraDamageGameplayAbility::ReceivedMouseHitResult(const FGameplayAbilit
 	const FHitResult* HitResult = TargetData->GetHitResult();
 
 	// 마우스 히트 정보를 멤버 변수로 만듬
-	CurrentTargetLocation = HitResult->ImpactPoint;
+	return CurrentTargetLocation = HitResult->ImpactPoint;
 
-	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
-	{
-		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
-		{
-			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
-			{
-				return CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
-			}
-		}
-	}
-	return FVector();
+	// if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
+	// {
+	// 	if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
+	// 	{
+	// 		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
+	// 		{
+	// 			return CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
+	// 		}
+	// 	}
+	// }
+	// return FVector();
 }
 
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const

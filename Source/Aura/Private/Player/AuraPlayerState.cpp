@@ -3,26 +3,31 @@
 
 #include "Player/AuraPlayerState.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemGlobals.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Game/AuraGameInstance.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/CharmComponent.h"
+#include "Player/EquipmentComponent.h"
+#include "Player/InventoryComponent.h"
 
 
-void FOwnedAbilityUpgrade::PostReplicatedAdd(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+void FOwnedAbilityUpgrade::PostReplicatedAdd(const FOwnedAbilityUpgradeList& InArraySerializer)
 {
     
 }
 
-void FOwnedAbilityUpgrade::PostReplicatedChange(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+void FOwnedAbilityUpgrade::PostReplicatedChange(const FOwnedAbilityUpgradeList& InArraySerializer)
 {
     
 }
 
-void FOwnedAbilityUpgrade::PreReplicatedRemove(const struct FOwnedAbilityUpgradeList& InArraySerializer)
+void FOwnedAbilityUpgrade::PreReplicatedRemove(const FOwnedAbilityUpgradeList& InArraySerializer)
 {
     
 }
@@ -64,6 +69,16 @@ AAuraPlayerState::AAuraPlayerState()
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
     AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
+
+    // 인벤토리
+    Inventory = CreateDefaultSubobject<UInventoryComponent>("Inventory");
+    Inventory->SetIsReplicated(true);
+    
+    Equipment = CreateDefaultSubobject<UEquipmentComponent>("Equipment");
+    Equipment->SetIsReplicated(true);
+
+    Charm = CreateDefaultSubobject<UCharmComponent>("Charm");
+    Charm->SetIsReplicated(true);
 }
 
 void AAuraPlayerState::BeginPlay()
@@ -72,6 +87,30 @@ void AAuraPlayerState::BeginPlay()
     
     // 초기화 완료
     OnPlayerStateInitialized.Broadcast(this);
+}
+
+void AAuraPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+    // 맵 이동 '전' 플레이어 스테이트에 의해 호출됨 - 인자는 새로운 플레이어 스테이트
+    Super::CopyProperties(PlayerState);
+    
+    if (AAuraPlayerState* NewPlayerState = Cast<AAuraPlayerState>(PlayerState))
+    {
+        // 기존 데이터를 새 플레이어 스테이트의 데이터로 복사
+        NewPlayerState->SetLevel(Level);
+        NewPlayerState->SetXP(XP);
+        NewPlayerState->SetAttributePoints(AttributePoints);
+        NewPlayerState->SetSpellPoints(SpellPoints);
+        NewPlayerState->SetAbilityUpgradeTagContainer(OwnedAbilityUpgradeList);
+        
+        // 인벤토리
+        NewPlayerState->Inventory->SetInventorySlots(Inventory->GetSlots());
+        NewPlayerState->Inventory->GetSlotList().MarkArrayDirty();
+        NewPlayerState->Equipment->SetEquipmentSlots(Equipment->GetSlots());
+        NewPlayerState->Equipment->GetSlots().MarkArrayDirty();
+    
+        NewPlayerState->bIsDataLoaded = true;
+    }
 }
 
 void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -180,19 +219,70 @@ void AAuraPlayerState::ResetAttributesToBaseValue()
     }
 }
 
-void AAuraPlayerState::Server_SyncPlayerStatFromClient_Implementation(int32 InLevel, int32 InXP,
-                                                                      int32 InAttributePoints, int32 InSpellPoints)
+void AAuraPlayerState::InitializeDefaultAttributesFromAttributeSet(UAbilitySystemComponent* NewASC,
+    UAttributeSet* AS)
 {
-    SetLevel(InLevel);
-    SetXP(InXP);
-    SetAttributePoints(InAttributePoints);
-    SetSpellPoints(InSpellPoints);
-}
+    // 액터의 클래스 정보 가져오기
+	UCharacterClassInfo* CharacterClassInfo = UAuraAbilitySystemLibrary::GetCharacterClassInfo(this);
+	if (CharacterClassInfo == nullptr)
+		return;
+	
+	UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AS);
+	if (!AuraAS)
+		return;
 
-void AAuraPlayerState::Server_SyncPlayerUpgradeListFromClient_Implementation(
-    const FOwnedAbilityUpgradeList& UpgradeList)
-{
-    SetAbilityUpgradeTagContainer(UpgradeList);
+	// Set by Caller 가져오기
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+
+	// 이펙트 컨텍스트 핸들 생성
+	FGameplayEffectContextHandle EffectContextHandle = NewASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(this);
+
+	// 이펙트 적용을 위한 이펙트 스펙 핸들 생성
+	const FGameplayEffectSpecHandle SpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->PrimaryAttributes_SetByCaller, 1.f, EffectContextHandle);
+
+	float StrengthMag = AuraAS->GetStrength();
+	float IntMag = AuraAS->GetIntelligence();
+	float ResMag = AuraAS->GetResilience();
+	float Vigor = AuraAS->GetVigor();
+	
+	// Set By Caller Magnitude 설정
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Strength, StrengthMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Intelligence, IntMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Resilience, ResMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Vigor, Vigor);
+
+	// 게임플레이 이펙트 적용
+	NewASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	// 2차 속성 적용
+	FGameplayEffectContextHandle SecondaryAttributesContextHandle = NewASC->MakeEffectContext();
+	SecondaryAttributesContextHandle.AddSourceObject(this);
+	
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes_Infinite, 1.f, SecondaryAttributesContextHandle);
+	NewASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+
+	// 바이탈 속성 적용
+	FGameplayEffectContextHandle VitalAttributesContextHandle = NewASC->MakeEffectContext();
+	VitalAttributesContextHandle.AddSourceObject(this);
+	
+	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
+	
+	float Health = AuraAS->GetHealth();
+	float Mana = AuraAS->GetMana();
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, Health);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, Mana);
+
+	NewASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+
+	// 리젠 속성 적용
+	FGameplayEffectContextHandle RegenAttributesContextHandle = NewASC->MakeEffectContext();
+	RegenAttributesContextHandle.AddSourceObject(this);
+	
+	const FGameplayEffectSpecHandle RegenAttributesSpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->RegenAttributes, 1.f, RegenAttributesContextHandle);
+
+	NewASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
 }
 
 void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
@@ -394,6 +484,7 @@ void AAuraPlayerState::Server_RemoveAbilityUpgradeTag_Implementation(FGameplayTa
 
 void AAuraPlayerState::OnRep_UpgradeCardInfo()
 {
+    // 카드 정보를 받아 UI로 추가
     OnUpgradeCardsInitializedDelegate.Broadcast(ReplicatedCardInfo);
 }
 

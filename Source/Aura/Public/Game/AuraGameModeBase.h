@@ -7,6 +7,7 @@
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Character/AuraCharacterBase.h"
 #include "GameFramework/GameModeBase.h"
+#include "UI/Widget/AuraOverlayWidget.h"
 #include "AuraGameModeBase.generated.h"
 
 class AAuraCharacter;
@@ -62,14 +63,21 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
 	
+	UFUNCTION(Server, Reliable)
+	void Server_SaveWorldStateAndTravel(UWorld* World, const FString& DestinationMapAssetName = FString(""));
+	
 	UFUNCTION(Client, Reliable)
 	void Client_SaveCharacterProgress();
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SaveCharacterProgress();
 	
 	UFUNCTION(Server, Reliable)
 	void Server_LoadWorldState(UWorld* World);
 	
 	void TravelToMap(UMVVM_LoadSlot* Slot);
 	void TravelToMap(FString MapName);
+	void ServerTravelToMap(FString MapName);
 	
 	UFUNCTION(Server, Reliable)
 	void Server_GameAutoSave();
@@ -78,8 +86,6 @@ public:
 	void RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject);
 	
 	void PlayerRespawn(AAuraPlayerController* DeadPC);
-
-public:
 	
 public:
 	/*
@@ -102,7 +108,7 @@ public:
 	 *	아이템 추가
 	 */
 	UFUNCTION(BlueprintCallable)
-	bool GiveItemToCharacter(AAuraCharacter* Character, FName ItemID, int ItemCount = 1);
+	bool GiveItemToCharacter(AAuraCharacter* Character, const FItemData& ItemData, int ItemCount = 1);
 	void SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const FItemData& DropItemData, FVector ItemSpawnLocation);
 	
 	UFUNCTION(BlueprintCallable)

@@ -9,6 +9,7 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Abilities/AuraPassiveAbility.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
+#include "Character/AuraCharacter.h"
 #include "Interaction/CombatInterface.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -244,7 +245,7 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 						}
 						else
 						{
-							UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), AvatarActor, FText::AsNumber(LevelReq));
+							UAuraAbilitySystemLibrary::AddMessageToActor(AvatarActor, FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
 						}
 					}
 				}
@@ -269,14 +270,14 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 								}
 								else
 								{
-									UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), AvatarActor, FText::AsNumber(LevelReq));
+									UAuraAbilitySystemLibrary::AddMessageToActor(Cast<AAuraCharacter>(AvatarActor), FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
 								}
 							}
 						}
 					}
 					if (AActor* AvatarActor = AuraAbilitySystemComponent->GetAvatarActor())
 					{
-						UAuraAbilitySystemLibrary::AddMessageToActor(FGameplayTag::RequestGameplayTag("Message.NotEnoughInferiorSpellLevel"), AvatarActor);
+						UAuraAbilitySystemLibrary::AddMessageToActor(Cast<AAuraCharacter>(AvatarActor), FGameplayTag::RequestGameplayTag("Message.NotEnoughInferiorSpellLevel"));
 					}
 				}
 			}

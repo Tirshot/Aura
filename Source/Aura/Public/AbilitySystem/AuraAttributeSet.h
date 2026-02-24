@@ -266,8 +266,4 @@ private:
 	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bBlockedHit, bool bCriticalHit, bool bHealed = false) const;
 	void SendXPEvent(const FEffectProperties& Props);
 	void SendOverriddenXPEvent(const FEffectProperties& Props, const float OverriddenValue);
-	
-	// 레벨업 체크
-	bool bTopOffHealth = false;
-	bool bTopOffMana = false;
 };

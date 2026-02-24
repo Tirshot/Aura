@@ -65,6 +65,8 @@ void UAuraArcaneOrbit::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 void UAuraArcaneOrbit::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
+	Missiles.Empty();
+	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
@@ -97,6 +99,7 @@ void UAuraArcaneOrbit::CheckAbilityUpgrades()
 TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 {
 	CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
 	
 	TArray<AAuraArcaneMissile*> OutMissiles;
 
@@ -161,13 +164,18 @@ void UAuraArcaneOrbit::DestroyAllMissiles()
 
 void UAuraArcaneOrbit::MissileDestroyed(AActor* DestroyedMissile)
 {
-	AAuraArcaneMissile* Missile = Cast<AAuraArcaneMissile>(DestroyedMissile);
-	Missiles.Remove(Missile);
+	if (!IsValid(DestroyedMissile))
+	{
+		K2_EndAbility();
+		return;
+	}
+	
+	if (AAuraArcaneMissile* Missile = Cast<AAuraArcaneMissile>(DestroyedMissile))
+		Missiles.Remove(Missile);
 
 	// 미사일이 모두 파괴되었으면 어빌리티 종료
 	if (Missiles.IsEmpty())
 	{
-		CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }

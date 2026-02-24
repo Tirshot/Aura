@@ -4,6 +4,8 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemGlobals.h"
+#include "AssetTypeCategories.h"
 #include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAttributeSet.h"
@@ -19,15 +21,10 @@
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "Engine/OverlapResult.h"
 #include "Game/AuraGameInstance.h"
-#include "UI/Widget/AuraUserWidget.h"
-#include "Interaction/MessageInterface.h"
 #include "Player/AuraPlayerController.h"
 #include "UI/HUD/LoadScreenHUD.h"
 #include "UI/HUD/MainMenuHUD.h"
 #include "UI/Widget/AuraCenterDescriptionWidget.h"
-#include "UI/Widget/AuraMessageBoxWidget.h"
-#include "UI/Widget/AuraOverlayWidget.h"
-#include "UI/Widget/AuraUserWidget.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD)
@@ -193,16 +190,30 @@ UMVVM_CardSelection* UAuraAbilitySystemLibrary::GetCardSelectionViewModel(const 
 
 UMVVM_Inventory* UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(const UObject* WorldContextObject)
 {
-	AAuraHUD* AuraHUD = nullptr;
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	if (!WorldContextObject)
+		return nullptr;
+
+	APlayerController* PC = nullptr;
+	if (const UUserWidget* UserWidget = Cast<UUserWidget>(WorldContextObject))
 	{
-		AuraHUD = Cast<AAuraHUD>(PC->GetHUD());
-		if (AuraHUD)
+		PC = UserWidget->GetOwningPlayer();
+	}
+	
+	if (PC)
+	{
+		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
 		{
-			return AuraHUD->InventoryMenuViewModel;
+			FWidgetControllerParams WCParams;
+			WCParams.PlayerController = PC;
+			WCParams.PlayerState = PC->GetPlayerState<APlayerState>();
+			WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PC->GetPawn());
+			if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(WCParams.PlayerState))
+			{
+				WCParams.AttributeSet = AuraPS->GetAttributeSet();
+			}
+			return AuraHUD->GetInventoryViewModel(WCParams);
 		}
 	}
-
 	return nullptr;
 }
 
@@ -289,6 +300,74 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UO
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 
 	// 세이브 데이터의 리젠 속성 적용
+	FGameplayEffectContextHandle RegenAttributesContextHandle = ASC->MakeEffectContext();
+	RegenAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle RegenAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->RegenAttributes, 1.f, RegenAttributesContextHandle);
+
+	ASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
+}
+
+void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, 
+	UAttributeSet* AS)
+{
+	// 액터의 클래스 정보 가져오기
+	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+	if (CharacterClassInfo == nullptr)
+		return;
+	
+	UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AS);
+	if (!AuraAS)
+		return;
+
+	// Set by Caller 가져오기
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+
+	const AActor* SourceActor = ASC->GetAvatarActor();
+
+	// 이펙트 컨텍스트 핸들 생성
+	FGameplayEffectContextHandle EffectContextHandle = ASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(SourceActor);
+
+	// 이펙트 적용을 위한 이펙트 스펙 핸들 생성
+	const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->PrimaryAttributes_SetByCaller, 1.f, EffectContextHandle);
+
+	float StrengthMag = AuraAS->GetStrength();
+	float IntMag = AuraAS->GetIntelligence();
+	float ResMag = AuraAS->GetResilience();
+	float Vigor = AuraAS->GetVigor();
+	
+	// Set By Caller Magnitude 설정
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Strength, StrengthMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Intelligence, IntMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Resilience, ResMag);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Vigor, Vigor);
+
+	// 게임플레이 이펙트 적용
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	// 2차 속성 적용
+	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
+	SecondaryAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes_Infinite, 1.f, SecondaryAttributesContextHandle);
+	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+
+	// 바이탈 속성 적용
+	FGameplayEffectContextHandle VitalAttributesContextHandle = ASC->MakeEffectContext();
+	VitalAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
+	
+	float Health = AuraAS->GetHealth();
+	float Mana = AuraAS->GetMana();
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, Health);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, Mana);
+
+	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+
+	// 리젠 속성 적용
 	FGameplayEffectContextHandle RegenAttributesContextHandle = ASC->MakeEffectContext();
 	RegenAttributesContextHandle.AddSourceObject(SourceActor);
 	
@@ -485,80 +564,16 @@ void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& 
 	}
 }
 
-UAuraUserWidget* UAuraAbilitySystemLibrary::AddMessageToActor(const FGameplayTag& Tag, AActor* AvatarActor,
-                                                             FText AppendText, UTexture2D* Image)
+void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, const FText& AppendText, UTexture2D* Icon)
 {
-	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
-	if (AuraCharacter == nullptr)
-		return nullptr;
-	
-	UAbilitySystemComponent* ASC = AuraCharacter->GetAbilitySystemComponent();
-	if (ASC == nullptr)
-		return nullptr;
-	
-	UWorld* World = AvatarActor->GetWorld();
-	
-	UAuraGameInstance* GI = World->GetGameInstance<UAuraGameInstance>();
+	UAuraGameInstance* GI = TargetActor->GetGameInstance<UAuraGameInstance>();
 	if (!GI || !GI->MessageTable)
-		return nullptr;
+		return;
 	
-
-	if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(Tag.GetTagName(), "Found Message"))
+	if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Cast<APawn>(TargetActor)->GetController()))
 	{
-		FText FinalMessage = FoundRow->Message;
-		if (!AppendText.IsEmpty())
-		{
-			FFormatOrderedArguments Args;
-			Args.Add(AppendText);
-			FinalMessage = FText::Format(FoundRow->Message, Args);
-		}
-		
-		// 메시지 위젯 생성
-		if (FoundRow->MessageWidget)
-		{
-			UAuraUserWidget* MessageWidget = CreateWidget<UAuraUserWidget>(World, FoundRow->MessageWidget);
-			if (UAuraMessageBoxWidget* AuraMessageBox = Cast<UAuraMessageBoxWidget>(MessageWidget))
-			{
-				if (auto AuraPC = AuraCharacter->GetController<AAuraPlayerController>())
-				{
-					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
-					{
-						if (UAuraOverlayWidget* OverlayWidget = Cast<UAuraOverlayWidget>(AuraHUD->GetOverlayWidget()))
-						{
-							// 메시지 박스에 내용 추가
-							OverlayWidget->WBP_MessageBox->AddTextMessageToBox(FinalMessage);
-							return OverlayWidget->WBP_MessageBox;
-						}
-					}
-				}
-			}
-			
-			// 중앙 설명 텍스트
-			if (auto AuraPC = AuraCharacter->GetController<AAuraPlayerController>())
-			{
-				if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(MessageWidget))
-				{
-					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
-					{
-						if (UAuraOverlayWidget* OverlayWidget = Cast<UAuraOverlayWidget>(AuraHUD->GetOverlayWidget()))
-						{
-							OverlayWidget->WBP_CenterTutorialDescription->TextBlock->SetText(FinalMessage);
-							return OverlayWidget->WBP_CenterTutorialDescription;
-						}
-					}
-				}
-			}
-			
-			// 팝업 텍스트
-			if (MessageWidget->Implements<UMessageInterface>())
-			{
-				IMessageInterface::Execute_SetMessage(MessageWidget, FinalMessage, Image);
-				MessageWidget->AddToViewport();
-				return MessageWidget;
-			}
-		}
+		PC->Client_CreateMessageWidget(MessageTag, AppendText, Icon);
 	}
-	return nullptr;
 }
 
 void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag)
@@ -671,6 +686,36 @@ const FItemData UAuraAbilitySystemLibrary::GetItemDataByItemName(const UObject* 
 		return *AuraGI->GetItemData(ItemName);
 	}
 	return FItemData();
+}
+
+UInventoryComponent* UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(APlayerState* PlayerState)
+{
+	if (!IsValid(PlayerState))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetInventoryComponentByPlayerState : PlayerState Is Not Valid!"));
+		return nullptr;
+	}
+	
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PlayerState))
+	{
+		return AuraPS->GetInventoryComponent();
+	}
+	return nullptr;
+}
+
+UEquipmentComponent* UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(APlayerState* PlayerState)
+{
+	if (!IsValid(PlayerState))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetEquipmentComponentByPlayerState : PlayerState Is Not Valid!"));
+		return nullptr;
+	}
+	
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PlayerState))
+	{
+		return AuraPS->GetEquipmentComponent();
+	}
+	return nullptr;
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)
@@ -1130,4 +1175,30 @@ float UAuraAbilitySystemLibrary::GetAttributeValue(const UObject* WorldContextOb
 	return Value;
 }
 
-
+void UAuraAbilitySystemLibrary::UpdateSoundVolume(const AAuraPlayerController* AuraPlayerController, USoundClass* TargetSoundClass, float Volume)
+{
+	if (!AuraPlayerController)
+		return;
+	
+	if (!TargetSoundClass)
+		return;
+	
+	if (UWorld* World = AuraPlayerController->GetWorld())
+	{
+		if (UAuraGameInstance* AuraGI = AuraPlayerController->GetGameInstance<UAuraGameInstance>())
+		{
+			USoundMix* SoundMix = AuraGI->SoundMix;
+			if (!SoundMix)
+				return;
+			
+			UGameplayStatics::SetSoundMixClassOverride(
+				AuraPlayerController,
+				SoundMix,
+				TargetSoundClass,
+				Volume);
+		
+			// 변경한 볼륨 즉시 적용
+			UGameplayStatics::PushSoundMixModifier(World, SoundMix);
+		}
+	}
+}

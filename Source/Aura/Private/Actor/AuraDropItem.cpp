@@ -2,10 +2,7 @@
 
 #include "Actor/AuraDropItem.h"
 
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Aura/Aura.h"
-#include "Blueprint/UserWidget.h"
-#include "Character/AuraCharacter.h"
 #include "Components/WidgetComponent.h"
 #include "Game/AuraGameModeBase.h"
 #include "Net/UnrealNetwork.h"
@@ -29,7 +26,6 @@ AAuraDropItem::AAuraDropItem()
 	
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraDropItem::OnSphereOverlap);
 	Sphere->OnComponentEndOverlap.AddDynamic(this, &AAuraDropItem::OnSphereEndOverlap);
-	OnClickedDroppedItem.AddDynamic(this, &AAuraDropItem::Server_AddItemToCharacter);
 	
 	MoveToComponent = CreateDefaultSubobject<USceneComponent>(TEXT("MoveToComponent"));
 	MoveToComponent->SetupAttachment(GetRootComponent());
@@ -39,9 +35,6 @@ void AAuraDropItem::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	Mesh->OnClicked.AddDynamic(this, &AAuraDropItem::OnClickedItem);
-	ItemTitleWidget->OnClicked.AddDynamic(this, &AAuraDropItem::OnClickedItem);
-	
 	// 아이템 핸들이 지정되어 있지만, 아이템 데이터가 채워져있지 않으면 데이터 채움
 	if (!ItemHandle.IsNull() && DropItemData.Name.IsNone())
 	{
@@ -49,9 +42,10 @@ void AAuraDropItem::BeginPlay()
 		{
 			DropItemData = *FoundRow;
 			DropItemData.ItemCounts = ItemCount;
-			InitializeItem(DropItemData);
 		}
 	}
+	
+	InitializeItem(DropItemData);
 }
 
 void AAuraDropItem::Tick(float DeltaTime)
@@ -63,6 +57,7 @@ void AAuraDropItem::Tick(float DeltaTime)
 void AAuraDropItem::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
 	DOREPLIFETIME(AAuraDropItem, DropItemData);
 }
 
@@ -81,10 +76,23 @@ void AAuraDropItem::SetMoveToLocation_Implementation(FVector& OutDestination)
 	OutDestination = MoveToComponent->GetComponentLocation();
 }
 
+void AAuraDropItem::SetMeshAndMaterial()
+{
+	if (UStaticMesh* StaticMesh = DropItemData.StaticMesh)
+	{
+		Mesh->SetStaticMesh(StaticMesh);
+	}
+
+	if (UMaterialInterface* Mat = DropItemData.Material.Get())
+	{
+		Mesh->SetMaterial(0, Mat);
+	}
+}
+
 void AAuraDropItem::InitializeItem(const FItemData& InItemData)
 {
 	DropItemData = InItemData;
-	OnRep_ItemData();
+	SetMeshAndMaterial();
 	
 	OnDropItemInitialized.Broadcast(DropItemData.DisplayName);
 }
@@ -107,57 +115,7 @@ void AAuraDropItem::SetTitleWidgetVisibility(bool InValue)
 	ItemTitleWidget->SetVisibility(InValue);
 }
 
-void AAuraDropItem::OnClickedItem(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed)
+void AAuraDropItem::OnRep_DropItemData()
 {
-	if (!GetOwner())
-		return;
-	
-	if (ButtonPressed == EKeys::LeftMouseButton)
-	{
-		// 거리 계산
-		FVector ItemLocation = GetActorLocation();
-		FVector OwnerLocation = GetOwner()->GetActorLocation();
-		
-		// 제곱근 계산을 하지 않으면 더 빠름
-		float DistSquare = FVector::DistSquared(ItemLocation, OwnerLocation);
-		
-		// 약 160cm
-		if (DistSquare < 25000)
-		{
-			Server_AddItemToCharacter(GetOwner());
-		}
-	}
+	SetMeshAndMaterial();
 }
-
-void AAuraDropItem::Server_AddItemToCharacter_Implementation(AActor* ItemOwner)
-{
-	if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
-	{
-		if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(ItemOwner))
-		{
-			if (AuraGM->GiveItemToCharacter(AuraCharacter, DropItemData.Name, ItemCount))
-			{
-				Destroy();
-			}
-			else
-			{
-				// 슬롯 부족, 또는 아이템 데이터 검색 실패
-				UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(FGameplayTag::RequestGameplayTag("Message.InventoryFull"), AuraCharacter, FText());
-			}
-		}
-	}
-}
-
-void AAuraDropItem::OnRep_ItemData()
-{
-	if (UStaticMesh* StaticMesh = DropItemData.StaticMesh)
-	{
-		Mesh->SetStaticMesh(StaticMesh);
-	}
-
-	if (UMaterialInterface* Mat = DropItemData.Material.Get())
-	{
-		Mesh->SetMaterial(0, Mat);
-	}
-}
-

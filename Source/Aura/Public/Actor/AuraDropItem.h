@@ -32,6 +32,7 @@ public:
 	virtual void HighlightActor_Implementation() override;
 	virtual void UnHighlightActor_Implementation() override;
 	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
+	void SetMeshAndMaterial();
 	// 하이라이트 인터페이스 끝
 	
 public:
@@ -43,16 +44,12 @@ public:
 	UFUNCTION()
 	void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
-	UFUNCTION(Server, Reliable)
-	void Server_AddItemToCharacter(AActor* ItemOwner);
-	
 	UFUNCTION(BlueprintCallable)
 	void SetItemCount(int32 InCount) {ItemCount = InCount;}
 	
 	void SetTitleWidgetVisibility(bool InValue);
-	
 	UFUNCTION()
-	void OnClickedItem(UPrimitiveComponent* TouchedComponent , FKey ButtonPressed);
+	void OnRep_DropItemData();
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnDropItemInitialized OnDropItemInitialized;
@@ -72,7 +69,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USceneComponent> MoveToComponent;
 	
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ItemData)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_DropItemData)
 	FItemData DropItemData;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
@@ -80,8 +77,4 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
 	int32 ItemCount = 1;
-	
-protected:
-	UFUNCTION()
-	void OnRep_ItemData();
 };

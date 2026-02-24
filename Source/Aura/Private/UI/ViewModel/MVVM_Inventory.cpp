@@ -3,77 +3,53 @@
 
 #include "UI/ViewModel/MVVM_Inventory.h"
 
+#include "SNegativeActionButton.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Character/AuraCharacter.h"
-#include "Player/AuraPlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "Player/EquipmentComponent.h"
 #include "Player/InventoryComponent.h"
-#include "UI/HUD/AuraHUD.h"
 #include "UI/ViewModel/MVVM_EquipmentSlot.h"
+#include "UI/WidgetController/AuraWidgetController.h"
 
-void UMVVM_Inventory::BindDependencies()
+void UMVVM_Inventory::BindDependencies(const FWidgetControllerParams& WCParams)
 {
-
+	PlayerController = WCParams.PlayerController;
+	PlayerState = WCParams.PlayerState;
+	AbilitySystemComponent = WCParams.AbilitySystemComponent;
+	AttributeSet = WCParams.AttributeSet;
 }
 
-UWorld* UMVVM_Inventory::GetWorld() const
+void UMVVM_Inventory::InitializeSlots()
 {
-	if (const UObject* Outer = GetOuter())
+	if (PlayerState) 
 	{
-		return Outer->GetWorld();
+		Inventory = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(PlayerState);
+		Equipment = UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(PlayerState);
 	}
-	return nullptr;
-}
-
-void UMVVM_Inventory::InitializeSlots(UInventoryComponent* InventoryComponent, UEquipmentComponent* EquipmentComponent)
-{
-	 if (InventoryComponent)
-	 	Inventory = InventoryComponent;
-	 if (EquipmentComponent)
-	 	Equipment = EquipmentComponent;
-	
-	if (!Inventory || !Equipment)
+	else
 	{
-		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetOuter()))
+		UE_LOG(LogTemp, Error, TEXT("UMVVM_Inventory Initialized Failed : PlayerState Is InValid"));
+		return;
+	}
+	
+	const int32 Size = Inventory->GetSlots().Num(); 
+	if (SlotViewModels.IsEmpty())
+	{
+		SlotViewModels.SetNum(Size);
+	
+		// 모든 슬롯에 대해 각자의 뷰 모델 연결
+		for (int i = 0; i < Size; i++)
 		{
-			if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(AuraHUD->GetOwningPlayerController()))
-			{
-				if (APawn* PlayerPawn = PC->GetPawn()) 
-				{
-					if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(PlayerPawn))
-					{
-						if (!Inventory)
-							Inventory = IPlayerInterface::Execute_GetInventoryComponent(AuraCharacter);
-						
-						if (!Equipment)
-							Equipment = IPlayerInterface::Execute_GetEquipmentComponent(AuraCharacter);
-					}
-				}
-			}
+			UMVVM_InventorySlot* NewSlotViewModel = NewObject<UMVVM_InventorySlot>(PlayerController);
+
+			// 뷰 모델에 인덱스와 인벤토리 컴포넌트 포인터 넘겨주기
+			NewSlotViewModel->Initialize(Inventory, i);
+
+			// 슬롯 뷰 모델들을 배열로 관리
+			SlotViewModels[i] = NewSlotViewModel;
 		}
 	}
-	if (!IsValid(Inventory) || !IsValid(Equipment))
-		return;
-	
-
-	const int32 Size = Inventory->GetSlots().Num(); 
-	SlotViewModels.Empty();
-	SlotViewModels.SetNum(Size);
-
-	// 모든 슬롯에 대해 각자의 뷰 모델 연결
-	for (int i = 0; i < Size; i++)
-	{
-		UMVVM_InventorySlot* NewSlotViewModel = NewObject<UMVVM_InventorySlot>(this);
-
-		// 뷰 모델에 인덱스와 인벤토리 컴포넌트 포인터 넘겨주기
-		NewSlotViewModel->Initialize(Inventory, i);
-
-		// 슬롯 뷰 모델들을 배열로 관리
-		SlotViewModels[i] = NewSlotViewModel;
-	}
-
-	Inventory->OnInventorySlotChanged.RemoveDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
-	Inventory->OnInventorySlotChanged.AddDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
 
 	// 실제 데이터를 슬롯 뷰 모델들에게 전달
 	for (int i = 0; i < Size; ++i)
@@ -82,22 +58,30 @@ void UMVVM_Inventory::InitializeSlots(UInventoryComponent* InventoryComponent, U
 	}
 	
 	// 장착 슬롯 뷰모델 생성 후 연결
-	if (EquipSlotViewModels.Num() <= 0)
+	if (EquipSlotViewModels.IsEmpty())
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			UMVVM_EquipmentSlot* NewSlotViewModel = NewObject<UMVVM_EquipmentSlot>(this);
+			UMVVM_EquipmentSlot* NewSlotViewModel = NewObject<UMVVM_EquipmentSlot>(PlayerController);
 
 			// 뷰 모델에 인덱스와 장착 컴포넌트 포인터 넘겨주기
-			NewSlotViewModel->Initialize(EquipmentComponent, i);
+			NewSlotViewModel->Initialize(Equipment, i);
 
 			// 슬롯 뷰 모델들을 배열로 관리
 			EquipSlotViewModels.Add(NewSlotViewModel);
 		}
 	}
+
+	Inventory->OnInventorySlotChanged.RemoveAll(this);
+	Inventory->OnInventorySlotChanged.AddDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
 	
-	Equipment->OnEquipmentSlotChanged.RemoveDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
+	Equipment->OnEquipmentSlotChanged.RemoveAll(this);
 	Equipment->OnEquipmentSlotChanged.AddDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
+	
+	for (int i = 0; i < EquipSlotViewModels.Num(); i++)
+	{
+		Equipment->OnEquipmentSlotChanged.Broadcast(i);
+	}
 }
 
 void UMVVM_Inventory::InventorySlotChanged(int Index)
@@ -106,10 +90,15 @@ void UMVVM_Inventory::InventorySlotChanged(int Index)
 
 	if (!InventorySlots.IsValidIndex(Index))
 		return;
+    
+	if (!SlotViewModels.IsValidIndex(Index))
+		return;
+
+	UMVVM_InventorySlot* SlotViewModel = SlotViewModels[Index];
+	if (!SlotViewModel)
+		return;
 	
 	const FInventorySlot& SlotData = InventorySlots[Index];
-	UMVVM_InventorySlot* SlotViewModel = SlotViewModels[Index];
-	
 	SlotViewModel->ItemData = SlotData.ItemData;
 	
 	SlotViewModel->SetItemID(SlotData.ItemHandle.RowName);

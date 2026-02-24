@@ -6,10 +6,14 @@
 #include "GameplayTagContainer.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Data/CharacterClassInfo.h"
+#include "Data/ItemInfo.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 #include "AuraAbilitySystemLibrary.generated.h"
 
+class UMVVM_Inventory;
+class UEquipmentComponent;
+class UInventoryComponent;
 class UMVVM_DebugMenu;
 class UItemToolTipWidgetController;
 class USettingsMenuWidgetController;
@@ -81,6 +85,9 @@ public:
 	// 세이브 된 기본 속성 적용 게임플레이 이펙트
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributesFromSaveData(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ULoadScreenSaveGame* SaveGame);
+
+	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
+	static void InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
 	// 몬스터 - 초기 어빌리티 부여
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|CharacterClassDefaults")
@@ -255,8 +262,7 @@ public:
 	static void ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText = FText());
 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static UAuraUserWidget* AddMessageToActor(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText = FText(),
-	                                         UTexture2D* Image = nullptr);
+	static void AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, const FText& AppendText = FText(), UTexture2D* Icon = nullptr);
 	
 	// 메시지 태그 제거
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|Message")
@@ -282,4 +288,13 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary|GameplayMechanics")
 	static const FItemData GetItemDataByItemName(const UObject* WorldContextObject, const FName& ItemName);
+	
+	// 인벤토리&장착 컴포넌트에 접근
+	UFUNCTION()
+	static UInventoryComponent* GetInventoryComponentByPlayerState(APlayerState* PlayerState);
+	UFUNCTION()
+	static UEquipmentComponent* GetEquipmentComponentByPlayerState(APlayerState* PlayerState);
+	
+	UFUNCTION(BlueprintCallable, Category = "AuraAbilitySystemLibrary|Sound", meta = (DefaultToSelf = "WorldContextObject"))
+	static void UpdateSoundVolume(const AAuraPlayerController* AuraPlayerController, USoundClass* TargetSoundClass, float Volume);
 };

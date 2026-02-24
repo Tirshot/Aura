@@ -10,11 +10,13 @@
 #include "Components/AudioComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 AAuraFireTornado::AAuraFireTornado()
 {
-	PrimaryActorTick.bCanEverTick = false;
-
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	SetRootComponent(Mesh);
 
@@ -32,16 +34,14 @@ AAuraFireTornado::AAuraFireTornado()
 void AAuraFireTornado::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// DamageRadius에 의해 메시 크기 스케일
-	float NewScaleValue = DamageRadius / 200.f;
-	FVector NewScale(NewScaleValue);
-	
-	Mesh->SetWorldScale3D(NewScale);
-
-	//
-	SetLifeSpan(LifeSpan);
 	SetReplicateMovement(true);
+	SetLifeSpan(LifeSpan);
+	
+	if (HasAuthority())
+	{
+		// 데미지 반경에 따라 메시 크기 조절
+		OnRep_DamageRadius();
+	}
 	
 	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
 
@@ -55,6 +55,13 @@ void AAuraFireTornado::BeginPlay()
 		DamageDeltaSecond,
 		true
 		);
+}
+
+void AAuraFireTornado::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAuraFireTornado, DamageRadius);
 }
 
 void AAuraFireTornado::Tick(float DeltaSeconds)
@@ -74,6 +81,7 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 	{
 		FVector ActorLocation = FVector::ZeroVector;
 	
+		// 가장 먼 대상 스캔
 		int32 OverlappingActorsNum = OverlappingActors.Num() - 1;
 		for (int i = OverlappingActorsNum; i >= 0; i--)
 		{
@@ -81,6 +89,10 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 				continue;
 
 			if (!IsValidOverlap(OverlappingActors[i]))
+				continue;
+			
+			// 아군 추적 금지
+			if (OverlappingActors[i]->ActorHasTag(FName("Player")))
 				continue;
 			
 			ActorLocation = OverlappingActors[i]->GetActorLocation();
@@ -199,4 +211,14 @@ bool AAuraFireTornado::IsValidOverlap(AActor* OtherActor)
 		return false;
 
 	return true;
+}
+
+void AAuraFireTornado::OnRep_DamageRadius()
+{
+	// DamageRadius에 의해 메시 크기 스케일
+	float NewScaleValue = DamageRadius / 200.f;
+	FVector NewScale(NewScaleValue);
+	
+	Mesh->SetWorldScale3D(NewScale);
+
 }

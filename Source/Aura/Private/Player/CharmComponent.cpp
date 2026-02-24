@@ -9,7 +9,6 @@
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/AuraPlayerState.h"
-#include "Player/CharmInstance.h"
 #include "Player/InventoryComponent.h"
 
 UCharmComponent::UCharmComponent()
@@ -23,10 +22,16 @@ void UCharmComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(GetOwner()))
+	if (APawn* Pawn = Cast<AAuraPlayerState>(GetOwner())->GetPawn())
 	{
-		Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
-		Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
+		if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Pawn))
+		{
+			if (!Inventory->OnItemGet.IsAlreadyBound(this, &UCharmComponent::AddToCharmSlot))
+				Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
+		
+			if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
+				Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
+		}
 	}
 }
 
@@ -70,7 +75,7 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 	}
 }
 
-void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
+void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 {
 	auto ASC = UAuraAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
 	if (!ASC)
@@ -81,7 +86,7 @@ void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
 		return;
 	
 	// 참 효과 재적용
-	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetOwner());
+	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AuraASC->GetAvatarActor());
 	if (!AuraCharacter)
 		return;
 	
@@ -128,11 +133,14 @@ void UCharmComponent::ApplyCharmItemEffect(FItemData& CharmItem)
 
 void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 {
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
 	// 아이템 추가가 인벤토리 내의 단순 이동이라면 리턴
 	if (bIsItemMoved)
 		return;
 	
-	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(GetOwner()))
+	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Cast<AAuraPlayerState>(GetOwner())->GetPawn()))
 	{
 		FInventorySlot* InventorySlot = Inventory->GetSlotByIndex(SlotIndex);
 		if (!InventorySlot)
@@ -141,8 +149,6 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 		FItemData& CharmData = InventorySlot->ItemData;
 		if (CharmData.ItemGroup == EItemGroup::Charm)
 		{
-			CharmSlotArray.Add(CharmData);
-	
 			// 참 효과 적용
 			ApplyCharmItemEffect(CharmData);
 		}
@@ -151,17 +157,17 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 
 void UCharmComponent::RemoveFromCharmSlot(const FItemData& ItemData)
 {
-	if (ItemData.ItemGroup == EItemGroup::Charm)
-	{
-		for (int RemoveIndex = CharmSlotArray.Num() - 1; RemoveIndex <= 0; RemoveIndex--)
-		{
-			if (CharmSlotArray[RemoveIndex] == ItemData)
-			{
-				CharmSlotArray.RemoveAt(RemoveIndex);
-				break;
-			}
-		}
-	}
+	// if (ItemData.ItemGroup == EItemGroup::Charm)
+	// {
+	// 	for (int RemoveIndex = CharmSlotArray.Num() - 1; RemoveIndex >= 0; RemoveIndex--)
+	// 	{
+	// 		if (CharmSlotArray[RemoveIndex] == ItemData)
+	// 		{
+	// 			CharmSlotArray.RemoveAt(RemoveIndex);
+	// 			break;
+	// 		}
+	// 	}
+	// }
 	
 	// 참 효과 제거
 	RemoveCharmItemEffect(ItemData);
@@ -212,4 +218,3 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 		AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
 	}
 }
-

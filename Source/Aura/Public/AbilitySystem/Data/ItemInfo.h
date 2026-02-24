@@ -113,6 +113,9 @@ struct FItemData: public FTableRowBase
 {
 	GENERATED_BODY()
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
+	FGuid UniqueID;
+	
 	// !!각 행의 이름을 ItemID와 일치시켜야 함
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
 	FName Name = FName();
@@ -133,7 +136,7 @@ struct FItemData: public FTableRowBase
 	
 	// 인벤토리 내의 아이콘
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
-	TSoftObjectPtr<UTexture2D> Image;
+	TObjectPtr<UTexture2D> Image;
 	
 	// 드롭 아이템 스태틱 메시
 	// 공통

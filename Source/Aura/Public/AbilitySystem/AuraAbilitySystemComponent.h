@@ -118,6 +118,7 @@ protected:
 	// 어빌리티가 클라이언트로 복제(Replicated)
 	virtual void OnRep_ActivateAbilities() override;
 
+public:
 	UFUNCTION(Client, Reliable)
 	// 이펙트 액터 적용 콜백 함수
 	void ClientEffectApplied(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle);

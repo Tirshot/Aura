@@ -4,7 +4,7 @@
 #include "UI/ViewModel/MVVM_EquipmentSlot.h"
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "Player/EquipmentComponent.h"
+#include "Game/AuraGameInstance.h"
 
 
 void UMVVM_EquipmentSlot::Initialize(UEquipmentComponent* Equipment, uint8 Index)
@@ -24,7 +24,7 @@ void UMVVM_EquipmentSlot::Reset()
 {
 	EquippedItemData = FItemData();
 	SetItemID("");
-	SetIcon(nullptr);
+	SetIcon(DefaultImage);
 	SetDescription(FText());
 	SetbEquipped(false);
 }
@@ -33,9 +33,21 @@ void UMVVM_EquipmentSlot::ReInitializeSlotView(const FItemData& ItemData)
 {
 	EquippedItemData = ItemData;
 	SetItemID(ItemData.Name);
-	SetIcon(ItemData.Image.Get());
 	SetDescription(ItemData.Description);
 	SetbEquipped(true);
+	
+	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	{
+		if (const FItemData* FoundItemData = AuraGI->GetItemData(ItemData.Name))
+		{
+			if (auto* FoundIcon = FoundItemData->Image.Get())
+			{
+				SetIcon(FoundIcon);
+				return;
+			}
+		}
+	}
+	SetIcon(DefaultImage);
 }
 
 void UMVVM_EquipmentSlot::SetItemID(FName InID)

@@ -61,6 +61,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	UOverlayWidgetController* OverlayWidgetController;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UTexture2D> DefaultImage;
+	
 	// 필드 노티파이
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter)
 	FName ItemID;

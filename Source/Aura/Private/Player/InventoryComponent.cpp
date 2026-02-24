@@ -3,13 +3,56 @@
 
 #include "Player/InventoryComponent.h"
 
+#include "AbilitySystemGlobals.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Character/AuraCharacter.h"
 #include "Game/AuraGameInstance.h"
-#include "Game/AuraGameModeBase.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/AuraPlayerController.h"
+#include "UI/HUD/AuraHUD.h"
 #include "UI/ViewModel/MVVM_Inventory.h"
+
+void FInventorySlot::PostReplicatedAdd(const FInventorySlotList& InArraySerializer)
+{
+	if (!Inventory)
+		return;
+	
+	if (Inventory->OnInventorySlotChanged.IsBound())
+		Inventory->OnInventorySlotChanged.Broadcast(SlotID);
+}
+
+void FInventorySlot::PostReplicatedChange(const FInventorySlotList& InArraySerializer)
+{
+	if (!Inventory)
+		return;
+	
+	if (Inventory->OnInventorySlotChanged.IsBound())
+		Inventory->OnInventorySlotChanged.Broadcast(SlotID);
+}
+
+void FInventorySlot::PreReplicatedRemove(const FInventorySlotList& InArraySerializer)
+{
+}
+
+void FInventorySlotList::HandleUIUpdate(int32 Index)
+{
+	if (Inventory)
+	{
+		Inventory->OnInventorySlotChanged.Broadcast(Index);
+	}
+}
+
+void FInventorySlotList::HandleUIUpdateToSlotList()
+{
+	if (Inventory && Inventory->OnInventorySlotChanged.IsBound())
+	{
+		for (int32 i = 0; i < Slots.Num(); ++i) 
+		{
+			Inventory->OnInventorySlotChanged.Broadcast(i);
+		}
+	}
+}
 
 UInventoryComponent::UInventoryComponent()
 {
@@ -22,37 +65,64 @@ void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// 인벤토리 슬롯 배열 초기화
-	for (int i = 0; i < InventorySize; i++)
+	// 서버 - 인벤토리 슬롯 배열 초기화
+	if (GetOwnerRole() == ROLE_Authority)
 	{
-		FInventorySlot Slot;
-		Slots.Add(Slot);
-	}
-
-	// 인벤토리 슬롯의 아이템 핸들에 데이터 테이블 등록
-	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
-	{
-		if (AuraGI->bInit)
+		bool bHasValidData = false;
+		for(const auto& Slot : SlotList.Slots)
 		{
+			if(!Slot.ItemData.Name.IsNone())
+			{
+				bHasValidData = true;
+				SlotList.MarkArrayDirty();
+				break;
+			}
+		}
+		// 유효한 데이터가 있으면 초기화 안함
+		if (!bHasValidData)
+		{
+			SlotList.Slots.Empty();
+
+			for (int i = 0; i < InventorySize; i++)
+			{
+				FInventorySlot Slot;
+				Slot.Inventory = this;
+				Slot.SlotID = i;
+				SlotList.Slots.Add(Slot);
+			}
+			SlotList.Inventory = this;
+			SlotList.MarkArrayDirty();
+
 			AssignDataTableToSlot();
 		}
-		else
+	}
+	else
+	{
+		if (AAuraPlayerState* MyPS = Cast<AAuraPlayerState>(GetOwner()))
 		{
-			// 아직 초기화 전이면 델리게이트 등록
-			AuraGI->OnInitialized.AddDynamic(this, &UInventoryComponent::AssignDataTableToSlot);
+			if (APlayerController* PC = MyPS->GetPlayerController())
+			{
+				if (AAuraHUD* AuraHUD = PC->GetHUD<AAuraHUD>())
+				{
+					FWidgetControllerParams WCParams;
+					WCParams.PlayerController = PC;
+					WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PC->GetPawn());
+				
+					if (APlayerState* PlayerState = Cast<APlayerState>(GetOwner()))
+						WCParams.PlayerState = PlayerState;
+				
+					if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
+						WCParams.AttributeSet = AuraPS->GetAttributeSet();
+					
+					// 뷰 모델 생성
+					if (auto ViewModel = AuraHUD->GetInventoryViewModel(WCParams))
+					{
+						ViewModel->InitializeSlots();
+					}
+				}
+			}
 		}
 	}
-	
-	UEquipmentComponent* EquipmentComponent = nullptr;
-	if (GetOwner()->Implements<UPlayerInterface>())
-	{
-		EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(GetOwner());
-	}
-	
-	// 인벤토리의 각 슬롯 뷰 모델 생성 및 초기화
-	UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this)->InitializeSlots(this, EquipmentComponent);
-	
-	// 추후에 Slots 배열을 세이브 데이터로 집어 넣어야함(불러오기 및 저장)
 }
 
 void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -60,14 +130,26 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	// 배열 복제
-	DOREPLIFETIME(UInventoryComponent, Slots);
+	DOREPLIFETIME(UInventoryComponent, SlotList);
 }
 
 
 void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
 
+void UInventoryComponent::InventorySlotItemChanged(int32 Index)
+{
+	OnInventorySlotChanged.Broadcast(Index);
+}
+
+void UInventoryComponent::InventorySlotListChanged()
+{
+	for (int i = 0; i < SlotList.Slots.Num() - 1; i++)
+	{
+		OnInventorySlotChanged.Broadcast(i);
+	}
 }
 
 void UInventoryComponent::AssignDataTableToSlot()
@@ -76,10 +158,7 @@ void UInventoryComponent::AssignDataTableToSlot()
 
 	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
 	if (!AuraGI)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AuraGI Not FOUND!!!"));
 		return;
-	}
 	
 	ItemInfos = AuraGI->GetItemInfos();
 	if (!ItemInfos)
@@ -90,8 +169,9 @@ void UInventoryComponent::AssignDataTableToSlot()
 		
 	for (int i = 0; i < InventorySize; i++)
 	{
-		FInventorySlot& Slot = Slots[i];
+		FInventorySlot& Slot = SlotList.Slots[i];
 		Slot.ItemHandle.DataTable = ItemInfos->ItemTable;
+		SlotList.MarkItemDirty(Slot);
 	}
 }
 
@@ -111,10 +191,10 @@ bool UInventoryComponent::CheckItemSpaceIsClear(int StartX, int StartY, int Widt
 		for (int X = StartX; X < StartX + Width; X++)
 		{
 			int Index = InventoryWidth * Y + X;
-			if (Index < 0 || Index >= Slots.Num())
+			if (Index < 0 || Index >= SlotList.Slots.Num())
 				return false;
 
-			if (Slots[Index].bIsOccupied == true)
+			if (SlotList.Slots[Index].bIsOccupied == true)
 				return false;
 		}
 	}
@@ -172,6 +252,10 @@ bool UInventoryComponent::CanPlaceItemToIndex(const FItemData& ItemData, int ind
 
 bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, int TargetIndex, bool bIsItemMoved)
 {
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return false;
+	
 	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
 	{
 		auto ItemTable = AuraGI->GetItemInfos()->ItemTable;
@@ -186,14 +270,14 @@ bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, i
 			for (int X = StartX; X < StartX + Width; X++)
 			{
 				int NewIndex = InventoryWidth * Y + X;
-
-				// 인벤토리 정보 채우기
-				int CurrentIndex = (Y * InventoryWidth) + X;
             
-				if (!Slots.IsValidIndex(CurrentIndex))
+				if (!SlotList.Slots.IsValidIndex(NewIndex))
 					return false;
 				
-				FInventorySlot& Slot = Slots[NewIndex];
+				if (!CanPlaceItemToIndex(ItemData, NewIndex))
+					return false;
+				
+				FInventorySlot& Slot = SlotList.Slots[NewIndex];
 				
 				if (ItemTable)
 					Slot.ItemHandle.DataTable = ItemTable;
@@ -203,7 +287,8 @@ bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, i
 				Slot.StartPoint = FIntPoint(StartX, StartY);
 				Slot.ItemSize = FIntPoint(Width, Height);
 				Slot.ItemData = ItemData;
-
+				Slot.Inventory = this;
+				
 				// 첫 칸일때
 				if (X == StartX && Y == StartY)
 				{
@@ -213,110 +298,117 @@ bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, i
 						Slot.ItemCount = AddCount;
 								
 					Slot.ItemData.ItemCounts = Slot.ItemCount;
-								
 					OnItemGet.Broadcast(NewIndex, bIsItemMoved);
 				}
+				SlotList.Inventory = this;
+				SlotList.HandleUIUpdate(NewIndex);
+				SlotList.MarkItemDirty(Slot);
 			}
 		}
-		OnRep_Slots();
 		return true;
 	}
 	return false;
 }
 
-void UInventoryComponent::ClearItemAt(int TargetIndex)
+bool UInventoryComponent::ClearItemAt(int TargetIndex)
 {
-	if (!Slots.IsValidIndex(TargetIndex))
-		return;
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return false;
 	
-	FIntPoint TargetPoint = FIntPoint(TargetIndex % InventoryWidth, TargetIndex / InventoryWidth);
-	FIntPoint ItemSize = Slots[TargetIndex].ItemData.Size;
+	if (!SlotList.Slots.IsValidIndex(TargetIndex))
+		return false;
 	
-	ClearItemSpace_Internal(TargetPoint, ItemSize);
+	if (!SlotList.Slots[TargetIndex].bIsOccupied)
+		return false;
+	
+	// 드래그 중인 아이템의 시작 좌표를 찾아서 넘김
+	FIntPoint TargetPoint = SlotList.Slots[TargetIndex].StartPoint;
+	FIntPoint ItemSize = SlotList.Slots[TargetIndex].ItemData.Size;
+	
+	return ClearItemSpace_Internal(TargetPoint, ItemSize);
 }
 
 bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCount)
 {
+	SlotList.Inventory = this;
+	
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return false;
+	
 	if (!ItemData.Name.IsValid())
 		return false;
-
-	PrevSlots = Slots;
 	
-	// 아이템 크기
-	int Width = ItemData.Size.X;
-	int Height = ItemData.Size.Y;
-
 	// - 장비라면 빈 공간에 추가하기
-	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	// 해당 위치부터 아이템 크기에 따라 배치 가능 판단
+	if (IsItemStackable(ItemData))
 	{
-		// 해당 위치부터 아이템 크기에 따라 배치 가능 판단
-		if (IsItemStackable(ItemData))
+		// 중첩 가능
+		// 인벤토리에 있음
+		if (HasItem(ItemData))
 		{
-			// 중첩 가능
-			// 인벤토리에 있음
-			if (HasItem(ItemData))
+			// 슬롯 찾기
+			bool bFound = false;
+			if (FInventorySlot* FoundSlot = FindItemSlot(ItemData.Name, bFound))
 			{
-				// 슬롯 찾기
-				bool bFound = false;
-				if (FInventorySlot* FoundSlot = FindItemSlot(ItemData.Name, bFound))
+				if (AddCount == 0)
 				{
-					if (AddCount == 0)
-					{
-						FoundSlot->ItemCount++;
-					}
-					else
-					{
-						FoundSlot->ItemCount += AddCount;
-					}
-					FoundSlot->ItemData.ItemCounts = FoundSlot->ItemCount;
-					
-					OnRep_Slots();
-					return true;
+					FoundSlot->ItemCount++;
 				}
-			}
-			else
-			{
-				// 인벤토리에 없음
-				FIntPoint Place;
-				if (CanPlaceItem(ItemData, Place))
+				else
 				{
-					int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
-					if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
-						return false;
+					FoundSlot->ItemCount += AddCount;
 				}
+				FoundSlot->ItemData.ItemCounts = FoundSlot->ItemCount;
+				SlotList.HandleUIUpdate(FoundSlot->SlotID);
+				SlotList.MarkItemDirty(*FoundSlot);
+				return true;
 			}
 		}
 		else
 		{
-			// 중첩 불가
-			for (int i = 0; i < AddCount; i++)
+			// 인벤토리에 없음
+			FIntPoint Place;
+			if (CanPlaceItem(ItemData, Place))
 			{
-				FIntPoint Place;
-				if (CanPlaceItem(ItemData, Place))
-				{
-					int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
-					if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
-						return false;
-				}
-				else
-				{
+				int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
+				if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
 					return false;
-				}
 			}
-			OnRep_Slots();
-			return true;
 		}
+	}
+	else
+	{
+		// 중첩 불가
+		for (int i = 0; i < AddCount; i++)
+		{
+			FIntPoint Place;
+			if (CanPlaceItem(ItemData, Place))
+			{
+				int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
+				if (!PlaceItemAt(ItemData, AddCount, TargetIndex))
+					return false;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 	return false;
 }
 
 bool UInventoryComponent::AddItemToIndex_Internal(const FItemData& ItemData, int index)
 {
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return false;
+	
 	// 아이템을 다른 슬롯으로 이동시킬때 호출되는 함수
 	if (!ItemData.Name.IsValid())
 		return false;
-	
-	PrevSlots = Slots;
 	
 	// 아이템 크기
 	int Width = ItemData.Size.X;
@@ -334,7 +426,6 @@ bool UInventoryComponent::AddItemToIndex_Internal(const FItemData& ItemData, int
 	if (!PlaceItemAt(ItemData, 1, index))
 		return false;
 	
-	OnRep_Slots();
 	return true;
 }
 
@@ -343,7 +434,7 @@ FInventorySlot* UInventoryComponent::GetSlotByIndex(int index)
 	if (index >= InventorySize)
 		return nullptr;
 
-	return &Slots[index];
+	return &SlotList.Slots[index];
 }
 
 bool UInventoryComponent::IsItemStackable(const FItemData& ItemData) const
@@ -353,7 +444,7 @@ bool UInventoryComponent::IsItemStackable(const FItemData& ItemData) const
 
 bool UInventoryComponent::HasItem(const FItemData& ItemData) const
 {
-	for (const auto& Slot : Slots)
+	for (const auto& Slot : SlotList.Slots)
 	{
 		if (Slot.ItemData == ItemData)
 			return true;
@@ -363,19 +454,36 @@ bool UInventoryComponent::HasItem(const FItemData& ItemData) const
 
 void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlots)
 {
-	Slots = InSlots;
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
 	
-	UEquipmentComponent* EquipmentComponent = nullptr;
-	if (GetOwner()->Implements<UPlayerInterface>())
+	SlotList.Slots.Empty();
+	SlotList.Inventory = this;
+    
+	for (const FInventorySlot& NewSlot : InSlots)
 	{
-		EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(GetOwner());
+		FInventorySlot& AddedSlot = SlotList.Slots.Add_GetRef(NewSlot);
+		AddedSlot.Inventory = this;
+		SlotList.MarkItemDirty(AddedSlot); 
 	}
-	UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this)->InitializeSlots(this, EquipmentComponent);
+	
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
+	{
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AuraPS->GetPlayerController()))
+		{
+			AuraPC->OnCharacterInit.AddDynamic(this, &UInventoryComponent::OnCharacterInitialized);
+		}
+	}
 }
 
 void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int TargetIndex)
 {
-	if (!Slots.IsValidIndex(OriginalIndex) || !Slots.IsValidIndex(TargetIndex))
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
+	if (!SlotList.Slots.IsValidIndex(OriginalIndex) || !SlotList.Slots.IsValidIndex(TargetIndex))
 		return;
 	
 	// 제자리에 놓기
@@ -383,30 +491,33 @@ void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int 
 		return;
 	
 	// 이동 전 슬롯의 데이터 가져오기
-	const FInventorySlot& OriginalSlot = Slots[OriginalIndex];
+	const FInventorySlot& OriginalSlot = SlotList.Slots[OriginalIndex];
 
-	PrevSlots = Slots;
-	
 	// 아이템 데이터 백업
 	FItemData MoveItem = OriginalSlot.ItemData;
 	
 	// 아이템 먼저 제거
-	ClearItemAt(OriginalIndex);
-	
-	if (CanPlaceItemToIndex(MoveItem, TargetIndex))
+	if (ClearItemAt(OriginalIndex))
 	{
-		PlaceItemAt(MoveItem, MoveItem.ItemCounts, TargetIndex, true);
-	}
-	else
-	{
-		// 배치 실패시 원상 복구
-		PlaceItemAt(MoveItem, MoveItem.ItemCounts, OriginalIndex, true);
+		if (CanPlaceItemToIndex(MoveItem, TargetIndex))
+		{
+			PlaceItemAt(MoveItem, MoveItem.ItemCounts, TargetIndex, true);
+		}
+		else
+		{
+			// 배치 실패시 원상 복구
+			PlaceItemAt(MoveItem, MoveItem.ItemCounts, OriginalIndex, true);
+		}
 	}
 }
 
-void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, const FIntPoint& ItemSize)
+bool UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, const FIntPoint& ItemSize)
 {
-	PrevSlots = Slots;
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return false;
+	
+	SlotList.Inventory = this;
 	
 	// 인덱스를 8로 나눈 나머지가 X(열)임, 몫이 Y(행)임
 	int StartX = StartPoint.X;
@@ -414,7 +525,7 @@ void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, c
 	float Width = ItemSize.X;
 	float Height = ItemSize.Y;
 
-	FItemData RemovedItem = Slots[InventoryWidth * StartY + StartX].ItemData;
+	FItemData RemovedItem = SlotList.Slots[InventoryWidth * StartY + StartX].ItemData;
 	
 	// int StartIndex = InventorySize * StartY + StartX;
 
@@ -425,75 +536,56 @@ void UInventoryComponent::ClearItemSpace_Internal(const FIntPoint& StartPoint, c
 			int Index = InventoryWidth * Y + X;
 
 			// 점유하던 슬롯 초기화
-			Slots[Index].ItemHandle.RowName = "";
-			Slots[Index].ItemSize = FIntPoint();
-			Slots[Index].ItemCount = 0;
-			Slots[Index].StartPoint = FIntPoint();
-			Slots[Index].bIsOccupied = false;
-			Slots[Index].ItemData = FItemData();
-			
-			if (auto SlotViewModel = UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(this)->GetSlotViewModel(Index))
-			{
-				// 슬롯의 뷰 모델도 초기화
-				SlotViewModel->LoadInitialData();
-			}
+			SlotList.Slots[Index].ItemHandle.RowName = "";
+			SlotList.Slots[Index].ItemSize = FIntPoint();
+			SlotList.Slots[Index].ItemCount = 0;
+			SlotList.Slots[Index].StartPoint = FIntPoint();
+			SlotList.Slots[Index].bIsOccupied = false;
+			SlotList.Slots[Index].ItemData = FItemData();
+			SlotList.HandleUIUpdate(Index);
+			SlotList.MarkItemDirty(SlotList.Slots[Index]);
 		}
 	}
-	
-	OnRep_Slots();
+	return true;
 }
 
-void UInventoryComponent::Server_RemoveItemToWorld_Implementation(int OriginalIndex)
+void UInventoryComponent::RemoveItemToWorld(int OriginalIndex)
 {
-	if (!Slots.IsValidIndex(OriginalIndex))
-		return;
-	
-	// 이동 전 슬롯의 데이터 가져오기
-	const FInventorySlot& OriginalSlot = Slots[OriginalIndex];
-	const FName OriginalItemName = OriginalSlot.ItemHandle.RowName;
-	
-	FItemData ItemData = OriginalSlot.ItemData;
-
-	PrevSlots = Slots;
-	
-	// 기존 슬롯 제거
-	ClearItemSpace_Internal(OriginalSlot.StartPoint, OriginalSlot.ItemSize);
-	
-	OnItemRemoved.Broadcast(ItemData);
-	OnRep_Slots();
-	
-	// 월드에 아이템 액터 스폰
-	if (auto AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+	if (APawn* AvatarActor = Cast<AAuraPlayerState>(GetOwner())->GetPawn())
 	{
-		AActor* AvatarActor = GetOwner();
-		if (auto AuraCharacter = Cast<AAuraCharacter>(AvatarActor))
-			AuraGM->SpawnDropItemActor(AuraCharacter, ItemData, AvatarActor->GetActorLocation());
+		if (AAuraPlayerController* AuraPC = AvatarActor->GetController<AAuraPlayerController>())
+		{
+			const FInventorySlot& TargetSlot = SlotList.Slots[OriginalIndex];
+			const FItemData ItemDataToDrop = TargetSlot.ItemData;
+			
+			AuraPC->Server_TryRemoveItem(OriginalIndex);
+		}
 	}
 }
 
-void UInventoryComponent::Server_RemoveItemToEquip_Implementation(int OriginIndex)
+void UInventoryComponent::RemoveItemToEquip(int OriginIndex)
 {
+	// 서버가 아니면 리턴
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
 	// 장착한 아이템은 인벤토리에서 제거
 	if (OriginIndex <= -1 ||  OriginIndex >= GetInventorySize())
 		return;
 	
-	if (!Slots.IsValidIndex(OriginIndex))
+	if (!SlotList.Slots.IsValidIndex(OriginIndex))
 		return;
 	
 	// 이동 전 슬롯의 데이터 가져오기
-	const FInventorySlot& OriginalSlot = Slots[OriginIndex];
-
-	PrevSlots = Slots;
+	const FInventorySlot& OriginalSlot = SlotList.Slots[OriginIndex];
 	
 	// 기존 슬롯 제거
 	ClearItemSpace_Internal(OriginalSlot.StartPoint, OriginalSlot.ItemSize);
-	
-	OnRep_Slots();
 }
 
 FInventorySlot* UInventoryComponent::FindItemSlot(FName ItemID, bool& bFound)
 {
-	for (auto& Slot : Slots)
+	for (auto& Slot : SlotList.Slots)
 	{
 		if (Slot.ItemHandle.RowName == ItemID && Slot.ItemCount >= 1)
 		{
@@ -523,7 +615,7 @@ int32 UInventoryComponent::GetInventoryHeight() const
 
 const TArray<FInventorySlot>& UInventoryComponent::GetSlots() const
 {
-	return Slots;
+	return SlotList.Slots;
 }
 
 int UInventoryComponent::GetDragItemIndex() const
@@ -536,33 +628,47 @@ FItemData UInventoryComponent::GetCurrentDragItemData() const
 	return CurrentDragItemData;
 }
 
-FItemData* UInventoryComponent::GetItemData(FName ItemName)
+const FItemData* UInventoryComponent::GetItemData(FName ItemName)
 {
 	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
 	{
-		auto ItemTable = AuraGI->GetItemInfos()->ItemTable;
-		if (auto FoundData = ItemTable->FindRow<FItemData>(ItemName, "Found Item"))
-		{
-			return FoundData;
-		}
+		return AuraGI->GetItemData(ItemName);
 	}
 	return nullptr;
 }
 
-void UInventoryComponent::OnRep_Slots()
+void UInventoryComponent::OnRep_SlotList()
 {
-	if (PrevSlots.Num() <= 0)
-		PrevSlots = Slots;
-	
-	if (Slots.Num() > 0)
+	for (auto& Slot : SlotList.Slots)
 	{
-		// UI 갱신
-		for (int Index = 0; Index < Slots.Num(); Index++)
-		{
-			if (PrevSlots[Index] != Slots[Index])
-				OnInventorySlotChanged.Broadcast(Index);
-		}
+		Slot.Inventory = this;
 	}
-	PrevSlots = Slots;
+	SlotList.Inventory = this;
 }
 
+void UInventoryComponent::OnCharacterInitialized(ACharacter* Character)
+{
+	if (Character)
+	{
+		// UI 반영
+		for (int i = 0; i < SlotList.Slots.Num(); i++)
+		{
+			if (OnInventorySlotChanged.IsBound())
+				OnInventorySlotChanged.Broadcast(i);
+		}
+		if (Character->Implements<UPlayerInterface>())
+		{
+			EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(Character);
+			if (EquipmentComponent)
+			{
+				if (EquipmentComponent->OnEquipmentSlotChanged.IsBound())
+				{
+					for (int i = 0; i < EquipmentComponent->EquipmentSlots.Items.Num(); i++)
+					{
+						EquipmentComponent->OnEquipmentSlotChanged.Broadcast(i);
+					}
+				}
+			}
+		}
+	}
+}

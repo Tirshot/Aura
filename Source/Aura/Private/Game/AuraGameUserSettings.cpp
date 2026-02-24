@@ -7,3 +7,11 @@ UAuraGameUserSettings* UAuraGameUserSettings::GetAuraGameUserSettings()
 {
 	return Cast<UAuraGameUserSettings>(UGameUserSettings::GetGameUserSettings());
 }
+
+void UAuraGameUserSettings::SetMasterVolumeChecked(bool InMasterVolumeChecked)
+{
+	MasterVolumeChecked = InMasterVolumeChecked;
+	UIVolumeChecked = InMasterVolumeChecked;
+	FXVolumeChecked = InMasterVolumeChecked;
+	BackgroundVolumeChecked = InMasterVolumeChecked;
+}

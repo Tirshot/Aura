@@ -15,6 +15,7 @@
 AAuraArcaneArea::AAuraArcaneArea()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	SetRootComponent(Mesh);

@@ -16,7 +16,7 @@ UMMC_MaxMana::UMMC_MaxMana()
 
 float UMMC_MaxMana::CalculateBaseMagnitude_Implementation(const FGameplayEffectSpec& Spec) const
 {
-	// ÅÂ±×
+	// ï¿½Â±ï¿½
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
 
@@ -25,19 +25,25 @@ float UMMC_MaxMana::CalculateBaseMagnitude_Implementation(const FGameplayEffectS
 	EvaluateParameters.SourceTags = SourceTags;
 	EvaluateParameters.TargetTags = TargetTags;
 
-	// ¼Ó¼º Ä¸ÃÄ
+	// ï¿½Ó¼ï¿½ Ä¸ï¿½ï¿½
 	float Intelligence = 0.f;
 	GetCapturedAttributeMagnitude(IntelligenceDef, Spec, EvaluateParameters, Intelligence);
 
-	// ¼Ó¼º Å¬·¥ÇÎ
+	// ï¿½Ó¼ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½
 	Intelligence = FMath::Max(Intelligence, 0.f);
 
-	// ·¹º§ °¡Á®¿À±â
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	int32 PlayerLevel = 1;
 
-	if ((Spec.GetContext().Get()->GetSourceObject()->Implements<UCombatInterface>()))
+	if (FGameplayEffectContext* GEContext = Spec.GetContext().Get())
 	{
-		PlayerLevel = ICombatInterface::Execute_GetCharacterLevel(Spec.GetContext().Get()->GetSourceObject());
+		if (AActor* AvatarActor = Cast<AActor>(GEContext->GetSourceObject()))
+		{
+			if (AvatarActor->Implements<UCombatInterface>())
+			{
+				PlayerLevel = ICombatInterface::Execute_GetCharacterLevel(AvatarActor);
+			}
+		}
 	}
 
 	return 50 + 2.5f * Intelligence + 15 * PlayerLevel;

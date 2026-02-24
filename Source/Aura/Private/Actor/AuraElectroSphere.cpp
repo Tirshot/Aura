@@ -14,6 +14,7 @@
 AAuraElectroSphere::AAuraElectroSphere()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	Mesh->SetupAttachment(GetRootComponent());

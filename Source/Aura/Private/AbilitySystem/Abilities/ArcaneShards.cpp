@@ -161,6 +161,9 @@ void UArcaneShards::SpawnShards()
 
 void UArcaneShards::SpawnCueAndApplyDamage()
 {
+	if (!GetAvatarActorFromActorInfo()->HasAuthority())
+		return;
+	
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	
 	if (Idx < GroundPoints.Num())
@@ -183,9 +186,10 @@ void UArcaneShards::SpawnCueAndApplyDamage()
 			CueParams.Location = ShardSpawnLocation;
 			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
 			CueParams.RawMagnitude = SizeMultiplier / 100.f;
-
-			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
-
+			CueParams.Instigator = AvatarActor;
+			CueParams.EffectCauser = AvatarActor;
+			
+			GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
 			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius + SizeMultiplier);
 		}
 		else
@@ -194,9 +198,10 @@ void UArcaneShards::SpawnCueAndApplyDamage()
 			CueParams.Location = ShardSpawnLocation;
 			CueParams.Normal = UKismetMathLibrary::GetRightVector(ShardSpawnRotation);
 			CueParams.RawMagnitude = 1.f;
+			CueParams.Instigator = AvatarActor;
+			CueParams.EffectCauser = AvatarActor;
 		
-			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
-		
+			GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
 			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius);
 		}
 	}

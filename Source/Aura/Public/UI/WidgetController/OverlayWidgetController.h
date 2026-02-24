@@ -202,6 +202,9 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void RemoveCenterDescriptionMessage();
+	
+	UFUNCTION()
+	void SetXPBarPercentToOwnValue();
 };
 
 template <typename T>

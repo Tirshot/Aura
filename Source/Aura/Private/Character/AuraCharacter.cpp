@@ -22,7 +22,6 @@
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
-#include "Player/CharmComponent.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -60,16 +59,6 @@ AAuraCharacter::AAuraCharacter()
     MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("MiniMapCapture");
     MiniMapCapture->SetupAttachment(RootComponent);
 
-    // 인벤토리
-    Inventory = CreateDefaultSubobject<UInventoryComponent>("Inventory");
-    Inventory->SetIsReplicated(true);
-    
-    Equipment = CreateDefaultSubobject<UEquipmentComponent>("Equipment");
-    Equipment->SetIsReplicated(true);
-
-    Charm = CreateDefaultSubobject<UCharmComponent>("Charm");
-    Charm->SetIsReplicated(true);
-
     CharacterClass = ECharacterClass::Elementalist;
 }
 
@@ -89,6 +78,12 @@ void AAuraCharacter::BeginPlay()
         if (!IsLocallyControlled())
             MiniMapCapture->Deactivate();
     }
+    
+    if (APawn* Pawn = Cast<APawn>(this))
+    {
+        if (AAuraPlayerController* AuraPC = Pawn->GetController<AAuraPlayerController>())
+            AuraPC->OnCharacterInit.Broadcast(this);
+    }
 }
 
 void AAuraCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -106,30 +101,96 @@ void AAuraCharacter::PossessedBy(AController* NewController)
     if (HasAuthority())
     {
         InitAbilityActorInfo();
-
-        AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>();
-        if (AuraPS && !AuraPS->bIsDataLoaded) 
+        
+        if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>()) 
         {
-            // 게임 시작 시 저장 데이터 불러옴
-            LoadProgress();
-            
-            if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+            // 첫 게임 시작 시 저장 데이터 불러옴
+            if (!AuraPS->bIsDataLoaded)
+                LoadProgressFromSaveGame();
+            else
             {
-                AuraGameMode->Server_LoadWorldState(GetWorld());
+                // 맵 이동으로 인해 어빌리티 불러옴
+                LoadAbilitiesFromSaveGame();
             }
+            InitializeDefaultAttributes();
 
             // 플레이어 스테이트는 1회만 불러오면 됨
             AuraPS->bIsDataLoaded = true;
         }
-        else
+        
+        if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
         {
-            InitializeDefaultAttributes();
+            AuraGameMode->Server_LoadWorldState(GetWorld());
         }
     }
 }
 
-void AAuraCharacter::LoadProgress()
+void AAuraCharacter::LoadProgressFromSaveGame()
 {
+    if (!HasAuthority())
+        return;
+    
+    // 게임 인스턴스에 접근
+    if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+    {
+        // 저장 슬롯 찾기
+        const FString InGameLoadSlotName = AuraGI->LoadSlotName;
+        const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
+
+        ULoadScreenSaveGame* SaveData = AuraGI->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
+        if (SaveData == nullptr)
+            return;
+
+        UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
+        if (!AuraASC)
+            return;
+        
+        // 사망 태그 제거
+        FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+        AuraASC->RemoveLooseGameplayTag(DeadTag); 
+        
+        // 기본 어빌리티 부여
+        AddCharacterAbilites();
+            
+        // 첫 로딩일 때
+        if (SaveData->bFirstTimeLoading)
+        {
+            if (AuraASC)
+            {
+                // 기본 1차 속성 적용
+                InitializeDefaultAttributes();
+                SaveData->bFirstTimeLoading = false;
+            }
+        }
+        else
+        {
+            // 저장된 세이브에서 어빌리티 불러오기
+            AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
+            
+            // 저장된 데이터 불러오기
+            if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+            {
+                AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+                AuraPlayerState->SetXP(SaveData->XP);
+                AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
+                AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
+                
+                // 인벤토리 불러오기
+                UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(AuraPlayerState)->SetInventorySlots(SaveData->SavedInventorySlots);
+                UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(AuraPlayerState)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
+            }
+            // 1차 속성, 2차 속성 적용
+            UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
+        }
+    }
+}
+
+void AAuraCharacter::LoadAbilitiesFromSaveGame()
+{
+    if (!HasAuthority())
+        return;
+    
     // 게임 인스턴스에 접근
     if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
     {
@@ -149,46 +210,11 @@ void AAuraCharacter::LoadProgress()
         FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
         AuraASC->RemoveLooseGameplayTag(DeadTag); 
         
-        // 첫 로딩일 때
-        if (SaveData->bFirstTimeLoading)
-        {
-            
-            if (AuraASC)
-            {
-                // 기본 1차 속성 적용
-                InitializeDefaultAttributes();
-                AddCharacterAbilites();
-            }
-        }
-        else
-        {
-            // 저장된 세이브에서 어빌리티 불러오기
-            AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
-            
-            // 저장된 데이터 불러오기
-            if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
-            {
-                AuraPlayerState->SetLevel(SaveData->PlayerLevel);
-                AuraPlayerState->SetXP(SaveData->XP);
-                AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
-                AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
-                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
-                
-                // 클라이언트에서 작동 중이면
-                if (IsLocallyControlled())
-                {
-                    // 서버에서 동기화
-                    AuraPlayerState->Server_SyncPlayerStatFromClient(SaveData->PlayerLevel, SaveData->XP, SaveData->AttributePoints, SaveData->SpellPoints);
-                    AuraPlayerState->Server_SyncPlayerUpgradeListFromClient(SaveData->SavedAbilityUpgradeList);
-                }
-                
-                // 인벤토리 불러오기
-                IPlayerInterface::Execute_GetInventoryComponent(this)->SetInventorySlots(SaveData->SavedInventorySlots);
-                IPlayerInterface::Execute_GetEquipmentComponent(this)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
-            }
-            // 1차 속성, 2차 속성 적용
-            UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
-        }
+        // 시작 어빌리티 부여
+        AddCharacterAbilites();
+        
+        // 저장된 세이브에서 어빌리티 불러오기
+        AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
     }
 }
 
@@ -198,9 +224,10 @@ void AAuraCharacter::OnRep_PlayerState()
 
     // 어빌리티 액터 정보 초기화
     InitAbilityActorInfo();
+    InitializeDefaultAttributes();
     
     // 저장 데이터 불러오기
-    LoadProgress();
+    // LoadProgress();
 }
 
 void AAuraCharacter::OnRep_Controller()
@@ -462,12 +489,39 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
 
 UInventoryComponent* AAuraCharacter::GetInventoryComponent_Implementation()
 {
-    return Inventory;
+    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+    {
+        return AuraPS->GetInventoryComponent();
+    }
+    return nullptr;
 }
 
 UEquipmentComponent* AAuraCharacter::GetEquipmentComponent_Implementation()
 {
-    return Equipment;
+    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+    {
+        return AuraPS->GetEquipmentComponent();
+    }
+    return nullptr;
+}
+
+void AAuraCharacter::InitializeDefaultAttributes() const
+{
+    // 기존에 적용된 이펙트 제거 후 재적용
+    AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultPrimaryAttributes, AbilitySystemComponent);
+    AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
+    AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
+    AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
+    
+    int32 Level = 1.f;
+    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+    {
+        Level = AuraPS->GetCharacterLevel();
+    }
+    ApplyEffectToSelf(DefaultPrimaryAttributes, Level);
+    ApplyEffectToSelf(DefaultSecondaryAttributes, Level);
+    ApplyEffectToSelf(InitializeVitalAttributes, Level);
+    ApplyEffectToSelf(InitializeRegenAttributes, Level);
 }
 
 int32 AAuraCharacter::GetCharacterLevel_Implementation()

@@ -54,7 +54,9 @@ public:
 	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
 	virtual void ShowDamageNumber_Implementation(float Damage, bool bBlocked, bool bCriticalHit, bool bHealed) override;
 	// 전투 인터페이스 끝
-
+	
+	virtual void InitializeDefaultAttributes() const override;
+	
 public:
 	TObjectPtr<class USpringArmComponent> GetSpringArmComponent(){return SpringArm;}
 	TObjectPtr<UBoxComponent> GetBoxComponent(){return Box;}
@@ -73,7 +75,8 @@ public:
 	virtual void OnRep_Burned() override;
 
 protected:
-	void LoadProgress();
+	void LoadProgressFromSaveGame();
+	void LoadAbilitiesFromSaveGame();
 
 private:
 	UFUNCTION(NetMulticast, Reliable)
@@ -93,15 +96,6 @@ private:
 	// 미니맵
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap", meta=(AllowPrivateAccess = true))
 	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
-	TObjectPtr<UInventoryComponent> Inventory;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
-	TObjectPtr<UEquipmentComponent> Equipment;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
-	TObjectPtr<UCharmComponent> Charm;
 	
 private:
 	virtual void InitAbilityActorInfo() override;

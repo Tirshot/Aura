@@ -9,6 +9,9 @@
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/ViewModel/MVVM_DebugMenu.h"
+#include "UI/Widget/AuraCenterDescriptionWidget.h"
+#include "UI/Widget/AuraMessageBoxWidget.h"
+#include "UI/Widget/AuraOverlayWidget.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "UI/Widget/LoadScreenWidget.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
@@ -116,12 +119,24 @@ UItemToolTipWidgetController* AAuraHUD::GetItemToolTipWidgetController(const FWi
     return ItemToolTipWidgetController;
 }
 
-UMVVM_Inventory* AAuraHUD::GetInventoryViewModel()
+UMVVM_CardSelection* AAuraHUD::GetCardSelectionViewModel()
+{
+    if (CardSelectionViewModel == nullptr)
+    {   // 없으면 생성
+        CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
+        CardSelectionViewModel->InitializeSlot();
+        CardSelectionViewModel->OnCardSelectionViewModelInitialized.Broadcast();
+    }
+
+    return CardSelectionViewModel;
+}
+
+UMVVM_Inventory* AAuraHUD::GetInventoryViewModel(const FWidgetControllerParams& WCParams)
 {
     if (!InventoryMenuViewModel)
     {
         InventoryMenuViewModel = NewObject<UMVVM_Inventory>(this, InventoryMenuViewModelClass);
-        InventoryMenuViewModel->BindDependencies();
+        InventoryMenuViewModel->BindDependencies(WCParams);
     }
     return InventoryMenuViewModel;
 }
@@ -135,8 +150,8 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     // 위젯 생성 후 오라 유저 위젯으로 캐스팅
     if (!IsValid(OverlayWidget))
     {
-        UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), OverlayWidgetClass);
-        OverlayWidget = Cast<UAuraUserWidget>(Widget);
+        UUserWidget* Widget = CreateWidget<UUserWidget>(PC, OverlayWidgetClass);
+        OverlayWidget = Cast<UAuraOverlayWidget>(Widget);
     }
     
     // 구조체에 할당 후 오버레이 위젯 컨트롤러를 초기화
@@ -153,6 +168,11 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     if (!OverlayWidget->IsInViewport())
     {
         OverlayWidget->AddToViewport();
+        if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(ASC))
+        {
+           AuraASC->AbilitiesGivenDelegate.Broadcast();
+        }
+        NewOverlayWidgetController->SetXPBarPercentToOwnValue();
     }
     
     // 게임오버 위젯 컨트롤러 생성
@@ -172,13 +192,7 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     SettingsMenuWidgetController = GetSettingsMenuWidgetController(WidgetControllerParams);
     
     // 카드 선택 UI 뷰 모델 생성
-    if (!IsValid(CardSelectionViewModel))
-    {
-        CardSelectionViewModel = NewObject<UMVVM_CardSelection>(this, CardSelectionViewModelClass);
-        CardSelectionViewModel->InitializeSlot();
-    }
-    
-    CardSelectionViewModel->OnCardSelectionViewModelInitialized.Broadcast();
+    CardSelectionViewModel = GetCardSelectionViewModel();
 
     if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PS))
     {
@@ -193,8 +207,7 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
         // DebugMenuViewModel->ViewModelInitialized();
     }
 
-    // 인벤토리 뷰 모델 생성
-    InventoryMenuViewModel = GetInventoryViewModel();
+    // 인벤토리 뷰 모델은 인벤토리 컴포넌트에서 생성
 }
 
 void AAuraHUD::ResetWidgetControllerAndViewModels()
@@ -247,6 +260,29 @@ void AAuraHUD::RemoveSaveProgressWidget()
     }
 }
 
+void AAuraHUD::CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetClass, FText Message, UTexture2D* Icon)
+{
+    UAuraUserWidget* MessageWidget = CreateWidget<UAuraUserWidget>(GetOwningPlayerController(), MessageWidgetClass);
+    if (UAuraMessageBoxWidget* AuraMessageBox = Cast<UAuraMessageBoxWidget>(MessageWidget))
+    {
+        // 메시지 박스에 내용 추가
+        OverlayWidget->WBP_MessageBox->AddTextMessageToBox(Message);
+    }
+					
+    // 중앙 설명 텍스트
+    if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(MessageWidget))
+    {
+        OverlayWidget->WBP_CenterTutorialDescription->TextBlock->SetText(Message);
+    }
+			
+    // 팝업 텍스트
+    if (MessageWidget->Implements<UMessageInterface>())
+    {
+        IMessageInterface::Execute_SetMessage(MessageWidget, Message, Icon);
+        MessageWidget->AddToViewport();
+    }
+}
+
 void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos)
 {
     // 뷰 생성
@@ -293,6 +329,11 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardViewModel_2->SetUpgradeRarity(UpgradeInfos[2].Rarity);
         
         CardViewModel_2->OnUpgradeTagAssignedDelegate.Broadcast(UpgradeInfos[2].UpgradeEffectTag);
+    }
+    
+    if (auto* AuraPC = Cast<AAuraPlayerController>(GetOwningPlayerController()))
+    {
+        AuraPC->HandleCardSelectionInitialized();
     }
 }
 

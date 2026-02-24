@@ -5,10 +5,13 @@
 #include "CoreMinimal.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Components/ActorComponent.h"
+#include "Net/Serialization/FastArraySerializer.h"
 #include "InventoryComponent.generated.h"
 
+class UEquipmentComponent;
+
 USTRUCT(BlueprintType)
-struct FInventorySlot
+struct FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
@@ -16,6 +19,9 @@ struct FInventorySlot
 	// 실제 데이터를 가지는 구조체
 	UPROPERTY(BlueprintReadOnly)
 	FDataTableRowHandle ItemHandle;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 SlotID = -1;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FItemData ItemData;
@@ -35,6 +41,9 @@ struct FInventorySlot
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsOccupied = false; 
 	
+	UPROPERTY()
+	class UInventoryComponent* Inventory;
+	
 	// 인덱스 공식
 	// 슬롯 = 열 x 행
 	// 인덱스 = 슬롯 가로크기(8) x (행-1) + (열-1)
@@ -49,6 +58,38 @@ struct FInventorySlot
 	{
 		return !(*this == Other);
 	}
+	
+	void PostReplicatedAdd(const struct FInventorySlotList& InArraySerializer);
+	void PostReplicatedChange(const struct FInventorySlotList& InArraySerializer);
+	void PreReplicatedRemove(const struct FInventorySlotList& InArraySerializer);
+};
+
+USTRUCT(BlueprintType)
+struct FInventorySlotList : public FFastArraySerializer
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FInventorySlot> Slots;
+
+	UPROPERTY()
+	class UInventoryComponent* Inventory = nullptr;
+	
+	void HandleUIUpdate(int32 Index);
+	void HandleUIUpdateToSlotList();
+
+	// 직렬화
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+	{
+		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotList>(Slots, DeltaParms, *this);
+	}
+};
+
+// FastArray 등록
+template<>
+struct TStructOpsTypeTraits<FInventorySlotList> : public TStructOpsTypeTraitsBase2<FInventorySlotList>
+{
+	enum { WithNetDeltaSerializer = true };
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventorySlotChanged, int32, SlotIndex);
@@ -66,13 +107,18 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-	
-public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+public:	
+	UFUNCTION()
+	void InventorySlotItemChanged(int32 Index);
+	
+	UFUNCTION()
+	void InventorySlotListChanged();
 
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnInventorySlotChanged OnInventorySlotChanged;
-
+	
 	UPROPERTY(BlueprintAssignable, Category="Inventory")
 	FOnItemGet OnItemGet;
 	
@@ -95,12 +141,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool CanPlaceItemToIndex(const FItemData& ItemData, int index);
 	bool PlaceItemAt(const FItemData& ItemData, int AddCount, int TargetIndex, bool bIsItemMoved = false);
-	void ClearItemAt(int TargetIndex);
+	bool ClearItemAt(int TargetIndex);
 
 	FInventorySlot* GetSlotByIndex(int index);
 
 	bool IsItemStackable(const FItemData& ItemData) const;
-	
 	bool HasItem(const FItemData& ItemData) const;
 
 	// 불러오기 용도
@@ -115,16 +160,16 @@ public:
 
 	// 드래그를 위해 집어들었을 때 기존 데이터 정리
 	UFUNCTION()
-	void ClearItemSpace_Internal(const FIntPoint& StartPoint, const FIntPoint& ItemSize);
+	bool ClearItemSpace_Internal(const FIntPoint& StartPoint, const FIntPoint& ItemSize);
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_MoveItem(int OriginalIndex, int TargetIndex);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RemoveItemToWorld(int OriginalIndex);
+	UFUNCTION(BlueprintCallable)
+	void RemoveItemToWorld(int OriginalIndex);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RemoveItemToEquip(int OriginIndex);
+	UFUNCTION(BlueprintCallable)
+	void RemoveItemToEquip(int OriginIndex);
 	
 	// 아이템 슬롯 찾기
 	FInventorySlot* FindItemSlot(FName ItemID, bool& bFound);
@@ -137,6 +182,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	const TArray<FInventorySlot>& GetSlots() const;
 	
+	FInventorySlotList& GetSlotList() {return SlotList;}
+	
 	UFUNCTION(BlueprintCallable)
 	int GetDragItemIndex() const;
 	
@@ -144,11 +191,7 @@ public:
 	void SetDragItemIndex(int DragIndex) {DragItemIndex = DragIndex;}
 	
 	FItemData GetCurrentDragItemData() const;
-	FItemData* GetItemData(FName ItemName);
-	
-public:
-	// 참 아이템 효과 적용
-	
+	const FItemData* GetItemData(FName ItemName);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Inventory")
@@ -159,23 +202,27 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Inventory")
 	int32 InventoryHeight = 5;
-
-protected:
-	// 네트워크 환경에서 인벤토리
-	UPROPERTY(ReplicatedUsing = OnRep_Slots)
-	TArray<FInventorySlot> Slots;
-	
-	UPROPERTY()
-	TArray<FInventorySlot> PrevSlots;
 	
 	UPROPERTY(BlueprintReadWrite)
 	int DragItemIndex = -1;
 	
 	UPROPERTY(BlueprintReadWrite)
 	FItemData CurrentDragItemData;
+	
+	UPROPERTY()
+	UEquipmentComponent* EquipmentComponent;
 
-private:
+protected:
+	// 네트워크 환경에서 인벤토리
+	UPROPERTY(ReplicatedUsing = OnRep_SlotList)
+	FInventorySlotList SlotList;
+	
+public:
+	//
 	UFUNCTION()
-	void OnRep_Slots();
+	void OnRep_SlotList();
+	
+	UFUNCTION()
+	void OnCharacterInitialized(ACharacter* Character);
 		
 };

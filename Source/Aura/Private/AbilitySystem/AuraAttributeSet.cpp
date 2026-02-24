@@ -17,6 +17,7 @@
 #include "AbilitySystem/Abilities/ManaSiphon.h"
 #include "Character/AuraCharacter.h"
 #include "Character/AuraCharacterBase.h"
+#include "Game/AuraGameInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -437,13 +438,22 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
             IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
             IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
 
-            // 체력과 마나 회복하기
-            bTopOffHealth = true;
-            bTopOffMana = true;
-
+            // 체력, 마나 회복
+            if (UAbilitySystemComponent* SourceASC = Props.SourceASC)
+            {
+                if (ACharacter* SourceCharacter = Props.SourceCharacter)
+                {
+                    if (UAuraGameInstance* AuraGI = SourceCharacter->GetGameInstance<UAuraGameInstance>())
+                    {
+                        TSubclassOf<UGameplayEffect> FullHPMPEffectClass = AuraGI->FullHPMPEffect;
+                        FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+                        FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(FullHPMPEffectClass, 1.f, Context);
+                        SourceASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+                    }
+                }
+            }
             IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
         }
-
         IPlayerInterface::Execute_AddToXP(Props.SourceCharacter, LocalIncomingXP);
     }
 }
@@ -451,19 +461,6 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
 void UAuraAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
     Super::PostAttributeChange(Attribute, OldValue, NewValue);
-
-    // 레벨업 체크 불리언
-    if (Attribute == GetMaxHealthAttribute() && bTopOffHealth)
-    {
-        SetHealth(GetMaxHealth());
-        bTopOffHealth = false;
-    }
-
-    if (Attribute == GetMaxManaAttribute() && bTopOffMana)
-    {
-        SetMana(GetMaxMana());
-        bTopOffMana = false;
-    }
 }
 
 

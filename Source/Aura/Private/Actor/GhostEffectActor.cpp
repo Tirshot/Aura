@@ -6,6 +6,7 @@
 AGhostEffectActor::AGhostEffectActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GhostMesh"));
 	SetRootComponent(Mesh);
