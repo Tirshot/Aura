@@ -25,8 +25,10 @@
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameStateBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interaction/CombatInterface.h"
@@ -93,20 +95,25 @@ void AAuraPlayerController::BeginPlay()
         TutorialDialogueViewModel->BlueprintInitialize();
         ShowTutorialUI(true);
     }
+    
+    // 이미 서버에 보스가 등록되어 있는 상태에서 늦게 생성되었다면 호출
+    if (AAuraGameStateBase* GS = Cast<AAuraGameStateBase>(GetWorld()->GetGameState()))
+    {
+        if (GS->GetBossCharacterArrayLength() > 0)
+        {
+            BossMonsterBind();
+        }
+    }
 }
 
 void AAuraPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
-    OnBossMonsterAdded.AddUObject(this, &AAuraPlayerController::BossMonsterBind);
-
-    if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
+    
+    // 인벤토리 뷰모델 초기화
+    if (AAuraPlayerState* MyPS = GetPlayerState<AAuraPlayerState>())
     {
-        auto BossArray = AuraGM->GetBossCharactersArray();
-        if (BossArray.Num() > 0)
-        {
-            OnBossMonsterAdded.Broadcast();
-        }
+        HandleInventoryUIInit();
     }
 }
 
@@ -116,6 +123,22 @@ void AAuraPlayerController::AcknowledgePossession(APawn* P)
     
     // TODO::클라이언트 또한 보스 몬스터 이벤트에 바인딩 해야함 
     
+    
+    // 인벤토리 뷰모델 초기화
+    if (AAuraPlayerState* MyPS = GetPlayerState<AAuraPlayerState>())
+    {
+        if (UInventoryComponent* InventoryComponent = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(MyPS))
+        {
+            if (InventoryComponent->GetSlots().Num() > 0)
+            {
+                HandleInventoryUIInit();
+            }
+            else
+            {
+                InventoryComponent->SlotsReplicated.AddUObject(this, &AAuraPlayerController::HandleInventoryUIInit);
+            }
+        }
+    }
 }
 
 
@@ -146,9 +169,9 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
     
-    if (GetASC())
+    if (AAuraCharacterBase* Aura = Cast<AAuraCharacterBase>(GetPawn()))
     {
-        if (GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+        if (ICombatInterface::Execute_IsDead(Aura))
             return;
     }
 
@@ -182,12 +205,15 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
     }
 }
 
+void AAuraPlayerController::OnRep_PlayerState()
+{
+    Super::OnRep_PlayerState();
+}
+
 void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
 {
-    if (!IsLocalController())
-        return;
-
-    if (!InCharacter)
+    //
+    if (!IsLocalController() || !InCharacter || InCharacter != GetPawn())
         return;
     
     if (!InCharacter->IsLocallyControlled())
@@ -199,26 +225,6 @@ void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
     {
         EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(InCharacter);
         InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(InCharacter);
-    }
-    
-    // 인벤토리의 각 슬롯 뷰 모델 생성 및 초기화
-    if (InventoryComponent)
-    {
-        if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
-        {
-            FWidgetControllerParams WCParams;
-            WCParams.PlayerController = this;
-            WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InCharacter);
-            WCParams.PlayerState = GetPlayerState<APlayerState>();
-            if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(WCParams.PlayerState))
-            {
-                WCParams.AttributeSet = AuraPS->GetAttributeSet();
-            }
-            if (UMVVM_Inventory* ViewModel = AuraHUD->GetInventoryViewModel(WCParams))
-            {
-                ViewModel->InitializeSlots();
-            }
-        }
     }
 }
 
@@ -259,6 +265,15 @@ void AAuraPlayerController::AutoRun()
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
+        }
+        
+        // 미니맵 갱신
+        if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(ControlledPawn))
+        {
+            if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
+            {
+                MiniMapCapture->CaptureScene();
+            }
         }
     }
 }
@@ -316,9 +331,9 @@ void AAuraPlayerController::StopAutoRun()
 void AAuraPlayerController::BossMonsterBind()
 {
     // 게임 모드의 보스 배열에 접근하여 몽타주 이벤트에 바인딩
-    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    if (AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
-        auto BossArray = AuraGameMode->GetBossCharactersArray();
+        auto BossArray = AuraGS->GetBossCharactersArray();
         for (const auto Boss : BossArray)
         {
             if (!Boss.Get()->OnBossEventStart.IsAlreadyBound(this, &AAuraPlayerController::OnBossEventStart))
@@ -329,6 +344,11 @@ void AAuraPlayerController::BossMonsterBind()
             
             if (!Boss.Get()->OnDeath.IsAlreadyBound(this, &AAuraPlayerController::OnBossDead))
                 Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
+            
+            if (Boss->bIsRoaring)
+            {
+                OnBossEventStart(Boss.Get()); 
+            }
         }
     }
 }
@@ -344,6 +364,8 @@ void AAuraPlayerController::OnBossEventStart(AActor* BossActor)
     // 플레이어 입력 방지
     SetPlayerInputEnable(false);
     
+    StopAutoRun();
+    
     ChangeCameraToBossActor(BossActor, 0.25f, 3.f);
 }
 
@@ -358,6 +380,8 @@ void AAuraPlayerController::OnBossEventEnd(AActor* BossActor)
     // 플레이어 입력 활성화
     SetPlayerInputEnable(true);
 
+    StopAutoRun();
+    
     ChangeCameraToOwn(0.5f);
 }
 
@@ -677,6 +701,9 @@ void AAuraPlayerController::HandleCardSelectionInitialized()
                         CardViewModel->OnUpgradeSelectedDelegate.AddDynamic(this, &AAuraPlayerController::HandleAbilityCardSelected);
                 }
             }
+            
+            // 게임 일시정지 요청
+            Server_RequestPauseGame(this);
         }
     }
 }
@@ -684,6 +711,8 @@ void AAuraPlayerController::HandleCardSelectionInitialized()
 void AAuraPlayerController::HandleAbilityCardSelected(FGameplayTag SelectedUpgradeTag)
 {
     Server_SelectUpgrade(SelectedUpgradeTag);
+    
+    Server_RequestUnPauseGame(this);
     
     // 델리게이트 언바인드
     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
@@ -718,6 +747,8 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 {
     Server_SelectUpgrade(SelectedUpgradeInfo[0].UpgradeEffectTag);
 
+    Server_RequestUnPauseGame(this);
+    
     // 카드 선택 UI 닫기
     if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
     {
@@ -729,6 +760,75 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
     Server_CreateCardSelection(GetPawn());
+}
+
+void AAuraPlayerController::HandleInventoryUIInit()
+{
+    if (AAuraPlayerState* MyPS = GetPlayerState<AAuraPlayerState>())
+    {
+        if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
+        {
+            FWidgetControllerParams WCParams;
+            WCParams.PlayerController = this;
+            WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(this->GetPawn());
+            WCParams.PlayerState = MyPS;
+            WCParams.AttributeSet = MyPS->GetAttributeSet();
+					
+            // 뷰 모델 생성
+            if (auto ViewModel = AuraHUD->GetInventoryViewModel(WCParams))
+            {
+                ViewModel->InitializeSlots();
+            }
+        }
+    }
+}
+
+void AAuraPlayerController::SaveCharacterProgress_Implementation()
+{
+    if (GetPawn()->Implements<UPlayerInterface>())
+    {
+        IPlayerInterface::Execute_SaveProgress( GetPawn(), "");
+    }
+}
+
+void AAuraPlayerController::Server_RequestUnPauseGame_Implementation(AAuraPlayerController* RequestedPC)
+{
+    FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(TEXT("Message.GamePausedBy"));
+    FText AppendText = FText::FromString(RequestedPC->PlayerState->GetPlayerName());
+    
+    if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
+    {
+        GameMode->ClearPause();
+    }
+    
+    for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        AAuraPlayerController* PC = Cast<AAuraPlayerController>(It->Get());
+        if (PC && PC != this)
+        {
+            UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(PC->GetASC(), MessageTag);
+        }
+    }
+}
+
+void AAuraPlayerController::Server_RequestPauseGame_Implementation(AAuraPlayerController* RequestedPC)
+{
+    FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(TEXT("Message.GamePausedBy"));
+    FText AppendText = FText::FromString(RequestedPC->PlayerState->GetPlayerName());
+    
+    for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        AAuraPlayerController* PC = Cast<AAuraPlayerController>(It->Get());
+        if (PC && PC != this)
+        {
+            UAuraAbilitySystemLibrary::AddMessageToActor(PC->GetPawn(), MessageTag, AppendText);
+        }
+    }
+    
+    if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
+    {
+        GameMode->SetPause(this); 
+    }
 }
 
 void AAuraPlayerController::Server_TryRemoveItem_Implementation(int32 SlotIndex)
@@ -804,8 +904,16 @@ void AAuraPlayerController::Server_StartSpectating_Implementation()
     if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
     {
         AActor* SpectatingPawn = nullptr;
-        for (TSoftObjectPtr<AAuraPlayerController> SpectatingPlayer : AuraGM->GetPlayersArray())
+        for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
         {
+            APlayerController* PC = It->Get();
+            if (!PC)
+                continue;
+            
+            AAuraPlayerController* SpectatingPlayer = Cast<AAuraPlayerController>(PC);
+            if (!SpectatingPlayer)
+                continue;
+            
             SpectatingPawn = SpectatingPlayer->GetPawn();
             if (SpectatingPawn && SpectatingPawn != GetPawn())
             {
@@ -957,7 +1065,7 @@ void AAuraPlayerController::Server_SelectUpgrade_Implementation(FGameplayTag Sel
         // 자동 저장
         if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
         {
-            AuraGM->Server_GameAutoSave();
+            AuraGM->GameAutoSave();
         }
     }
 }
@@ -1002,7 +1110,15 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
         }
         return;
     }
-
+    
+    if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetPawn()))
+    {
+        if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
+        {
+            MiniMapCapture->CaptureScene();
+        }
+    }
+    
     SetAutoRunning(false);
 
     const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
@@ -1181,11 +1297,17 @@ void AAuraPlayerController::CursorTrace()
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
     // 입력 상태 태그 확인
-    if (!GetASC())
+    UAuraAbilitySystemComponent* ASC = GetASC();
+    if (!ASC)
         return;
     
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
-        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    if (AAuraCharacterBase* Aura = Cast<AAuraCharacterBase>(GetPawn()))
+    {
+        if (ICombatInterface::Execute_IsDead(Aura))
+            return;
+    }
+    
+    if (ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
         StopAutoRun();
         return;
@@ -1232,45 +1354,48 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
         TargetItem = ThisActor;
     }
 
-    if (GetASC())
-    {
-        GetASC()->AbilityInputTagPressed(InputTag);
-    }
+    if (ASC)
+        ASC->AbilityInputTagPressed(InputTag);
     
     StopAutoRun();
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-    // 입력 상태 태그 확인
-    if (!GetASC())
+    UAuraAbilitySystemComponent* ASC = GetASC();
+    if (!ASC)
         return;
     
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
-        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
         StopAutoRun();
         return;
     }
     
+    if (AAuraCharacterBase* Aura = Cast<AAuraCharacterBase>(GetPawn()))
+    {
+        if (ICombatInterface::Execute_IsDead(Aura))
+            return;
+    }
+    
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
-        if (GetASC())
-            GetASC()->AbilityInputTagReleased(InputTag);
+        if (ASC)
+            ASC->AbilityInputTagReleased(InputTag);
 
         return;
     }
 
-    if (GetASC())
-         GetASC()->AbilityInputTagReleased(InputTag);
+    if (ASC)
+         ASC->AbilityInputTagReleased(InputTag);
 
     // 타겟이 없고 쉬프트키가 눌리지 않았다면
     if (TargetingStatus != ETargetingStatus::TargetingEnemy && !bShiftKeyDown)
     {
         // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
         const APawn* ControlledPawn = GetPawn();
-        if (FollowTime <= ShortPressThresold && ControlledPawn)
+        if (FollowTime <= ShortPressThreshold && ControlledPawn)
         {
             if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
             {
@@ -1305,12 +1430,17 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-    // 입력 상태 태그 확인
-    if (!GetASC())
+    UAuraAbilitySystemComponent* ASC = GetASC();
+    if (!ASC)
         return;
+        
+    if (AAuraCharacterBase* Aura = Cast<AAuraCharacterBase>(GetPawn()))
+    {
+        if (ICombatInterface::Execute_IsDead(Aura))
+            return;
+    }
     
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed)
-        || GetASC()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
         StopAutoRun();
         return;
@@ -1319,8 +1449,8 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
-        if (GetASC())
-            GetASC()->AbilityInputTagHeld(InputTag);
+        if (ASC)
+            ASC->AbilityInputTagHeld(InputTag);
 
         return;
     }
@@ -1328,8 +1458,8 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     // 타겟
     if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
     {
-        if (GetASC())
-            GetASC()->AbilityInputTagHeld(InputTag);
+        if (ASC)
+            ASC->AbilityInputTagHeld(InputTag);
     }
     else // 이동
     {
@@ -1348,6 +1478,15 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
             // 방향 벡터 구하기
             const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
             ControlledPawn->AddMovementInput(WorldDirection);
+            
+            // 미니맵 갱신
+            if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(ControlledPawn))
+            {
+                if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
+                {
+                    MiniMapCapture->CaptureScene();
+                }
+            }
         }
     }
 }

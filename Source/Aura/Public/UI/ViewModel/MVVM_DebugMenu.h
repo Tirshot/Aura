@@ -59,4 +59,11 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	bool bAuraInfiniteMana;
+	
+public:
+	UPROPERTY()
+	APlayerController* PlayerController;
+	
+	UPROPERTY()
+	APlayerState* PlayerState;
 };

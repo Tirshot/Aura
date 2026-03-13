@@ -12,6 +12,7 @@
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 ACheckPoint::ACheckPoint(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -95,6 +96,14 @@ void ACheckPoint::LoadActor_Implementation()
 	}
 }
 
+void ACheckPoint::OnRep_Reached()
+{
+	if (bReached)
+	{
+		HandleGlowEffects();
+	}
+}
+
 void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// 캐릭터 저장
@@ -134,8 +143,8 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 				FString MapName = World->GetMapName();
 				MapName.RemoveFromStart(World->StreamingLevelsPrefix);
 			
-				AuraGM->Server_SaveWorldState(GetWorld(), MapName);
-				AuraGM->Client_SaveCharacterProgress();
+				AuraGM->SaveWorldState(GetWorld(), MapName);
+				AuraGM->SaveAllCharacters();
 			}
 		}
 
@@ -149,6 +158,13 @@ void ACheckPoint::BeginPlay()
 
 	if (bBindOverlapCallback)
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACheckPoint::OnSphereOverlap);
+}
+
+void ACheckPoint::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ACheckPoint, bReached);
 }
 
 void ACheckPoint::HandleGlowEffects(AActor* InteractedActor)

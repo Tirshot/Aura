@@ -70,10 +70,7 @@ public:
 
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UMVVM_CardSelection* GetCardSelectionViewModel(const UObject* WorldContextObject);
-
-	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
-	static UMVVM_Inventory* GetInventoryMenuViewModel(const UObject* WorldContextObject);
-
+	
 	/*
 	* 어빌리티 시스템 초기화
 	*/
@@ -85,6 +82,9 @@ public:
 	// 세이브 된 기본 속성 적용 게임플레이 이펙트
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributesFromSaveData(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ULoadScreenSaveGame* SaveGame);
+	
+	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
+	static void InitializeDefaultAttributesFromAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana);
 
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, UAttributeSet* AS);

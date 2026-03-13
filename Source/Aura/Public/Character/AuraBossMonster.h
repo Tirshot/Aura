@@ -21,8 +21,13 @@ class AURA_API AAuraBossMonster : public AAuraEnemy
 
 public:
 	AAuraBossMonster();
+	void BossMontageBind();
+	
+	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
-
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+public:
 	UPROPERTY()
 	FOnBossEventStart OnBossEventStart;
 	
@@ -53,7 +58,13 @@ public:
 public:
 	UFUNCTION()
 	void BeginBerserkMode(float NewHealth);
+	
+	UFUNCTION()
+	void OnRep_IsRoaring();
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsRoaring)
+	bool bIsRoaring = false;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float BeginBerserkRatio = 0.5f;

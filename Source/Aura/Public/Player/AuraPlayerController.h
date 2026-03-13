@@ -56,6 +56,7 @@ protected:
 	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
+	virtual void OnRep_PlayerState() override;
 	
 public:
 	UFUNCTION()
@@ -112,7 +113,10 @@ public:
 	// 리롤 버튼 클릭
 	UFUNCTION()
 	void HandleAbilityCardRerollSelected();
-
+	
+	UFUNCTION()
+	void HandleInventoryUIInit();
+	
 public:
 	/*
 	//	서버 RPC 함수
@@ -148,8 +152,17 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CharacterInfiniteMana(bool bInfiniteMana);
 	
+	UFUNCTION(Client, Reliable)
+	void SaveCharacterProgress();
+	
 	UFUNCTION(Server, Reliable)
 	void Server_ReviveFromPlayerStart();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_RequestPauseGame(AAuraPlayerController* RequestedPC);
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestUnPauseGame(AAuraPlayerController* RequestedPC);
 
 	// 사망 후 관전
 	UFUNCTION(Server, UnReliable)
@@ -235,7 +248,7 @@ protected:
 	/* 클릭으로 이동 */
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
-	float ShortPressThresold = 0.5f;
+	float ShortPressThreshold = 0.5f;
 	bool bAutoRunning = false;
 	ETargetingStatus TargetingStatus = ETargetingStatus::None;
 

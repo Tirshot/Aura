@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AuraAbilitySystemComponent.generated.h"
 
+struct FSavedAbility;
 class ULoadScreenSaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer&, AssetTags/*에셋 태그들*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAbilitiesGiven);
@@ -54,6 +55,7 @@ public:
 
 	// 어빌리티 부여
 	void AddCharacterAbilitiesFromSaveData(ULoadScreenSaveGame* SaveData);
+	void AddCharacterAbilitiesFromArray(const TArray<FSavedAbility>& SavedAbilities);
 	void AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities);
 	void AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
 	bool bStartupAbilitiesGiven = false;

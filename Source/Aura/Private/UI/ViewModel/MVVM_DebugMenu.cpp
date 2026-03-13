@@ -44,9 +44,13 @@ void UMVVM_DebugMenu::VisibleNextButton(bool bVisible)
 	{
 		AuraGI->SetVisibleNextButton(bVisible);
 	}
-	if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+	
+	if (PlayerController)
 	{
-		OverlayWC->OnNextButtonVisibilityChanged.Broadcast(bVisible);
+		if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(PlayerController))
+		{
+			OverlayWC->OnNextButtonVisibilityChanged.Broadcast(bVisible);
+		}
 	}
 }
 
@@ -56,9 +60,12 @@ void UMVVM_DebugMenu::VisibleLevelUpButton(bool bVisible)
 	{
 		AuraGI->SetVisibleLevelUpButton(bVisible);
 	}
-	if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+	if (PlayerController)
 	{
-		OverlayWC->OnLevelUpButtonVisibilityChanged.Broadcast(bVisible);
+		if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(PlayerController))
+		{
+			OverlayWC->OnNextButtonVisibilityChanged.Broadcast(bVisible);
+		}
 	}
 }
 
@@ -110,6 +117,6 @@ void UMVVM_DebugMenu::OnForcingSaveButtonPressed()
 {
 	if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
 	{
-		AuraGM->Server_GameAutoSave();
+		AuraGM->GameAutoSave();
 	}
 }

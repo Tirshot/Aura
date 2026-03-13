@@ -105,6 +105,9 @@ public:
 	UFUNCTION()
 	virtual void OnRep_Burned();
 	
+	UFUNCTION()
+	virtual void OnRep_Invincible();
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo();
@@ -125,10 +128,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName TailSocketName;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bDead = false;
 		
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing=OnRep_Invincible)
 	bool bInvincible = false;
 		
 	// GAS
@@ -160,6 +163,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
 	TSubclassOf<UGameplayEffect> InfiniteManaGameplayEffectClass;
 	
+	// 소환수 사망시키는 이펙트
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities | Effects")
 	TSubclassOf<UGameplayEffect> DeadEffectClass;
 	
@@ -210,6 +214,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UDebuffNiagaraComponent> StunDebuffComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UDebuffNiagaraComponent> InvincibleBuffComponent;
 
 protected:
 	// 어빌리티 부여

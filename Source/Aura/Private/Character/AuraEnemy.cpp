@@ -15,6 +15,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "Character/AuraBossMonster.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameStateBase.h"
 
 
 AAuraEnemy::AAuraEnemy()
@@ -51,11 +52,6 @@ void AAuraEnemy::PossessedBy(AController* NewController)
     if (!HasAuthority())
         return;
 
-    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
-    {
-        AuraGameMode->AddMonsterToArray(this);
-    }
-
     AuraAIController = Cast<AAuraAIController>(NewController);
 
     // 블랙보드 초기화
@@ -76,6 +72,12 @@ void AAuraEnemy::PossessedBy(AController* NewController)
 
     // 근거리, 원거리 판정
     AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Warrior);
+
+    AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>();
+    if (!AuraGS)
+        return;
+
+    AuraGS->AddMonsterToArray(this);
 }
 
 void AAuraEnemy::HighlightActor_Implementation()
@@ -112,9 +114,9 @@ void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 
     HealthBar->DestroyComponent();
     
-    if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
+    if (AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
-        AuraGameMode->RemoveMonsterFromArray(this);
+        AuraGS->RemoveMonsterFromArray(this);
     }
 
     // 수명 설정

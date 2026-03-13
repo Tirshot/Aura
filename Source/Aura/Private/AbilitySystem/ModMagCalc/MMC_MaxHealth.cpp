@@ -10,7 +10,7 @@ UMMC_MaxHealth::UMMC_MaxHealth()
 	VigorDef.AttributeToCapture = UAuraAttributeSet::GetVigorAttribute();
 	VigorDef.AttributeSource = EGameplayEffectAttributeCaptureSource::Target;
 	VigorDef.bSnapshot = false;
-
+	
 	RelevantAttributesToCapture.Add(VigorDef);
 }
 

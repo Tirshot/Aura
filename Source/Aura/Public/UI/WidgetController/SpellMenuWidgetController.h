@@ -55,7 +55,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FTutorialAssignedSignature ElectrocuteAssignedDelegate;
-	
 	UFUNCTION(BlueprintCallable)
 	void SpellGlobeSelected(const FGameplayTag& AbilityTag);
 

@@ -50,10 +50,10 @@ void AMapEntrance::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAc
 			FString MapName = AuraGM->GetMapNameFromMapAssetName(DestinationMap.ToSoftObjectPath().GetAssetName());
 			
 			// 캐릭터 저장
-			AuraGM->Client_SaveCharacterProgress();
+			AuraGM->SaveAllCharacters();
 			
 			// 서버 이동 및 저장
-			AuraGM->Server_SaveWorldStateAndTravel(GetWorld(), MapName);
+			AuraGM->SaveWorldStateAndTravel(GetWorld(), MapName);
 		}
 	}
 }

@@ -12,6 +12,7 @@
 struct FWidgetControllerParams;
 class UEquipmentComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemDataMissing, int, DataMissingSlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryOpened, bool, bIsOpened);
 
 UCLASS()
 class AURA_API UMVVM_Inventory : public UMVVMViewModelBase
@@ -23,6 +24,12 @@ public:
 
 public:
 	FOnItemDataMissing DataMissingSlotIndex;
+	
+	UPROPERTY(BlueprintCallable)
+	FOnInventoryOpened InventoryOpened;
+	
+	UFUNCTION()
+	void OnInventoryOpened(bool bIsOpened);
 	
 	UFUNCTION(BlueprintCallable)
 	void InitializeSlots();
@@ -38,6 +45,7 @@ public:
 
 public:
 	UMVVM_InventorySlot* GetSlotViewModel(int Index);
+	UInventoryComponent* GetInventoryComponent();
 	
 public:
 	const TArray<UMVVM_InventorySlot*>& GetSlotViewModels() const {return SlotViewModels;}

@@ -275,19 +275,24 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
         if (bFatal)
         {
             bool bIsXPOverridden = false;
+            if (UAuraGameInstance* AuraGI = Props.TargetCharacter->GetGameInstance<UAuraGameInstance>())
+            {
+                FGameplayEffectContextHandle Context = Props.TargetASC->MakeEffectContext();
+                FGameplayEffectSpecHandle SpecHandle = Props.TargetASC->MakeOutgoingSpec(AuraGI->DeadTagEffectClass, 1.f, Context);
+                if (SpecHandle.IsValid())
+                {
+                    Props.TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+                }
+            }
             
             ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
             if (CombatInterface)
             {
-                // 사망
-                FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-                Props.TargetASC->AddLooseGameplayTag(DeadTag); 
-                
                 auto DeathImpulse = UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle);
                 
                 AAuraCharacter* AuraCharacter = nullptr;
-                if (Props.SourceCharacter)
-                    AuraCharacter = Cast<AAuraCharacter>(SourceCharacter);
+                if (Props.TargetAvatarActor)
+                    AuraCharacter = Cast<AAuraCharacter>(Props.TargetAvatarActor);
                 
                 CombatInterface->Die(DeathImpulse, AuraCharacter);
                 
@@ -439,20 +444,30 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
             IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
 
             // 체력, 마나 회복
-            if (UAbilitySystemComponent* SourceASC = Props.SourceASC)
+            UAuraAbilitySystemComponent* SourceASC = Cast<UAuraAbilitySystemComponent>(Props.SourceASC);
+            if (!SourceASC)
+                return;
+            
+            // 어빌리티 상태 업데이트
+            SourceASC->UpdateAbilityStatus(NewLevel);
+            
+            IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
+            float CurrentVigor = GetVigor();
+            SetVigor(CurrentVigor);
+            
+            float CurrentIntelligence = GetIntelligence();
+            SetIntelligence(CurrentIntelligence);
+            
+            if (ACharacter* SourceCharacter = Props.SourceCharacter)
             {
-                if (ACharacter* SourceCharacter = Props.SourceCharacter)
+                if (UAuraGameInstance* AuraGI = SourceCharacter->GetGameInstance<UAuraGameInstance>())
                 {
-                    if (UAuraGameInstance* AuraGI = SourceCharacter->GetGameInstance<UAuraGameInstance>())
-                    {
-                        TSubclassOf<UGameplayEffect> FullHPMPEffectClass = AuraGI->FullHPMPEffect;
-                        FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
-                        FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(FullHPMPEffectClass, 1.f, Context);
-                        SourceASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-                    }
+                    TSubclassOf<UGameplayEffect> FullHPMPEffectClass = AuraGI->FullHPMPEffect;
+                    FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+                    FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(FullHPMPEffectClass, 1.f, Context);
+                    SourceASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
                 }
             }
-            IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
         }
         IPlayerInterface::Execute_AddToXP(Props.SourceCharacter, LocalIncomingXP);
     }

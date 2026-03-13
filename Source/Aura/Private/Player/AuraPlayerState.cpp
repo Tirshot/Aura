@@ -102,12 +102,6 @@ void AAuraPlayerState::CopyProperties(APlayerState* PlayerState)
         NewPlayerState->SetAttributePoints(AttributePoints);
         NewPlayerState->SetSpellPoints(SpellPoints);
         NewPlayerState->SetAbilityUpgradeTagContainer(OwnedAbilityUpgradeList);
-        
-        // 인벤토리
-        NewPlayerState->Inventory->SetInventorySlots(Inventory->GetSlots());
-        NewPlayerState->Inventory->GetSlotList().MarkArrayDirty();
-        NewPlayerState->Equipment->SetEquipmentSlots(Equipment->GetSlots());
-        NewPlayerState->Equipment->GetSlots().MarkArrayDirty();
     
         NewPlayerState->bIsDataLoaded = true;
     }
@@ -259,7 +253,7 @@ void AAuraPlayerState::InitializeDefaultAttributesFromAttributeSet(UAbilitySyste
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = NewASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(this);
 	
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes_Infinite, 1.f, SecondaryAttributesContextHandle);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = NewASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
 	NewASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
 
 	// 바이탈 속성 적용
@@ -490,8 +484,12 @@ void AAuraPlayerState::OnRep_UpgradeCardInfo()
 
 void AAuraPlayerState::OnRep_Level(int32 OldLevel)
 {
-    // 블루프린트로 전달
-    OnLevelChangedDelegate.Broadcast(Level, true);
+    OnLevelChangedDelegate.Broadcast(Level, bIsLevelInitialized);
+    if (!bIsLevelInitialized)
+    {
+        // 블루프린트로 전달
+        bIsLevelInitialized = true;
+    }
 }
 
 void AAuraPlayerState::OnRep_XP(int32 OldXP)

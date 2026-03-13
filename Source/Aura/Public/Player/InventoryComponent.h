@@ -95,6 +95,7 @@ struct TStructOpsTypeTraits<FInventorySlotList> : public TStructOpsTypeTraitsBas
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventorySlotChanged, int32, SlotIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemGet, int32, SlotIndex, bool, bIsItemMoved);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemoved, const FItemData&, RemovedItemData);
+DECLARE_MULTICAST_DELEGATE(FOnInventorySlotsReplicated);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AURA_API UInventoryComponent : public UActorComponent
@@ -216,7 +217,6 @@ protected:
 	// 네트워크 환경에서 인벤토리
 	UPROPERTY(ReplicatedUsing = OnRep_SlotList)
 	FInventorySlotList SlotList;
-	
 public:
 	//
 	UFUNCTION()
@@ -224,5 +224,7 @@ public:
 	
 	UFUNCTION()
 	void OnCharacterInitialized(ACharacter* Character);
+	
+	FOnInventorySlotsReplicated SlotsReplicated;
 		
 };

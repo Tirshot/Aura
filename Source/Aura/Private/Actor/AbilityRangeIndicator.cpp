@@ -3,14 +3,14 @@
 
 #include "Actor/AbilityRangeIndicator.h"
 
-#include "Character/AuraCharacter.h"
-#include "Components/CapsuleComponent.h"
 #include "Components/DecalComponent.h"
-#include "Player/AuraPlayerController.h"
+#include "Net/UnrealNetwork.h"
 
 AAbilityRangeIndicator::AAbilityRangeIndicator()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	
+	bReplicates = true;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 
@@ -40,11 +40,20 @@ AAbilityRangeIndicator::AAbilityRangeIndicator()
 	}
 }
 
+void AAbilityRangeIndicator::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAbilityRangeIndicator, IndicatorColor);
+	DOREPLIFETIME(AAbilityRangeIndicator, RangeShape);
+}
+
 void AAbilityRangeIndicator::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	IndicatorInitialized.AddDynamic(this, &AAbilityRangeIndicator::ShowIndicator);
+	DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
 }
 
 void AAbilityRangeIndicator::Tick(float DeltaTime)
@@ -53,8 +62,36 @@ void AAbilityRangeIndicator::Tick(float DeltaTime)
 
 }
 
+void AAbilityRangeIndicator::ShowIndicatorOwnerOnly()
+{
+	// 플레이어가 소환한 데칼인지 체크
+	if (APawn* AvatarPawn = Cast<APawn>(GetOwner()))
+	{
+		if (AvatarPawn->IsPlayerControlled())
+		{
+			// 컨트롤 중인 플레이어와 데칼을 소환한 플레이어가 동일한지 판단
+			bool bCheck = AvatarPawn->IsLocallyControlled();
+			if (!bCheck)
+			{
+				// 아니라면 데칼 숨김
+				DecalComponent->SetHiddenInGame(true);
+			}
+			else
+			{
+				// 맞다면 데칼 보여짐
+				DecalComponent->SetHiddenInGame(false);
+			}
+		}
+		else
+		{
+			// 몬스터가 소환한 데칼이라면 보여줌
+			DecalComponent->SetHiddenInGame(false);
+		}
+	}
+}
+
 void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape,
-	const FVector& Location, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
+                                           const FVector& Location, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
 {
 	Radius = InRadius;
 	Width = InWidth;
@@ -64,6 +101,12 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 
 	FVector Color = RGB / 100.f;
 
+	// 다이내믹 머티리얼의 값 변경
+	IndicatorColor = Color;
+	
+	// 몬스터를 제외하고, 소유자에게만 데칼 보임
+	ShowIndicatorOwnerOnly();
+	
 	FHitResult HitResult;
 	FCollisionQueryParams CollisionQueryParams;
 	CollisionQueryParams.AddIgnoredActor(AvatarActor);
@@ -82,7 +125,8 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			if (IsValid(CircleMaterial))
 			{
 				DecalComponent->SetMaterial(0, CircleMaterial);
-				DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
+				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+				OnRep_IndicatorColor();
 			}
 			
 			// 액터에게 붙일 경우
@@ -108,7 +152,8 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			if (IsValid(RectMaterial))
 			{
 				DecalComponent->SetMaterial(0, RectMaterial);
-				DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
+				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+				OnRep_IndicatorColor();
 			}
 			
 			// 액터에게 붙일 경우
@@ -133,7 +178,8 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			if (IsValid(RectMaterial))
 			{
 				DecalComponent->SetMaterial(0, RectMaterial);
-				DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
+				OnRep_IndicatorColor();
+				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
 			}
 			
 			// 액터에게 붙일 경우
@@ -158,6 +204,39 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			break;
 		}
 	}
-	// 다이내믹 머티리얼의 값 변경
-	DynamicMI->SetVectorParameterValue("OutlineColor", Color);
+}
+
+void AAbilityRangeIndicator::OnRep_IndicatorColor()
+{
+	UMaterialInterface* Target = nullptr;
+	switch (RangeShape)
+	{
+	case ERangeShape::ERS_Circle:
+		Target = CircleMaterial;
+		break;
+	case ERangeShape::ERS_Rectangle:
+		Target = RectMaterial;
+		break;
+	case ERangeShape::ERS_RectangleAndCircle:
+		Target = RectMaterial;
+		break;
+	}
+
+	if (Target)
+	{
+		DecalComponent->SetMaterial(0, Target);
+	}
+
+	DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
+	if (DynamicMI)
+	{
+		DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+	}
+}
+
+void AAbilityRangeIndicator::OnRep_Owner()
+{
+	Super::OnRep_Owner();
+	
+	ShowIndicatorOwnerOnly();
 }

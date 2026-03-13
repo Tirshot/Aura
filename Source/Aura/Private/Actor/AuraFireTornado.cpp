@@ -79,32 +79,38 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 
 	if (!OverlappingActors.IsEmpty())
 	{
-		FVector ActorLocation = FVector::ZeroVector;
+		AActor* TargetActor = nullptr;
 	
 		// 가장 먼 대상 스캔
 		int32 OverlappingActorsNum = OverlappingActors.Num() - 1;
 		for (int i = OverlappingActorsNum; i >= 0; i--)
 		{
-			if (!IsValid(OverlappingActors[i]))
+			AActor* Monster = OverlappingActors[i];
+			if (!IsValid(TargetActor))
 				continue;
 
-			if (!IsValidOverlap(OverlappingActors[i]))
+			if (!IsValidOverlap(TargetActor))
 				continue;
 			
 			// 아군 추적 금지
-			if (OverlappingActors[i]->ActorHasTag(FName("Player")))
+			if (TargetActor->ActorHasTag(FName("Player")))
 				continue;
 			
-			ActorLocation = OverlappingActors[i]->GetActorLocation();
+			TargetActor = Monster;
 			break;
 		}
+		
+		// 타겟 없으면 제자리 회전
+		if (TargetActor)
+		{
+			FVector TargetLocation = TargetActor->GetActorLocation();
+			FVector TornadoLocation = GetActorLocation();
 
-		FVector TornadoLocation = GetActorLocation();
+			TargetLocation.Z = TornadoLocation.Z;
 
-		ActorLocation.Z = TornadoLocation.Z;
-
-		FVector NewLocation = FMath::VInterpTo(TornadoLocation, ActorLocation, DeltaSeconds, MovementSpeed);
-		SetActorLocation(NewLocation, true);
+			FVector NewLocation = FMath::VInterpTo(TornadoLocation, TargetLocation, DeltaSeconds, MovementSpeed);
+			SetActorLocation(NewLocation, true);
+		}
 	}
 }
 

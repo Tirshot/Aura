@@ -3,15 +3,24 @@
 
 #include "CheckPoint/AbilityUpgradeChest.h"
 
+#include "Character/AuraCharacter.h"
 #include "Game/AuraGameInstance.h"
+#include "Game/AuraGameModeBase.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/AuraPlayerController.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 AAbilityUpgradeChest::AAbilityUpgradeChest(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	bReplicates = true;
+}
 
+void AAbilityUpgradeChest::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 void AAbilityUpgradeChest::LoadActor_Implementation()
@@ -50,25 +59,36 @@ void AAbilityUpgradeChest::LoadActor_Implementation()
 			}
 		}
 	}
-	
-	if (bReached)
-		Destroy();
+}
+
+FGuid AAbilityUpgradeChest::GetGuid_Implementation()
+{
+	return Guid;
+}
+
+bool AAbilityUpgradeChest::IsReached_Implementation()
+{
+	return bReached;
 }
 
 void AAbilityUpgradeChest::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 이미 존재하면 파괴
-	auto* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
-	if (AuraGI)
+	if (HasAuthority())
 	{
-		ULoadScreenSaveGame* SaveGame = Cast<ULoadScreenSaveGame>(UGameplayStatics::LoadGameFromSlot(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex));
-		if (SaveGame && SaveGame->OneTimeUseActors.Contains(Guid))
+		auto* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
+		if (AuraGI)
 		{
-			Destroy();
+			if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+			{
+				AuraGM->SaveOneTimeUseActor(Guid, bReached);
+			}
 		}
 	}
+		
+	if (bReached)
+		OnRep_Reached();
 }
 
 void AAbilityUpgradeChest::PostInitializeComponents()
@@ -80,6 +100,36 @@ void AAbilityUpgradeChest::PostInitializeComponents()
 	}
 }
 
+void AAbilityUpgradeChest::OnRep_Reached()
+{
+	Super::OnRep_Reached();
+	
+	if (bReached)
+		UpdateChestState();
+}
+
+void AAbilityUpgradeChest::UpdateChestState()
+{
+	if (bReached)
+	{
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+		SetActorTickEnabled(false);
+	}
+}
+
+#if WITH_EDITOR
+void AAbilityUpgradeChest::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+{
+	// 액터가 배치될 때 호출되는 함수
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (!Guid.IsValid())
+	{
+		Guid = FGuid::NewGuid();
+	}
+}
+#endif
+
 void AAbilityUpgradeChest::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                            UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -88,19 +138,21 @@ void AAbilityUpgradeChest::OnSphereOverlap(UPrimitiveComponent* OverlappedCompon
 	
 	if (OtherActor->Implements<UPlayerInterface>())
 	{
-		HandleGlowEffects(OtherActor);
-		
 		bReached = true;
-
-		// 사용한 액터로 기록
-		auto* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
-		if (AuraGI)
+		
+		CheckPointReached(DynamicMI, OtherActor);
+		
+		// 서버 - 맵 상태 저장
+		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
 		{
-			ULoadScreenSaveGame* SaveGame = Cast<ULoadScreenSaveGame>(UGameplayStatics::LoadGameFromSlot(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex));
-			if (SaveGame)
+			if (AAuraCharacter* Aura = Cast<AAuraCharacter>(OtherActor))
 			{
-				SaveGame->OneTimeUseActors.Add(Guid, true);
-				UGameplayStatics::SaveGameToSlot(SaveGame, AuraGI->LoadSlotName, AuraGI->LoadSlotIndex);
+				if  (AAuraPlayerController* AuraPC = Aura->GetController<AAuraPlayerController>())
+				{
+					AuraPC->Server_CreateCardSelection(OtherActor);
+					AuraGM->SaveOneTimeUseActor(Guid, true);
+					UpdateChestState();
+				}
 			}
 		}
 	}

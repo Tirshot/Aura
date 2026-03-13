@@ -29,6 +29,10 @@ AAuraCharacterBase::AAuraCharacterBase()
 	StunDebuffComponent = CreateDefaultSubobject<UDebuffNiagaraComponent>("StunDebuffComponent");
 	StunDebuffComponent->SetupAttachment(GetRootComponent());
 	StunDebuffComponent->DebuffTag = FAuraGameplayTags::Get().Debuff_Stun;
+	
+	InvincibleBuffComponent = CreateDefaultSubobject<UDebuffNiagaraComponent>("InvincibleBuffComponent");
+	InvincibleBuffComponent->SetupAttachment(GetRootComponent());
+	InvincibleBuffComponent->DebuffTag = FAuraGameplayTags::Get().State_DebugInvincible;
 
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetCapsuleComponent()->SetGenerateOverlapEvents(false);
@@ -77,7 +81,9 @@ void AAuraCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	DOREPLIFETIME(AAuraCharacterBase, bIsStunned);
 	DOREPLIFETIME(AAuraCharacterBase, bIsBurned);
+	DOREPLIFETIME(AAuraCharacterBase, bInvincible);
 	DOREPLIFETIME(AAuraCharacterBase, bIsBeingShock);
+	DOREPLIFETIME(AAuraCharacterBase, bDead);
 }
 
 float AAuraCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -101,7 +107,7 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse, AAuraCharacter* Killed
 
 	// 소환수 모두 제거
 	RemoveAllMinions();
-	
+                
 	bDead = true;
 }
 
@@ -180,6 +186,10 @@ void AAuraCharacterBase::OnRep_Stunned()
 }
 
 void AAuraCharacterBase::OnRep_Burned()
+{
+}
+
+void AAuraCharacterBase::OnRep_Invincible()
 {
 }
 

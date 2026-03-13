@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
 #include "Game/AuraGameInstance.h"
+#include "Game/AuraGameStateBase.h"
 #include "Interaction/SaveInterface.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "Interaction/PlayerInterface.h"
@@ -33,6 +34,7 @@ void AAuraGameModeBase::BeginPlay()
 	Super::BeginPlay();
 
 	OnAllActorsInvincible.AddDynamic(this, &AAuraGameModeBase::SetAllActorsInvincible);
+	OnSetActorInvincible.AddDynamic(this, &AAuraGameModeBase::SetActorInvincible);
 }
 
 void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -46,7 +48,12 @@ void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
 			AuraPS->OnPlayerStateInitialized.AddDynamic(this, &AAuraGameModeBase::HandlePlayerStateInitialized);
 		}
 		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(NewPlayer))
-			Players.AddUnique(AuraPC);
+		{
+			if (AAuraGameStateBase* AuraGameState = GetGameState<AAuraGameStateBase>())
+			{
+				AuraGameState->AddPlayerToArray(AuraPC);
+			}
+		}
 	}
 }
 
@@ -77,6 +84,39 @@ AActor* AAuraGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 		return SelectedActor;
 	}
 	return nullptr;
+}
+
+void AAuraGameModeBase::RestartPlayer(AController* NewPlayer)
+{
+	Super::RestartPlayer(NewPlayer);
+	AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(NewPlayer);
+	if (!AuraPC)
+		return;
+	
+	UAbilitySystemComponent* ASC = AuraPC->GetASC();
+	if (!ASC)
+		return;
+	
+	UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>();
+	if (!AuraGI)
+		return;
+}
+
+void AAuraGameModeBase::RestartPlayerAtPlayerStart(AController* NewPlayer, AActor* StartSpot)
+{
+	Super::RestartPlayerAtPlayerStart(NewPlayer, StartSpot);
+	
+	AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(NewPlayer);
+	if (!AuraPC)
+		return;
+	
+	UAbilitySystemComponent* ASC = AuraPC->GetASC();
+	if (!ASC)
+		return;
+	
+	UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>();
+	if (!AuraGI)
+		return;
 }
 
 void AAuraGameModeBase::DeleteSlot(const FString& SlotName, int32 SlotIndex)
@@ -112,7 +152,7 @@ ULoadScreenSaveGame* AAuraGameModeBase::RetrieveInGameSaveData(APlayerController
 
 void AAuraGameModeBase::SaveInGameProgressData(ULoadScreenSaveGame* SaveObject)
 {
-	// UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(GetGameInstance());
+	// UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(GetGameInstance())
 	//
 	// const FString InGameLoadSlotName = AuraGameInstance->LoadSlotName;
 	// const int32 InGameLoadSlotIndex = AuraGameInstance->LoadSlotIndex;
@@ -121,25 +161,27 @@ void AAuraGameModeBase::SaveInGameProgressData(ULoadScreenSaveGame* SaveObject)
 	// UGameplayStatics::SaveGameToSlot(SaveObject, InGameLoadSlotName, InGameLoadSlotIndex);
 }
 
-void AAuraGameModeBase::Server_SaveWorldStateAndTravel_Implementation(UWorld* World,
-	const FString& DestinationMapAssetName)
+void AAuraGameModeBase::SaveAllCharacters()
+{
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(It->Get()))
+		{
+			AuraPC->SaveCharacterProgress();
+		}
+	}
+}
+
+void AAuraGameModeBase::SaveWorldStateAndTravel(UWorld* World, const FString& DestinationMapAssetName)
 {
 	if (!HasAuthority())
 		return;
 	
-	Server_SaveWorldState(World, DestinationMapAssetName);
+	SaveWorldState(World, DestinationMapAssetName);
 	ServerTravelToMap(DestinationMapAssetName);
 }
 
-void AAuraGameModeBase::Client_SaveCharacterProgress_Implementation()
-{
-	auto* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	AActor* Actor = Cast<AActor>(PlayerController->GetPawn());
-	if (Actor->Implements<UPlayerInterface>())
-		IPlayerInterface::Execute_SaveProgress(Actor, "");
-}
-
-void AAuraGameModeBase::Server_SaveWorldState_Implementation(UWorld* World, const FString& DestinationMapAssetName)
+void AAuraGameModeBase::SaveWorldState(UWorld* World, const FString& DestinationMapAssetName)
 {
 	if (!HasAuthority())
 		return;
@@ -214,12 +256,12 @@ void AAuraGameModeBase::Server_SaveWorldState_Implementation(UWorld* World, cons
 	}
 }
 
-void AAuraGameModeBase::Server_LoadWorldState_Implementation(UWorld* World)
+void AAuraGameModeBase::LoadWorldState(UWorld* World)
 {
 	if (!HasAuthority() || !World)
 		return;
 
-	// 1. 세이브 데이터 가져오기
+	// 세이브 데이터 가져오기
 	UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
 	if (!AuraGI)
 		return;
@@ -251,6 +293,13 @@ void AAuraGameModeBase::Server_LoadWorldState_Implementation(UWorld* World)
 
 		if (!IsValid(Actor) || !Actor->Implements<USaveInterface>()) 
 			continue;
+		
+		if (Actor->Implements<UItemInterface>())
+		{
+			FGuid Guid = IItemInterface::Execute_GetGuid(Actor);
+			bool bIsUsed = SaveGame->IsUsedActor(Guid);
+			
+		}
 
 		// Map에서 해당 액터의 데이터가 있는지 확인
 		if (const FSavedActor* FoundData = SavedActorMap.FindRef(Actor->GetFName()))
@@ -265,15 +314,19 @@ void AAuraGameModeBase::Server_LoadWorldState_Implementation(UWorld* World)
 	}
 }
 
-void AAuraGameModeBase::Multicast_SaveCharacterProgress_Implementation()
+void AAuraGameModeBase::SaveOneTimeUseActor(FGuid Guid, bool bUsed)
 {
 	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (!PC) return;
-
-	APawn* Pawn = PC->GetPawn();
-	if (Pawn && Pawn->Implements<UPlayerInterface>())
+	if (!PC)
+		return;
+	
+	if (UAuraGameInstance* AuraGI = PC->GetGameInstance<UAuraGameInstance>())
 	{
-		IPlayerInterface::Execute_SaveProgress(Pawn, "");
+		ULoadScreenSaveGame* SaveGame = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex);
+		if (SaveGame)
+		{
+			SaveGame->OneTimeUseActors.Add(Guid, bUsed);
+		}
 	}
 }
 
@@ -301,15 +354,15 @@ void AAuraGameModeBase::ServerTravelToMap(FString MapName)
 }
 
 
-void AAuraGameModeBase::Server_GameAutoSave_Implementation()
+void AAuraGameModeBase::GameAutoSave()
 {
 	// 월드 상태 저장
 	UWorld* World = GetWorld();
 	FString MapName = World->GetMapName();
 	MapName.RemoveFromStart(World->StreamingLevelsPrefix);
 	
-	Server_SaveWorldState(World, MapName);
-	Multicast_SaveCharacterProgress();
+	SaveWorldState(World, MapName);
+	SaveAllCharacters();
 }
 
 FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetName)
@@ -320,48 +373,6 @@ FString AAuraGameModeBase::GetMapNameFromMapAssetName(const FString& MapAssetNam
 			return Map.Key;
 	}
 	return FString();
-}
-
-void AAuraGameModeBase::OnBossMonsterDead(AActor* DeadActor)
-{
-	// 월드 상태 저장
-	Server_GameAutoSave();
-}
-
-void AAuraGameModeBase::AddMonsterToArray(AAuraEnemy* Enemy)
-{
-	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
-	{
-		BossCharacters.Add(Boss);
-		OnBossMonsterCountChanged.Broadcast(BossCharacters.Num());
-
-		// 보스 사망 델리게이트 구독 -> 게임 강제 저장
-		Boss->OnDeath.AddDynamic(this, &AAuraGameModeBase::OnBossMonsterDead);
-
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(UGameplayStatics::GetPlayerController(this, 0)))
-		{
-			AuraPC->OnBossMonsterAdded.Broadcast();
-		}
-	}
-	else
-	{
-		EnemyCharacters.Add(Enemy);
-		OnMonsterCountChanged.Broadcast(EnemyCharacters.Num());
-	}
-}
-
-void AAuraGameModeBase::RemoveMonsterFromArray(AAuraEnemy* Enemy)
-{
-	if (AAuraBossMonster* Boss = Cast<AAuraBossMonster>(Enemy))
-	{
-		BossCharacters.Remove(Boss);
-		OnBossMonsterCountChanged.Broadcast(BossCharacters.Num());
-	}
-	else
-	{
-		EnemyCharacters.Remove(Enemy);
-		OnMonsterCountChanged.Broadcast(EnemyCharacters.Num());
-	}
 }
 
 void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
@@ -377,9 +388,13 @@ void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
 			AuraPC->Server_CharacterInvincible(bInvincible);
 		}
 	}
+	
+	AAuraGameStateBase* AuraGameState = GetGameState<AAuraGameStateBase>();
+	if (!AuraGameState)
+		return;
     
 	// 일반 몬스터 순회
-	for (auto MonsterPtr : EnemyCharacters) 
+	for (auto MonsterPtr : AuraGameState->GetEnemyCharactersArray()) 
 	{
 		if (APawn* EnemyPawn = Cast<APawn>(MonsterPtr.Get()))
 		{
@@ -391,7 +406,7 @@ void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
 	}
 
 	// 보스 몬스터 순회
-	for (auto BossPtr : BossCharacters)
+	for (auto BossPtr : AuraGameState->GetBossCharactersArray())
 	{
 		if (APawn* BossPawn = Cast<APawn>(BossPtr.Get()))
 		{
@@ -399,6 +414,23 @@ void AAuraGameModeBase::SetAllActorsInvincible(bool bInvincible)
 			{
 				AuraAIController->Server_CharacterInvincible(bInvincible);
 			}
+		}
+	}
+}
+
+void AAuraGameModeBase::SetActorInvincible(AActor* TargetActor, bool bInvincible)
+{
+	if (APawn* TargetPawn = Cast<APawn>(TargetActor))
+	{
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(TargetPawn->GetController()))
+		{
+			// 플레이어 캐릭터
+			AuraPC->Server_CharacterInvincible(bInvincible);
+		}
+		else if (AAuraAIController* AuraAI = Cast<AAuraAIController>(TargetPawn->GetController()))
+		{
+			// 몬스터 캐릭터
+			AuraAI->Server_CharacterInvincible(bInvincible);
 		}
 	}
 }
@@ -435,6 +467,15 @@ void AAuraGameModeBase::PlayerRespawn(AAuraPlayerController* DeadPC)
 		DeadPawn->Destroy();
 	}
 	
+	UAbilitySystemComponent* ASC = DeadPC->GetASC();
+	if (!ASC)
+		return;
+	
+	// 부활 후 절반 체력 및 절반 마나 회복
+	UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>();
+	if (!AuraGI)
+		return;
+	
 	// 저장된 플레이어 스타트에서 재시작
 	if (AActor* SavedPlayerStart = ChoosePlayerStart(DeadPC))
 	{
@@ -446,21 +487,17 @@ void AAuraGameModeBase::PlayerRespawn(AAuraPlayerController* DeadPC)
 		RestartPlayer(DeadPC);
 	}
 	
-	// 사망 태그 부여 이펙트 제거
-	if (UAbilitySystemComponent* ASC = DeadPC->GetASC())
-	{
-		ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead")));
-		
-		// 부활 후 절반 체력 및 절반 마나 회복
-		if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
-		{
-			TSubclassOf<UGameplayEffect> ReviveEffectClass = AuraGI->ReviveEffect;
-			FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-			FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ReviveEffectClass, 1.f, Context);
+	// 부활 이펙트 적용 - 체력/마나 절반 회복
+	TSubclassOf<UGameplayEffect> ReviveEffectClass = AuraGI->ReviveEffect;
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ReviveEffectClass, 1.f, Context);
 			
-			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-		}
-	}
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	
+	// 3초 무적
+	FGameplayEffectContextHandle InvincibleContext = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle InvincibleSpecHandle = ASC->MakeOutgoingSpec(Invincible3Sec, 1.f, InvincibleContext);
+	ASC->ApplyGameplayEffectSpecToSelf(*InvincibleSpecHandle.Data.Get());
 }
 
 void AAuraGameModeBase::HandleInitializeCards(APlayerController* PC)

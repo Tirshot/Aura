@@ -115,6 +115,7 @@ public:
 	// 불러오기용, 슬롯 채우기
 	void SetEquipmentSlots(FEquipmentSlotList SavedEquipmentMap);
 	void ApplyItemStat(const FItemData& ItemData, FEquipmentSlotEntry* Slot);
+	void ReEquipItem();
 	
 	// 아이템 메시 캐릭터에 장착, 해제
 	void AttachItemMeshToAuraCharacterMesh_Internal(const FItemData& ItemData, AAuraCharacter* AuraCharacter, EItemSubGroup ItemGroup, FName SocketName);

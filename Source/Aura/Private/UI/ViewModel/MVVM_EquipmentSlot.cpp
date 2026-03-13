@@ -10,7 +10,10 @@
 void UMVVM_EquipmentSlot::Initialize(UEquipmentComponent* Equipment, uint8 Index)
 {
 	EquipmentComponent = Equipment;
-	OverlayWidgetController = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this);
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(Equipment->GetOwner()))
+	{
+		OverlayWidgetController = UAuraAbilitySystemLibrary::GetOverlayWidgetController(AuraPS->GetPlayerController());
+	}
 	
 	// 열거형의 최대치(None)을 넘으면 리턴
 	if (Index > static_cast<int8>(EItemSubGroup::None))

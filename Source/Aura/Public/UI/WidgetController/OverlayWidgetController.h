@@ -59,6 +59,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShowMenuKeyPressed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOpenMenuAnchor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCenterDescriptionRemoved);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemToolTipActivated, const FItemData&, ItemData, bool, bActivated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FClearSpellGlobe, const FGameplayTag&, InputTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRenderTargetCreated, UTextureRenderTarget2D*, RenderTarget2D);
 
 UCLASS(BlueprintType, Blueprintable)
 class AURA_API UOverlayWidgetController : public UAuraWidgetController
@@ -149,6 +151,9 @@ public:
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "OverlayWidget")
 	FOnCenterDescriptionRemoved OnCenterDescriptionRemoved;
 	
+	UPROPERTY(BlueprintAssignable)
+	FOnRenderTargetCreated OnRenderTargetCreated;
+	
 public:
 	UFUNCTION(BlueprintCallable)
 	void ShowOverlayWidget(bool bShow);
@@ -199,12 +204,19 @@ protected:
 	UFUNCTION()
 	void MessageRemove(const FGameplayTag& Tag);
 	
+	UFUNCTION()
+	void MiniMapRenderTargetSet(UTextureRenderTarget2D* RenderTarget);
+	
 public:
 	UFUNCTION(BlueprintCallable)
 	void RemoveCenterDescriptionMessage();
 	
 	UFUNCTION()
 	void SetXPBarPercentToOwnValue();
+	
+public:
+	UPROPERTY(BlueprintReadOnly)
+	UTextureRenderTarget2D* MiniMapRenderTarget;
 };
 
 template <typename T>

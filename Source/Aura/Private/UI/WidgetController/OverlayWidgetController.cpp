@@ -82,6 +82,8 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
         // 플로팅 메세지
         AuraASC->EffectAssetTags.AddDynamic(this, &UOverlayWidgetController::OnFloatingMessageReceived);
     }
+    
+    OnRenderTargetCreated.AddDynamic(this, &UOverlayWidgetController::MiniMapRenderTargetSet);
 }
 
 void UOverlayWidgetController::BeginDestroy()
@@ -111,7 +113,6 @@ void UOverlayWidgetController::ShowOverlayWidget(bool bShow)
     {
         OnOverlayVisibilityChanged.Broadcast(false);
     }
-
 }
 
 void UOverlayWidgetController::ShowOverlayButtons(bool bShow)
@@ -224,6 +225,11 @@ void UOverlayWidgetController::OnFloatingMessageReceived(const FGameplayTagConta
 void UOverlayWidgetController::MessageRemove(const FGameplayTag& Tag)
 {
     OnMessageRemoved.Broadcast(Tag);
+}
+
+void UOverlayWidgetController::MiniMapRenderTargetSet(UTextureRenderTarget2D* RenderTarget)
+{
+    MiniMapRenderTarget = RenderTarget;
 }
 
 void UOverlayWidgetController::SetXPBarPercentToOwnValue()

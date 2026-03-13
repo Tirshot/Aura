@@ -131,6 +131,17 @@ UMVVM_CardSelection* AAuraHUD::GetCardSelectionViewModel()
     return CardSelectionViewModel;
 }
 
+UMVVM_DebugMenu* AAuraHUD::GetDebugMenuViewModel(const FWidgetControllerParams& WCParams)
+{
+    if (DebugMenuViewModel == nullptr)
+    {   // 없으면 생성
+        DebugMenuViewModel = NewObject<UMVVM_DebugMenu>(this, DebugMenuViewModelClass);
+        DebugMenuViewModel->ViewModelInitialized();
+    }
+
+    return DebugMenuViewModel;
+}
+
 UMVVM_Inventory* AAuraHUD::GetInventoryViewModel(const FWidgetControllerParams& WCParams)
 {
     if (!InventoryMenuViewModel)
@@ -193,6 +204,9 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     
     // 카드 선택 UI 뷰 모델 생성
     CardSelectionViewModel = GetCardSelectionViewModel();
+    
+    // 툴팁 위젯 컨트롤러 생성
+    ToolTipViewModel = GetItemToolTipWidgetController(WidgetControllerParams);
 
     if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PS))
     {
@@ -207,7 +221,7 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
         // DebugMenuViewModel->ViewModelInitialized();
     }
 
-    // 인벤토리 뷰 모델은 인벤토리 컴포넌트에서 생성
+    InventoryMenuViewModel = GetInventoryViewModel(WidgetControllerParams);
 }
 
 void AAuraHUD::ResetWidgetControllerAndViewModels()
@@ -267,12 +281,14 @@ void AAuraHUD::CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetCla
     {
         // 메시지 박스에 내용 추가
         OverlayWidget->WBP_MessageBox->AddTextMessageToBox(Message);
+        return;
     }
 					
     // 중앙 설명 텍스트
     if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(MessageWidget))
     {
         OverlayWidget->WBP_CenterTutorialDescription->TextBlock->SetText(Message);
+        return;
     }
 			
     // 팝업 텍스트

@@ -56,10 +56,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TSubclassOf<UGameplayEffect> PrimaryAttributes_SetByCaller;
 	
-	// 2차 속성, Aura에게 적용, Type : Infinite
-	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
-	TSubclassOf<UGameplayEffect> SecondaryAttributes_Infinite;
-
 	// 2차 속성, 몬스터 생성 시 적용, 1차 속성에 의해 결정됨
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TSubclassOf<UGameplayEffect> SecondaryAttributes;

@@ -145,11 +145,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Item Drop")
 	TSubclassOf<class AAuraDropItem> DropItemClass;
 	
-	UPROPERTY(EditDefaultsOnly, Category = "Revive Effect")
+	// 사망 태그 부여 이펙트
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> DeadTagEffectClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> ReviveEffect;
 	
-	UPROPERTY(EditDefaultsOnly, Category = "LevelUp Effect")
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> FullHPMPEffect;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> SecondaryAttributes;
+	
 	FTimerHandle LoadMapTimer;
+	FTimerHandle ReviveInvincibleTimer;
 };

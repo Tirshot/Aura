@@ -3,6 +3,17 @@
 
 #include "Game/LoadScreenSaveGame.h"
 
+void ULoadScreenSaveGame::AddOneTimeUseActor(FGuid Guid, bool bReached)
+{
+	OneTimeUseActors.Add(Guid, bReached);
+}
+
+bool ULoadScreenSaveGame::IsUsedActor(FGuid Guid)
+{
+	bool* bIsUsed = OneTimeUseActors.Find(Guid);
+	return bIsUsed ? *bIsUsed : false;
+}
+
 FSavedMap ULoadScreenSaveGame::GetSavedMapWithMapName(const FString& InMapName)
 {
 	for (const FSavedMap& Map : SavedMaps)

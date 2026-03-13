@@ -44,7 +44,7 @@ public:
 	USettingsMenuWidgetController* GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams);
 	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel();
-	UMVVM_DebugMenu* GetDebugMenuViewModel() { return DebugMenuViewModel; }
+	UMVVM_DebugMenu* GetDebugMenuViewModel(const FWidgetControllerParams& WCParams);
 	UMVVM_Inventory* GetInventoryViewModel(const FWidgetControllerParams& WCParams);
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
@@ -153,6 +153,12 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_CardSelection> CardSelectionViewModel;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UItemToolTipWidgetController> ToolTipViewModelClass;
+	
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UItemToolTipWidgetController> ToolTipViewModel;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_DebugMenu> DebugMenuViewModelClass;

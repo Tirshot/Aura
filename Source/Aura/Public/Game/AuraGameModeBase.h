@@ -7,7 +7,6 @@
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Character/AuraCharacterBase.h"
 #include "GameFramework/GameModeBase.h"
-#include "UI/Widget/AuraOverlayWidget.h"
 #include "AuraGameModeBase.generated.h"
 
 class AAuraCharacter;
@@ -28,9 +27,8 @@ class UMVVM_LoadSlot;
 class USaveGame;
 class AAuraDropItem;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllActorsInvincible, bool, bInvincible);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSetActorInvincible, AActor*, TargetActor, bool, bInvincible);
 
 UCLASS()
 class AURA_API AAuraGameModeBase : public AGameModeBase
@@ -47,8 +45,17 @@ protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
 public:
+	UPROPERTY(BlueprintCallable)
+	FOnSetActorInvincible OnSetActorInvincible;
+	
+	UPROPERTY(BlueprintCallable)
+	FOnAllActorsInvincible OnAllActorsInvincible;
+	
+public:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
-
+	virtual void RestartPlayer(AController* NewPlayer) override;
+	virtual void RestartPlayerAtPlayerStart(AController* NewPlayer, AActor* StartSpot) override;
+	
 public:
 	/* 
 	 * 저장, 로드 관련
@@ -60,27 +67,28 @@ public:
 	void SaveInGameProgressData(ULoadScreenSaveGame* SaveObject);
 
 	// 월드 저장 및 불러오기
-	UFUNCTION(Server, Reliable)
-	void Server_SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
+	UFUNCTION()
+	void SaveWorldState(UWorld* World, const FString& DestinationMapAssetName = FString(""));
 	
-	UFUNCTION(Server, Reliable)
-	void Server_SaveWorldStateAndTravel(UWorld* World, const FString& DestinationMapAssetName = FString(""));
+	UFUNCTION()
+	void SaveWorldStateAndTravel(UWorld* World, const FString& DestinationMapAssetName = FString(""));
 	
-	UFUNCTION(Client, Reliable)
-	void Client_SaveCharacterProgress();
+	// 모든 클라이언트 대상으로 캐릭터 상태 저장
+	UFUNCTION()
+	void SaveAllCharacters();
 	
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SaveCharacterProgress();
+	UFUNCTION()
+	void SaveOneTimeUseActor(FGuid Guid, bool bUsed);
 	
-	UFUNCTION(Server, Reliable)
-	void Server_LoadWorldState(UWorld* World);
+	UFUNCTION()
+	void LoadWorldState(UWorld* World);
 	
 	void TravelToMap(UMVVM_LoadSlot* Slot);
 	void TravelToMap(FString MapName);
 	void ServerTravelToMap(FString MapName);
 	
-	UFUNCTION(Server, Reliable)
-	void Server_GameAutoSave();
+	UFUNCTION()
+	void GameAutoSave();
 
 	void RestartGameFromSaveData(ACharacter* DeadCharacter);
 	void RestartGameFromSaveDataWithWorldContextObject(UObject* WorldContextObject);
@@ -128,35 +136,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetMapNameFromMapAssetName(const FString& MapAssetName);
 
-public:
-	UFUNCTION()
-	void OnBossMonsterDead(AActor* DeadActor);
-	
-	UFUNCTION()
-	void AddMonsterToArray(AAuraEnemy* Enemy);
-	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
-	
-	UFUNCTION(BlueprintCallable)
-	int32 GetBossCharacterArrayLength() { return BossCharacters.Num(); }
-	
-	UFUNCTION(BlueprintCallable)
-	int32 GetMonsterCharacterLength() { return EnemyCharacters.Num(); }
-
 	UFUNCTION()
 	void SetAllActorsInvincible(bool bInvincible);
-
-	UPROPERTY(BlueprintCallable)
-	FOnAllActorsInvincible OnAllActorsInvincible;
 	
-	UPROPERTY(BlueprintAssignable)
-	FOnBossMonsterCountChanged OnBossMonsterCountChanged;
-	
-	UPROPERTY(BlueprintAssignable)
-	FOnMonsterCountChanged OnMonsterCountChanged;
-
-	TArray<TSoftObjectPtr<AAuraBossMonster>> GetBossCharactersArray(){return BossCharacters;}
-
-	TArray<TSoftObjectPtr<AAuraPlayerController>> GetPlayersArray(){return Players;}
+	UFUNCTION()
+	void SetActorInvincible(AActor* TargetActor, bool bInvincible);
 
 public:
 	// 몬스터에게 업그레이드 태그 부여
@@ -166,15 +150,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RemoveAbilityUpgradeFromEnemy(TSubclassOf<UGameplayEffect> AbilityUpgradeClass, AActor* ApplyActor);
 
-
-private:
-	// 액터 배열
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess = true))
-	TArray<TSoftObjectPtr<AAuraEnemy>> EnemyCharacters;
-
-	UPROPERTY()
-	TArray<TSoftObjectPtr<AAuraBossMonster>> BossCharacters;
-	
-	UPROPERTY()
-	TArray<TSoftObjectPtr<AAuraPlayerController>> Players;
+protected:
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> Invincible3Sec;
 };

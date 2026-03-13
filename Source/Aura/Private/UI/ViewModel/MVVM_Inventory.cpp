@@ -3,10 +3,7 @@
 
 #include "UI/ViewModel/MVVM_Inventory.h"
 
-#include "SNegativeActionButton.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "Character/AuraCharacter.h"
-#include "GameFramework/PlayerState.h"
 #include "Player/EquipmentComponent.h"
 #include "Player/InventoryComponent.h"
 #include "UI/ViewModel/MVVM_EquipmentSlot.h"
@@ -18,22 +15,28 @@ void UMVVM_Inventory::BindDependencies(const FWidgetControllerParams& WCParams)
 	PlayerState = WCParams.PlayerState;
 	AbilitySystemComponent = WCParams.AbilitySystemComponent;
 	AttributeSet = WCParams.AttributeSet;
+	
+	InventoryOpened.AddDynamic(this, &UMVVM_Inventory::OnInventoryOpened);
+}
+
+void UMVVM_Inventory::OnInventoryOpened(bool bIsOpened)
+{
+	const int32 Size = GetInventoryComponent()->GetInventorySize();
+	for (int i = 0; i < Size; ++i)
+	{
+		InventorySlotChanged(i);
+	}
 }
 
 void UMVVM_Inventory::InitializeSlots()
 {
-	if (PlayerState) 
-	{
-		Inventory = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(PlayerState);
-		Equipment = UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(PlayerState);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("UMVVM_Inventory Initialized Failed : PlayerState Is InValid"));
-		return;
-	}
+	// if (PlayerState != PlayerController->PlayerState)
+	// 	return;
 	
-	const int32 Size = Inventory->GetSlots().Num(); 
+	Inventory = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(PlayerState);
+	Equipment = UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(PlayerState);
+	
+	const int32 Size = Inventory->GetInventorySize(); 
 	if (SlotViewModels.IsEmpty())
 	{
 		SlotViewModels.SetNum(Size);
@@ -41,7 +44,7 @@ void UMVVM_Inventory::InitializeSlots()
 		// 모든 슬롯에 대해 각자의 뷰 모델 연결
 		for (int i = 0; i < Size; i++)
 		{
-			UMVVM_InventorySlot* NewSlotViewModel = NewObject<UMVVM_InventorySlot>(PlayerController);
+			UMVVM_InventorySlot* NewSlotViewModel = NewObject<UMVVM_InventorySlot>(this);
 
 			// 뷰 모델에 인덱스와 인벤토리 컴포넌트 포인터 넘겨주기
 			NewSlotViewModel->Initialize(Inventory, i);
@@ -198,4 +201,10 @@ UMVVM_InventorySlot* UMVVM_Inventory::GetSlotViewModel(int Index)
 		return SlotViewModels[Index];
 	
 	return nullptr;
+}
+
+UInventoryComponent* UMVVM_Inventory::GetInventoryComponent()
+{
+	Inventory = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(PlayerState);
+	return Inventory;
 }

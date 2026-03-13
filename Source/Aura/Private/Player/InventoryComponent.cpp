@@ -3,15 +3,11 @@
 
 #include "Player/InventoryComponent.h"
 
-#include "AbilitySystemGlobals.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Character/AuraCharacter.h"
 #include "Game/AuraGameInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
-#include "UI/HUD/AuraHUD.h"
-#include "UI/ViewModel/MVVM_Inventory.h"
 
 void FInventorySlot::PostReplicatedAdd(const FInventorySlotList& InArraySerializer)
 {
@@ -68,58 +64,33 @@ void UInventoryComponent::BeginPlay()
 	// 서버 - 인벤토리 슬롯 배열 초기화
 	if (GetOwnerRole() == ROLE_Authority)
 	{
-		bool bHasValidData = false;
-		for(const auto& Slot : SlotList.Slots)
+		if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
 		{
-			if(!Slot.ItemData.Name.IsNone())
+			if (AuraPS->bIsDataLoaded)
 			{
-				bHasValidData = true;
-				SlotList.MarkArrayDirty();
-				break;
-			}
-		}
-		// 유효한 데이터가 있으면 초기화 안함
-		if (!bHasValidData)
-		{
-			SlotList.Slots.Empty();
+				SlotList.Inventory = this;
 
-			for (int i = 0; i < InventorySize; i++)
-			{
-				FInventorySlot Slot;
-				Slot.Inventory = this;
-				Slot.SlotID = i;
-				SlotList.Slots.Add(Slot);
-			}
-			SlotList.Inventory = this;
-			SlotList.MarkArrayDirty();
-
-			AssignDataTableToSlot();
-		}
-	}
-	else
-	{
-		if (AAuraPlayerState* MyPS = Cast<AAuraPlayerState>(GetOwner()))
-		{
-			if (APlayerController* PC = MyPS->GetPlayerController())
-			{
-				if (AAuraHUD* AuraHUD = PC->GetHUD<AAuraHUD>())
+				for (FInventorySlot& Slot : SlotList.Slots)
 				{
-					FWidgetControllerParams WCParams;
-					WCParams.PlayerController = PC;
-					WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PC->GetPawn());
-				
-					if (APlayerState* PlayerState = Cast<APlayerState>(GetOwner()))
-						WCParams.PlayerState = PlayerState;
-				
-					if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
-						WCParams.AttributeSet = AuraPS->GetAttributeSet();
-					
-					// 뷰 모델 생성
-					if (auto ViewModel = AuraHUD->GetInventoryViewModel(WCParams))
-					{
-						ViewModel->InitializeSlots();
-					}
+					Slot.Inventory = this;
 				}
+				SlotList.MarkArrayDirty();
+				return;
+			}
+			
+			if (SlotList.Slots.IsEmpty())
+			{
+				for (int i = 0; i < InventorySize; i++)
+				{
+					FInventorySlot Slot;
+					Slot.Inventory = this;
+					Slot.SlotID = i;
+					SlotList.Slots.Add(Slot);
+				}
+				SlotList.Inventory = this;
+				SlotList.MarkArrayDirty();
+		
+				AssignDataTableToSlot();
 			}
 		}
 	}
@@ -383,7 +354,7 @@ bool UInventoryComponent::AddItem_Internal(const FItemData& ItemData, int AddCou
 		// 중첩 불가
 		for (int i = 0; i < AddCount; i++)
 		{
-			FIntPoint Place;
+			FIntPoint Place = {0, 0};
 			if (CanPlaceItem(ItemData, Place))
 			{
 				int TargetIndex = (Place.Y * InventoryWidth) + Place.X;
@@ -433,6 +404,9 @@ FInventorySlot* UInventoryComponent::GetSlotByIndex(int index)
 {
 	if (index >= InventorySize)
 		return nullptr;
+	
+	if (!SlotList.Slots.IsValidIndex(index))
+		return nullptr;
 
 	return &SlotList.Slots[index];
 }
@@ -460,6 +434,7 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 	
 	SlotList.Slots.Empty();
 	SlotList.Inventory = this;
+	SlotList.MarkArrayDirty();
     
 	for (const FInventorySlot& NewSlot : InSlots)
 	{
@@ -472,9 +447,11 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 	{
 		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AuraPS->GetPlayerController()))
 		{
-			AuraPC->OnCharacterInit.AddDynamic(this, &UInventoryComponent::OnCharacterInitialized);
+			if (!AuraPC->OnCharacterInit.IsAlreadyBound(this, &UInventoryComponent::OnCharacterInitialized))
+				AuraPC->OnCharacterInit.AddDynamic(this, &UInventoryComponent::OnCharacterInitialized);
 		}
 	}
+	SlotList.MarkArrayDirty();
 }
 
 void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int TargetIndex)
@@ -644,6 +621,7 @@ void UInventoryComponent::OnRep_SlotList()
 		Slot.Inventory = this;
 	}
 	SlotList.Inventory = this;
+	SlotsReplicated.Broadcast();
 }
 
 void UInventoryComponent::OnCharacterInitialized(ACharacter* Character)

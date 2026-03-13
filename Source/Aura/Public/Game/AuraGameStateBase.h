@@ -7,14 +7,60 @@
 #include "AuraGameStateBase.generated.h"
 
 class UGameplayEffect;
-/**
- * 
- */
+class AAuraEnemy;
+class AAuraBossMonster;
+class AAuraPlayerController;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
+
 UCLASS()
 class AURA_API AAuraGameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()
+	
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnBossMonsterCountChanged OnBossMonsterCountChanged;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnMonsterCountChanged OnMonsterCountChanged;
 
 public:
+	UFUNCTION()
+	void AddPlayerToArray(AAuraPlayerController* AuraPC);
+	
+	UFUNCTION()
+	void OnBossMonsterDead(AActor* DeadActor);
+	
+	UFUNCTION()
+	void AddMonsterToArray(AAuraEnemy* Enemy);
+	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetBossCharacterArrayLength() { return BossCharacters.Num(); }
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetMonsterCharacterLength() { return EnemyCharacters.Num(); }
 
+public:
+	const TArray<TSoftObjectPtr<AAuraEnemy>>& GetEnemyCharactersArray(){return EnemyCharacters;}
+	const TArray<TSoftObjectPtr<AAuraBossMonster>>& GetBossCharactersArray(){return BossCharacters;}
+	const TArray<TSoftObjectPtr<AAuraPlayerController>>& GetPlayersArray(){return Players;}
+	
+public:
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_BossCharactersSpawned();
+	
+private:
+	// 액터 배열
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess = true))
+	TArray<TSoftObjectPtr<AAuraEnemy>> EnemyCharacters;
+
+	UPROPERTY()
+	TArray<TSoftObjectPtr<AAuraBossMonster>> BossCharacters;
+	
+	UPROPERTY()
+	TArray<TSoftObjectPtr<AAuraPlayerController>> Players;
+	
 };

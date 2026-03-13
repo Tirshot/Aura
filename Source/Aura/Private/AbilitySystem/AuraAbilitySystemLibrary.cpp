@@ -124,9 +124,8 @@ USettingsMenuWidgetController* UAuraAbilitySystemLibrary::GetSettingsMenuWidgetC
 	{
 		return AuraHUD->GetSettingsMenuWidgetController(WCParams);
 	}
-	
 	// 메인메뉴
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	if (APlayerController* PC = WCParams.PlayerController)
 	{
 		if (AMainMenuHUD* MainMenuHUD = Cast<AMainMenuHUD>(PC->GetHUD()))
 		{
@@ -135,7 +134,7 @@ USettingsMenuWidgetController* UAuraAbilitySystemLibrary::GetSettingsMenuWidgetC
 	}
 	
 	// 로드메뉴
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	if (APlayerController* PC = WCParams.PlayerController)
 	{
 		if (ALoadScreenHUD* LoadScreenHUD = Cast<ALoadScreenHUD>(PC->GetHUD()))
 		{
@@ -160,16 +159,12 @@ UItemToolTipWidgetController* UAuraAbilitySystemLibrary::GetItemToolTipWidgetCon
 
 UMVVM_DebugMenu* UAuraAbilitySystemLibrary::GetDebugMenuViewModel(const UObject* WorldContextObject)
 {
+	FWidgetControllerParams WCParams;
 	AAuraHUD* AuraHUD = nullptr;
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
 	{
-		AuraHUD = Cast<AAuraHUD>(PC->GetHUD());
-		if (AuraHUD)
-		{
-			return AuraHUD->GetDebugMenuViewModel();
-		}
+		return AuraHUD->GetDebugMenuViewModel(WCParams);
 	}
-
 	return nullptr;
 }
 
@@ -185,35 +180,6 @@ UMVVM_CardSelection* UAuraAbilitySystemLibrary::GetCardSelectionViewModel(const 
 		}
 	}
 
-	return nullptr;
-}
-
-UMVVM_Inventory* UAuraAbilitySystemLibrary::GetInventoryMenuViewModel(const UObject* WorldContextObject)
-{
-	if (!WorldContextObject)
-		return nullptr;
-
-	APlayerController* PC = nullptr;
-	if (const UUserWidget* UserWidget = Cast<UUserWidget>(WorldContextObject))
-	{
-		PC = UserWidget->GetOwningPlayer();
-	}
-	
-	if (PC)
-	{
-		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
-		{
-			FWidgetControllerParams WCParams;
-			WCParams.PlayerController = PC;
-			WCParams.PlayerState = PC->GetPlayerState<APlayerState>();
-			WCParams.AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PC->GetPawn());
-			if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(WCParams.PlayerState))
-			{
-				WCParams.AttributeSet = AuraPS->GetAttributeSet();
-			}
-			return AuraHUD->GetInventoryViewModel(WCParams);
-		}
-	}
 	return nullptr;
 }
 
@@ -285,7 +251,7 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UO
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(SourceActor);
 	
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes_Infinite, 1.f, SecondaryAttributesContextHandle);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
 	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
 
 	// 세이브 데이터의 바이탈 속성 적용
@@ -308,8 +274,67 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UO
 	ASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
 }
 
+void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(const UObject* WorldContextObject,
+	UAbilitySystemComponent* ASC, float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana)
+{
+	UE_LOG(LogTemp, Warning, TEXT("InitializeAttributes: Called on Server for %s"), *ASC->GetAvatarActor()->GetName());
+	UE_LOG(LogTemp, Warning, TEXT("Passed Data - Strength: %f, Health: %f"), Strength, Health);
+	
+		// 액터의 클래스 정보 가져오기
+	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+	if (CharacterClassInfo == nullptr)
+		return;
+
+	// Set by Caller 가져오기
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+
+	const AActor* SourceActor = ASC->GetAvatarActor();
+
+	// 이펙트 컨텍스트 핸들 생성
+	FGameplayEffectContextHandle EffectContextHandle = ASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(SourceActor);
+
+	// 이펙트 적용을 위한 이펙트 스펙 핸들 생성
+	const FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->PrimaryAttributes_SetByCaller, 1.f, EffectContextHandle);
+
+	// Set By Caller Magnitude 설정
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Strength, Strength);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Intelligence, Intelligence);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Resilience, Resilience);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Attributes_Primary_Vigor, Vigor);
+
+	// 게임플레이 이펙트 적용
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+	// 2차 속성 적용
+	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
+	SecondaryAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
+	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+
+	// 세이브 데이터의 바이탈 속성 적용
+	FGameplayEffectContextHandle VitalAttributesContextHandle = ASC->MakeEffectContext();
+	VitalAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, Health);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, Mana);
+
+	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+
+	// 세이브 데이터의 리젠 속성 적용
+	FGameplayEffectContextHandle RegenAttributesContextHandle = ASC->MakeEffectContext();
+	RegenAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle RegenAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->RegenAttributes, 1.f, RegenAttributesContextHandle);
+
+	ASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
+}
+
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, 
-	UAttributeSet* AS)
+                                                                            UAttributeSet* AS)
 {
 	// 액터의 클래스 정보 가져오기
 	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
@@ -350,7 +375,7 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributeSet(cons
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(SourceActor);
 	
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes_Infinite, 1.f, SecondaryAttributesContextHandle);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
 	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
 
 	// 바이탈 속성 적용
@@ -578,7 +603,7 @@ void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGa
 
 void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag)
 {
-	ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(MessageTag));
+	ASC->RemoveActiveEffectsWithTags(FGameplayTagContainer(MessageTag));
 }
 
 TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor)

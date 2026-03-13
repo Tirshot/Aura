@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/AuraCharacterBase.h"
+#include "Game/LoadScreenSaveGame.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/EquipmentComponent.h"
 #include "AuraCharacter.generated.h"
@@ -60,6 +61,8 @@ public:
 public:
 	TObjectPtr<class USpringArmComponent> GetSpringArmComponent(){return SpringArm;}
 	TObjectPtr<UBoxComponent> GetBoxComponent(){return Box;}
+	TObjectPtr<USceneCaptureComponent2D> GetMiniMapCapture(){ return MiniMapCapture; }
+	TObjectPtr<UTextureRenderTarget2D> GetMiniMapRenderTarget(){ return MiniMapRenderTarget; }
 	
 public:
 	UPROPERTY(EditDefaultsOnly)
@@ -73,10 +76,26 @@ public:
 public:
 	virtual void OnRep_Stunned() override;
 	virtual void OnRep_Burned() override;
+	virtual void OnRep_Invincible() override;
 
 protected:
-	void LoadProgressFromSaveGame();
+	void LoadProgressFromSaveGame(AController* PC);
 	void LoadAbilitiesFromSaveGame();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_LoadProgressFromSaveGame();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyClientStat(float Level, float XP, int32 SpellPoints, int32 AttributePoints);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyClientAttributes(float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyClientSavedAbilities(const TArray<FSavedAbility>& SavedAbilities, const FOwnedAbilityUpgradeList& SavedAbilityUpgrades);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyClientInventory(const TArray<FInventorySlot>& InventorySlots, const FEquipmentSlotList& EquipmentSlots);
 
 private:
 	UFUNCTION(NetMulticast, Reliable)
@@ -97,6 +116,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap", meta=(AllowPrivateAccess = true))
 	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "MiniMap")
+	TSubclassOf<UTextureRenderTarget2D> MiniMapRenderTargetClass;
+	
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UTextureRenderTarget2D> MiniMapRenderTarget;
 private:
 	virtual void InitAbilityActorInfo() override;
 };

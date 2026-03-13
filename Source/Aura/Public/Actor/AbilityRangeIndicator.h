@@ -27,6 +27,7 @@ public:
 	AAbilityRangeIndicator();
 
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
 public:	
@@ -35,6 +36,8 @@ public:
 	UFUNCTION()
 	void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& Location, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
 
+	void ShowIndicatorOwnerOnly();
+	
 	ERangeShape GetRangeShape() const { return RangeShape; }
 	float GetWidth() const { return Width; }
 	float GetHeight() const { return Height; }
@@ -59,9 +62,17 @@ protected:
 public:
 	UPROPERTY()
 	FOnIndicatorInitialized IndicatorInitialized;
+	
+	UPROPERTY()
+	FOnIndicatorInitialized EnemyIndicatorInitialized;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnIndicatorRemoved RemoveIndicator;
+	
+	UFUNCTION()
+	void OnRep_IndicatorColor();
+	
+	virtual void OnRep_Owner() override;
 	
 private:
 	// 원형, 부채꼴
@@ -73,7 +84,10 @@ private:
 
 	// 부채꼴 각도
 	float ConeAngle = 0.f;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_IndicatorColor)
+	FVector IndicatorColor = FVector::ZeroVector;
 
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IndicatorColor, meta=(AllowPrivateAccess = true))
 	ERangeShape RangeShape;
 };

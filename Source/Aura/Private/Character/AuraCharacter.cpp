@@ -22,6 +22,8 @@
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "UI/WidgetController/OverlayWidgetController.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -58,7 +60,11 @@ AAuraCharacter::AAuraCharacter()
 
     MiniMapCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("MiniMapCapture");
     MiniMapCapture->SetupAttachment(RootComponent);
-
+    MiniMapCapture->SetRelativeLocation(FVector(0.f, 0.f, 1000.f));
+    MiniMapCapture->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+    MiniMapCapture->bCaptureEveryFrame = false;
+    MiniMapCapture->bCaptureOnMovement = true;
+    
     CharacterClass = ECharacterClass::Elementalist;
 }
 
@@ -74,9 +80,28 @@ void AAuraCharacter::BeginPlay()
     // 내 미니맵만 켜기
     if (MiniMapCapture)
     {
-        // 로컬 플레이어가 조종하는 캐릭터인 경우에만 캡처 활성화
-        if (!IsLocallyControlled())
+        if (IsLocallyControlled())
+        {
+            MiniMapRenderTarget = NewObject<UTextureRenderTarget2D>(MiniMapCapture, MiniMapRenderTargetClass);
+             if (MiniMapRenderTarget)
+             {
+                 MiniMapRenderTarget->SizeX = 512;
+                 MiniMapRenderTarget->SizeY = 512;
+                 
+                 MiniMapRenderTarget->UpdateResource();
+                 
+                 // 오버레이로 포인터 전달
+                 UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnRenderTargetCreated.Broadcast(MiniMapRenderTarget);
+                 
+                 MiniMapCapture->TextureTarget = MiniMapRenderTarget;
+                 MiniMapCapture->Activate();
+                 MiniMapCapture->CaptureScene();
+             }
+        }
+        else
+        {
             MiniMapCapture->Deactivate();
+        }
     }
     
     if (APawn* Pawn = Cast<APawn>(this))
@@ -97,41 +122,50 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
 
+    InitAbilityActorInfo();
+    InitializeDefaultAttributes();
+        
+    // 기본 어빌리티 부여
+    AddCharacterAbilites();
+    
     // 리슨 서버라면
     if (HasAuthority())
     {
-        InitAbilityActorInfo();
+        AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>();
+        if (!AuraPS)
+            return;
         
-        if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>()) 
+        // 부활
+        if (AuraPS->GetAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
         {
-            // 첫 게임 시작 시 저장 데이터 불러옴
-            if (!AuraPS->bIsDataLoaded)
-                LoadProgressFromSaveGame();
-            else
+            // 사망 태그 제거
+            if (UAuraGameInstance* AuraGI = AuraPS->GetGameInstance<UAuraGameInstance>())
             {
-                // 맵 이동으로 인해 어빌리티 불러옴
-                LoadAbilitiesFromSaveGame();
+                TSubclassOf<UGameplayEffect> DeadTagEffectClass = AuraGI->DeadTagEffectClass;
+                AuraPS->GetAbilitySystemComponent()->RemoveActiveGameplayEffectBySourceEffect(DeadTagEffectClass, AuraPS->GetAbilitySystemComponent());
+                return;
             }
-            InitializeDefaultAttributes();
-
-            // 플레이어 스테이트는 1회만 불러오면 됨
-            AuraPS->bIsDataLoaded = true;
+        }
+        
+        if (NewController->IsLocalController())
+        {
+            LoadProgressFromSaveGame(NewController);
         }
         
         if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
         {
-            AuraGameMode->Server_LoadWorldState(GetWorld());
+            AuraGameMode->LoadWorldState(GetWorld());
         }
     }
 }
 
-void AAuraCharacter::LoadProgressFromSaveGame()
+void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
 {
     if (!HasAuthority())
         return;
     
     // 게임 인스턴스에 접근
-    if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+    if (UAuraGameInstance* AuraGI = PC->GetGameInstance<UAuraGameInstance>())
     {
         // 저장 슬롯 찾기
         const FString InGameLoadSlotName = AuraGI->LoadSlotName;
@@ -144,13 +178,6 @@ void AAuraCharacter::LoadProgressFromSaveGame()
         UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
         if (!AuraASC)
             return;
-        
-        // 사망 태그 제거
-        FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-        AuraASC->RemoveLooseGameplayTag(DeadTag); 
-        
-        // 기본 어빌리티 부여
-        AddCharacterAbilites();
             
         // 첫 로딩일 때
         if (SaveData->bFirstTimeLoading)
@@ -206,10 +233,6 @@ void AAuraCharacter::LoadAbilitiesFromSaveGame()
         if (!AuraASC)
             return;
         
-        // 사망 태그 제거
-        FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-        AuraASC->RemoveLooseGameplayTag(DeadTag); 
-        
         // 시작 어빌리티 부여
         AddCharacterAbilites();
         
@@ -218,16 +241,97 @@ void AAuraCharacter::LoadAbilitiesFromSaveGame()
     }
 }
 
+void AAuraCharacter::Server_ApplyClientStat_Implementation(float Level, float XP, int32 SpellPoints,
+    int32 AttributePoints)
+{
+    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+    {
+        AuraPS->SetLevel(Level);
+        AuraPS->SetXP(XP);
+        AuraPS->SetSpellPoints(SpellPoints);
+        AuraPS->SetAttributePoints(AttributePoints);
+    }
+}
+
+void AAuraCharacter::Server_ApplyClientAttributes_Implementation(float Strength, float Intelligence, float Vigor,
+    float Resilience, float Health, float Mana)
+{
+    UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(this, GetAbilitySystemComponent(), Strength, Intelligence, Vigor, Resilience, Health, Mana);
+}
+
+void AAuraCharacter::Server_ApplyClientSavedAbilities_Implementation(const TArray<FSavedAbility>& SavedAbilities,
+    const FOwnedAbilityUpgradeList& SavedAbilityUpgrades)
+{
+    AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>();
+    if (!AuraPS)
+        return;
+
+    // 어빌리티 부여
+    UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent());
+    if (AuraASC)
+    {
+        AuraASC->AddCharacterAbilitiesFromArray(SavedAbilities);
+    }
+    
+    // 어빌리티 업그레이드 적용
+    AuraPS->SetAbilityUpgradeTagContainer(SavedAbilityUpgrades);
+}
+
+void AAuraCharacter::Server_ApplyClientInventory_Implementation(const TArray<FInventorySlot>& InventorySlots,
+    const FEquipmentSlotList& EquipmentSlots)
+{
+    AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>();
+    if (!AuraPS)
+        return;
+    
+    UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent());
+    if (AuraASC)
+    {
+        AuraPS->GetInventoryComponent()->SetInventorySlots(InventorySlots);
+        AuraPS->GetEquipmentComponent()->SetEquipmentSlots(EquipmentSlots);
+    }
+}
+
+void AAuraCharacter::Client_LoadProgressFromSaveGame_Implementation()
+{
+    // 게임 인스턴스에 접근
+    if (UAuraGameInstance* AuraGI = GetGameInstance<UAuraGameInstance>())
+    {
+        // 저장 슬롯 찾기
+        const FString InGameLoadSlotName = AuraGI->LoadSlotName;
+        const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
+
+        ULoadScreenSaveGame* SaveData = AuraGI->GetSaveSlotData(InGameLoadSlotName, InGameLoadSlotIndex);
+        if (SaveData == nullptr)
+            return;
+        
+        // 첫(빈) 세이브 로딩
+        if (SaveData->bFirstTimeLoading)
+        {
+            SaveData->bFirstTimeLoading = false;
+            InitializeDefaultAttributes();
+            return;
+        }
+        
+        // 기존 세이브 로딩
+        Server_ApplyClientStat(SaveData->PlayerLevel, SaveData->XP, SaveData->SpellPoints, SaveData->AttributePoints);
+        Server_ApplyClientAttributes(SaveData->Strength, SaveData->Intelligence, SaveData->Vigor, SaveData->Resilience, SaveData->Health, SaveData->Mana);
+        Server_ApplyClientSavedAbilities(SaveData->SavedAbilities, SaveData->SavedAbilityUpgradeList);
+        Server_ApplyClientInventory(SaveData->SavedInventorySlots, SaveData->SavedEquipmentSlots);
+    }
+}
+
 void AAuraCharacter::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
 
-    // 어빌리티 액터 정보 초기화
     InitAbilityActorInfo();
-    InitializeDefaultAttributes();
     
-    // 저장 데이터 불러오기
-    // LoadProgress();
+    //어빌리티 액터 정보 초기화
+    if (IsLocallyControlled())
+    {
+        Client_LoadProgressFromSaveGame();
+    }
 }
 
 void AAuraCharacter::OnRep_Controller()
@@ -516,7 +620,7 @@ void AAuraCharacter::InitializeDefaultAttributes() const
     int32 Level = 1.f;
     if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
     {
-        Level = AuraPS->GetCharacterLevel();
+        Level = FMath::Max(1.f, AuraPS->GetCharacterLevel());
     }
     ApplyEffectToSelf(DefaultPrimaryAttributes, Level);
     ApplyEffectToSelf(DefaultSecondaryAttributes, Level);
@@ -598,6 +702,18 @@ void AAuraCharacter::OnRep_Burned()
     else
     {
         BurnDebuffComponent->Deactivate();
+    }
+}
+
+void AAuraCharacter::OnRep_Invincible()
+{
+    if (bInvincible)
+    {
+        InvincibleBuffComponent->Activate();
+    }
+    else
+    {
+        InvincibleBuffComponent->Deactivate();
     }
 }
 

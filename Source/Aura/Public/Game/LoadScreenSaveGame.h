@@ -170,6 +170,8 @@ public:
 	UPROPERTY()
 	TMap<FGuid, bool> OneTimeUseActors;
 	TMap<FGuid, bool> GetOneTimeUseActors(){return OneTimeUseActors;}
+	void AddOneTimeUseActor(FGuid Guid, bool bReached);
+	bool IsUsedActor(FGuid Guid);
 
 	FSavedMap GetSavedMapWithMapName(const FString& InMapName);
 	bool HasMap(const FString& InMapName);

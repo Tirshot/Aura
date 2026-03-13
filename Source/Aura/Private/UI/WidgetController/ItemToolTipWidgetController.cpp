@@ -149,7 +149,7 @@ void UItemToolTipWidgetController::SetItemDataToWidget(const FItemData& ItemData
 	{
 		if (UAuraToolTipStatRow* StatRowWidget = CreateWidget<UAuraToolTipStatRow>(GetWorld(), StatRowClass))
 		{
-			if (UAttributeInfo* Info = UAuraAbilitySystemLibrary::GetAttributeMenuWidgetController(this)->GetAttributeInfo())
+			if (UAttributeInfo* Info = UAuraAbilitySystemLibrary::GetAttributeMenuWidgetController(PlayerController)->GetAttributeInfo())
 			{
 				FText StatName = Info->GetAttributeNameForTag(StatRow.Tag);
 				FText StatValue = FText::AsNumber(StatRow.Value);
