@@ -92,6 +92,13 @@ void AAuraDropItem::SetMeshAndMaterial()
 void AAuraDropItem::InitializeItem(const FItemData& InItemData)
 {
 	DropItemData = InItemData;
+	
+	// 각 아이템에 고유 ID 부여 - 없을때만
+	if (!DropItemData.UniqueID.IsValid())
+		DropItemData.UniqueID = FGuid::NewGuid();
+	
+	UniqueID = DropItemData.UniqueID;
+	
 	SetMeshAndMaterial();
 	
 	OnDropItemInitialized.Broadcast(DropItemData.DisplayName);

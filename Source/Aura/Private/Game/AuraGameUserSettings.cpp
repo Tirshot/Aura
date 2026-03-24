@@ -14,4 +14,6 @@ void UAuraGameUserSettings::SetMasterVolumeChecked(bool InMasterVolumeChecked)
 	UIVolumeChecked = InMasterVolumeChecked;
 	FXVolumeChecked = InMasterVolumeChecked;
 	BackgroundVolumeChecked = InMasterVolumeChecked;
+	
+	SaveConfig();
 }

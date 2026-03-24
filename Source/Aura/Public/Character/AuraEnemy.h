@@ -22,8 +22,14 @@ class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface, p
 	
 public:
 	AAuraEnemy();
+	
+protected:
+	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
-
+	virtual void InitAbilityActorInfo() override;
+	virtual void InitializeDefaultAttributes() const override;
+	virtual void MulticastHandleDeath(const FVector& DeathImpulse) override;
+	
 public:
 	// 하이라이트 인터페이스 오버라이드
 	virtual void HighlightActor_Implementation() override;
@@ -42,6 +48,11 @@ public:
     virtual float GetXPOverriddenValue_Implementation() const override;
 	// 전투 인터페이스 끝
 	
+public:
+	/*
+	 *	델리게이트
+	 */
+	
 	// 라이프 사이클, 데미지
 	FOnDeath OnDeath;
 	FOnDamageSignature OnDamageDelegate;
@@ -52,10 +63,13 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnMaxHealthChanged;
 
+	// 콜백 함수
 	virtual void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
 	virtual void BeingShockedTagChanged() override;
 	
+public:
+	// Setter
 	void SetLevel(int32 InLevel) {Level = InLevel;}
 	void SetXPOverride(bool bOverride) {bIsXPOverride = bOverride;}
 	void SetXPOverrideValue(float InXP) {XPOverrideValue = InXP;}
@@ -75,11 +89,6 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat", meta = (EditCondition = bIsXPOverride, EditConditionHides))
 	float XPOverrideValue = 0.f;
-
-protected:
-	virtual void BeginPlay() override;
-	virtual void InitAbilityActorInfo() override;
-	virtual void InitializeDefaultAttributes() const override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, category = "Character Class Defaults")
@@ -103,13 +112,15 @@ protected:
 	UPROPERTY()
 	TObjectPtr<AAuraAIController> AuraAIController;
 
+public:
+	// 아이템 드랍
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpawnLoot();
 
-	UFUNCTION()
-	void SpawnDropItem();
-
 public:
+	/*
+	 *  어빌리티 업그레이드
+	 */
 	// 어빌리티 업그레이드 및 스택 관리는 몬스터의 ASC에 직접
 	void AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass);
 	void RemoveAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass);

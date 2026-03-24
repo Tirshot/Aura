@@ -23,8 +23,8 @@ public:
 	FDamageEffectParams ExplosionDamageParams;
 
 public:
-	void SetOrbitCenter(const FVector& InVector) { OrbitCenter = InVector; }
-	void SetHasTarget(bool InBool) {TargetSet = InBool;}
+	virtual void SetOrbitCenter(const FVector& InVector) { OrbitCenter = InVector; }
+	virtual void SetHasTarget(bool InBool) {TargetSet = InBool;}
 	
 protected:
 	virtual void BeginPlay() override;
@@ -54,7 +54,7 @@ public:
 public:
 	void SetOwnedAbility(UAuraDamageGameplayAbility* InAbility){ OwnedAbility = InAbility;}
 	
-private:
+protected:	
 	UPROPERTY()
 	UAuraDamageGameplayAbility* OwnedAbility;
 	

@@ -76,29 +76,29 @@ public:
 public:
 	// 사운드 설정
 	UFUNCTION(BlueprintCallable)
-	void SetMasterVolume(USoundClass* SoundClass, float Value);
+	void SetMasterVolume(float Value);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetBackgroundVolume(USoundClass* SoundClass, float Value);
+	void SetBackgroundVolume(float Value);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetFXVolume(USoundClass* SoundClass, float Value);
+	void SetFXVolume(float Value);
 
 	UFUNCTION(BlueprintCallable)
-	void SetUIVolume(USoundClass* SoundClass, float Value);	
+	void SetUIVolume(float Value);	
 	
 	// 사운드 설정
 	UFUNCTION(BlueprintCallable)
-	void SetMasterVolumeChecked(USoundClass* SoundClass, bool Value);
+	void SetMasterVolumeChecked(bool Value);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetBackgroundVolumeChecked(USoundClass* SoundClass, bool Value);
+	void SetBackgroundVolumeChecked(bool Value);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetFXVolumeChecked(USoundClass* SoundClass, bool Value);
+	void SetFXVolumeChecked(bool Value);
 
 	UFUNCTION(BlueprintCallable)
-	void SetUIVolumeChecked(USoundClass* SoundClass, bool Value);
+	void SetUIVolumeChecked(bool Value);
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -142,4 +142,16 @@ public:
 	bool LastFXVolumeChecked;
 	UPROPERTY(BlueprintReadOnly)
 	bool LastBackgroundVolumeChecked;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USoundClass> MasterVolumeClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USoundClass> BackgroundVolumeClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USoundClass> FXVolumeClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USoundClass> UIVolumeClass;
 };

@@ -26,6 +26,7 @@
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/AuraGameStateBase.h"
@@ -113,6 +114,9 @@ void AAuraPlayerController::OnPossess(APawn* InPawn)
     // 인벤토리 뷰모델 초기화
     if (AAuraPlayerState* MyPS = GetPlayerState<AAuraPlayerState>())
     {
+        MyPS->GetInventoryComponent()->ForceReplication();
+        MyPS->GetEquipmentComponent()->ForceReplication();
+        
         HandleInventoryUIInit();
     }
 }
@@ -208,6 +212,9 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 void AAuraPlayerController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
+    
+    // 인벤토리 뷰모델 초기화
+    HandleInventoryUIInit();
 }
 
 void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
@@ -336,24 +343,24 @@ void AAuraPlayerController::BossMonsterBind()
         auto BossArray = AuraGS->GetBossCharactersArray();
         for (const auto Boss : BossArray)
         {
-            if (!Boss.Get()->OnBossEventStart.IsAlreadyBound(this, &AAuraPlayerController::OnBossEventStart))
-                Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::OnBossEventStart);
+            if (!Boss.Get()->OnBossEventStart.IsAlreadyBound(this, &AAuraPlayerController::Client_OnBossEventStart))
+                Boss.Get()->OnBossEventStart.AddDynamic(this, &AAuraPlayerController::Client_OnBossEventStart);
             
-            if (!Boss.Get()->OnBossEventEnd.IsAlreadyBound(this, &AAuraPlayerController::OnBossEventEnd))
-                Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::OnBossEventEnd);
+            if (!Boss.Get()->OnBossEventEnd.IsAlreadyBound(this, &AAuraPlayerController::Client_OnBossEventEnd))
+                Boss.Get()->OnBossEventEnd.AddDynamic(this, &AAuraPlayerController::Client_OnBossEventEnd);
             
-            if (!Boss.Get()->OnDeath.IsAlreadyBound(this, &AAuraPlayerController::OnBossDead))
-                Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::OnBossDead);
+            if (!Boss.Get()->OnDeath.IsAlreadyBound(this, &AAuraPlayerController::Client_OnBossDead))
+                Boss.Get()->OnDeath.AddDynamic(this, &AAuraPlayerController::Client_OnBossDead);
             
             if (Boss->bIsRoaring)
             {
-                OnBossEventStart(Boss.Get()); 
+                Client_OnBossEventStart(Boss.Get()); 
             }
         }
     }
 }
 
-void AAuraPlayerController::OnBossEventStart(AActor* BossActor)
+void AAuraPlayerController::Client_OnBossEventStart_Implementation(AActor* BossActor)
 {
     // 오버레이 감추기, 카메라 전환
     if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
@@ -364,12 +371,23 @@ void AAuraPlayerController::OnBossEventStart(AActor* BossActor)
     // 플레이어 입력 방지
     SetPlayerInputEnable(false);
     
+    // 입력 방지 태그 추가
+    if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
+    {
+        if (auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn()))
+        {
+            FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+            FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AuraGI->InputBlockEffectClass, 1.f, ContextHandle);
+            ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }
+    }
+    
     StopAutoRun();
     
     ChangeCameraToBossActor(BossActor, 0.25f, 3.f);
 }
 
-void AAuraPlayerController::OnBossEventEnd(AActor* BossActor)
+void AAuraPlayerController::Client_OnBossEventEnd_Implementation(AActor* BossActor)
 {
     // 블렌드 종료 후 오버레이 보이기, 카메라 전환
     if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
@@ -379,13 +397,24 @@ void AAuraPlayerController::OnBossEventEnd(AActor* BossActor)
 
     // 플레이어 입력 활성화
     SetPlayerInputEnable(true);
-
+    
+    // 입력 방지 태그 제거
+    if (auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn()))
+    {
+        FGameplayTagContainer BlockTags;
+        BlockTags.AddTag(FAuraGameplayTags::Get().Player_Block_InputHeld);
+        BlockTags.AddTag(FAuraGameplayTags::Get().Player_Block_InputPressed);
+        BlockTags.AddTag(FAuraGameplayTags::Get().Player_Block_InputReleased);
+            
+        ASC->RemoveActiveEffectsWithTags(BlockTags);
+    }
+    
     StopAutoRun();
     
     ChangeCameraToOwn(0.5f);
 }
 
-void AAuraPlayerController::OnBossDead(AActor* BossActor)
+void AAuraPlayerController::Client_OnBossDead_Implementation(AActor* BossActor)
 {
     // 오버레이 감추기, 카메라 전환
     if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
@@ -427,7 +456,7 @@ void AAuraPlayerController::ChangeCameraToBossActor(AActor* BossActor, float Ble
 
 void AAuraPlayerController::ChangeCameraToOwn(float BlendTime)
 {
-    SetViewTarget(GetPawn());
+    SetViewTargetWithBlend(GetPawn(), BlendTime,VTBlend_Cubic,0.0f,true);
 }
 
 void AAuraPlayerController::SetPlayerInputEnable(bool bEnable)
@@ -759,6 +788,28 @@ void AAuraPlayerController::HandleAbilityInfoCardSelected(TArray<FAuraAbilityUpg
 
 void AAuraPlayerController::HandleAbilityCardRerollSelected()
 {
+    if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(GetHUD()))
+    {
+        if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+        {
+            for (int32 i = 0; i < CardSelectionViewModel->GetNumCards(); ++i)
+            {
+                if (UMVVM_AbilityCard* CardViewModel = CardSelectionViewModel->GetCardViewModelByIndex(i))
+                {
+                    CardViewModel->OnUpgradeSelectedDelegate.Clear();
+                }
+            }
+            CardSelectionViewModel->OnRerollSelectedDelegate.Clear();
+        }
+
+        // 위젯 제거
+        if (AuraHUD->CardSelectionWidget)
+        {
+            AuraHUD->CardSelectionWidget->RemoveFromParent();
+            AuraHUD->CardSelectionWidget = nullptr;
+        }
+    }
+    
     Server_CreateCardSelection(GetPawn());
 }
 
@@ -783,6 +834,17 @@ void AAuraPlayerController::HandleInventoryUIInit()
     }
 }
 
+void AAuraPlayerController::Client_RemoveCardSelection_Implementation()
+{
+    if (auto AuraHUD = GetHUD<AAuraHUD>())
+    {
+        if (UMVVM_CardSelection* CardSelectionViewModel = AuraHUD->GetCardSelectionViewModel())
+        {
+            CardSelectionViewModel->OnCloseSelectedDelegate.Broadcast();
+        }
+    }
+}
+
 void AAuraPlayerController::SaveCharacterProgress_Implementation()
 {
     if (GetPawn()->Implements<UPlayerInterface>())
@@ -796,10 +858,8 @@ void AAuraPlayerController::Server_RequestUnPauseGame_Implementation(AAuraPlayer
     FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(TEXT("Message.GamePausedBy"));
     FText AppendText = FText::FromString(RequestedPC->PlayerState->GetPlayerName());
     
-    if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
-    {
-        GameMode->ClearPause();
-    }
+    // 게임 배속을 원래대로 변경
+    UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
     
     for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
@@ -825,10 +885,8 @@ void AAuraPlayerController::Server_RequestPauseGame_Implementation(AAuraPlayerCo
         }
     }
     
-    if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
-    {
-        GameMode->SetPause(this); 
-    }
+    // 게임 배속을 느리게 지정
+    UGameplayStatics::SetGlobalTimeDilation(this, 0.05f);
 }
 
 void AAuraPlayerController::Server_TryRemoveItem_Implementation(int32 SlotIndex)
@@ -1015,19 +1073,7 @@ void AAuraPlayerController::Server_RemoveCardSelection_Implementation(AActor* In
     if (!HasAuthority())
         return;
     
-    // 게임 모드에게 카드 뽑기를 요청
-    if (AAuraGameModeBase* GameMode = Cast<AAuraGameModeBase>(GetWorld()->GetAuthGameMode()))
-    {
-        if (APawn* InteractedPawn = Cast<APawn>(InteractedActor))
-        {
-            if (APlayerController* PC = Cast<APlayerController>(InteractedPawn->GetController()))
-            {
-                // GameMode의 카드 뽑기 로직 호출
-                GameMode->HandleInitializeCards(PC);
-            }
-        }
-    }
-    
+    Client_RemoveCardSelection();
 }
 
 void AAuraPlayerController::Server_RemoveUpgrade_Implementation(FGameplayTag RemoveTag)
@@ -1440,7 +1486,7 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
             return;
     }
     
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
     {
         StopAutoRun();
         return;

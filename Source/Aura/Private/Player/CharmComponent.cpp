@@ -8,6 +8,7 @@
 #include "AbilitySystem/AuraAbilitySystemGlobals.h"
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
+#include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "Player/InventoryComponent.h"
 
@@ -18,10 +19,8 @@ UCharmComponent::UCharmComponent()
 }
 
 
-void UCharmComponent::BeginPlay()
+void UCharmComponent::TryToBindItemGetAndRemove()
 {
-	Super::BeginPlay();
-	
 	if (APawn* Pawn = Cast<AAuraPlayerState>(GetOwner())->GetPawn())
 	{
 		if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Pawn))
@@ -31,7 +30,59 @@ void UCharmComponent::BeginPlay()
 		
 			if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
 				Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
+					
+			if (!Inventory->SlotsReplicated.IsBoundToObject(this))
+				Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
 		}
+	}
+}
+
+void UCharmComponent::ApplyCharmEffectFromSavedInventory()
+{
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
+	{
+		// 인벤토리 순회
+		APawn* Pawn = AuraPS->GetPawn();
+		if (!Pawn)
+			return;
+		
+		if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Pawn))
+		{
+			for (const auto& Slot : Inventory->GetSlots())
+			{
+				if (!Slot.bIsOccupied)
+					continue;
+				
+				if (Slot.ItemData.ItemGroup == EItemGroup::Charm)
+				{
+					// 아이템의 첫 슬롯에서만 효과 적용
+					if (Inventory->IsFirstSlotOfItem(Slot))
+					{
+						AddToCharmSlot(Slot.SlotID, false);
+					}
+				}
+			}
+		}
+	}
+}
+
+void UCharmComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	TryToBindItemGetAndRemove();
+	
+	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
+	{
+		AuraPS->OnPawnSet.AddUniqueDynamic(this, &UCharmComponent::OnPawnSet);
+	
+		if (GetOwnerRole() != ROLE_Authority)
+			return;
+			
+		ApplyCharmEffectFromSavedInventory();
 	}
 }
 
@@ -56,14 +107,17 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 	if (!AuraASC)
 		return;
 	
-	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
-	AuraASC->RemoveActiveGameplayEffectBySourceEffect(CharmItem.ItemStatEffectClass, nullptr, 1);
-	
-	// 게임플레이 이펙트 제거
-	for (const auto EffectAndStack : CharmItem.EffectAndStacks)
+	// 스텟 이펙트와 기타 부여된 게임플레이 이펙트 제거
+	if (FCharmActiveEffects* ActiveEffects = AppliedCharms.Find(CharmItem.UniqueID))
 	{
-		AuraASC->RemoveActiveGameplayEffectBySourceEffect(EffectAndStack.EffectClass, nullptr, 1);
+		for (auto ActiveEffectHandle : ActiveEffects->EffectHandles)
+		{
+			AuraASC->RemoveActiveGameplayEffect(ActiveEffectHandle, 1);
+		}
 	}
+	
+	// 맵에서 제거
+	AppliedCharms.Remove(CharmItem.UniqueID);
 	
 	// 슬롯에 배치된 아이템에 의해 부여된 어빌리티 제거
 	for (const auto TagAndLevel : CharmItem.AbilityTagAndLevel)
@@ -85,10 +139,11 @@ void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 	if (!AuraASC)
 		return;
 	
-	// 참 효과 재적용
 	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AuraASC->GetAvatarActor());
 	if (!AuraCharacter)
 		return;
+	
+	FCharmActiveEffects& ActiveEffects = AppliedCharms.FindOrAdd(CharmItem.UniqueID);
 	
 	// 스텟 적용
 	ApplyItemStat(CharmItem);
@@ -112,7 +167,9 @@ void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 		{
 			const FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
 			const auto SpecHandle = AuraASC->MakeOutgoingSpec(EffectAndStack.EffectClass, EffectAndStack.EffectStack, Context);
-			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+			FActiveGameplayEffectHandle ActiveHandle = AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+			
+			ActiveEffects.EffectHandles.Add(ActiveHandle);
 		}
 	}
 	
@@ -140,6 +197,8 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 	if (bIsItemMoved)
 		return;
 	
+	UE_LOG(LogTemp, Warning, TEXT("Server: Adding Charm for %s"), *GetOwner()->GetName());
+	
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Cast<AAuraPlayerState>(GetOwner())->GetPawn()))
 	{
 		FInventorySlot* InventorySlot = Inventory->GetSlotByIndex(SlotIndex);
@@ -157,20 +216,14 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 
 void UCharmComponent::RemoveFromCharmSlot(const FItemData& ItemData)
 {
-	// if (ItemData.ItemGroup == EItemGroup::Charm)
-	// {
-	// 	for (int RemoveIndex = CharmSlotArray.Num() - 1; RemoveIndex >= 0; RemoveIndex--)
-	// 	{
-	// 		if (CharmSlotArray[RemoveIndex] == ItemData)
-	// 		{
-	// 			CharmSlotArray.RemoveAt(RemoveIndex);
-	// 			break;
-	// 		}
-	// 	}
-	// }
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
 	
-	// 참 효과 제거
-	RemoveCharmItemEffect(ItemData);
+	if (ItemData.ItemGroup == EItemGroup::Charm)
+	{
+		// 참 효과 제거
+		RemoveCharmItemEffect(ItemData);
+	}
 }
 
 void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
@@ -181,7 +234,7 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 		return;
 	
 	FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
-	Context.AddInstigator(AuraASC->GetAvatarActor(), nullptr);
+	Context.AddInstigator(AuraASC->GetAvatarActor(), AuraASC->GetAvatarActor());
 		
 	auto SpecHandle = AuraASC->MakeOutgoingSpec(ItemData.ItemStatEffectClass, 1.f, Context);
 		
@@ -215,6 +268,33 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 		SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_ManaRegeneration, ManaRegen);
 		SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_CriticalHitChance, CriticalChance);
 		
-		AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+		FActiveGameplayEffectHandle ActiveHandle = AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+		FCharmActiveEffects& ActiveEffects = AppliedCharms.FindOrAdd(ItemData.UniqueID);
+		ActiveEffects.EffectHandles.Add(ActiveHandle);
+	}
+}
+
+void UCharmComponent::OnPawnSet(APlayerState* PlayerState, APawn* NewPawn, APawn* OldPawn)
+{
+	APawn* Pawn = PlayerState->GetPawn();
+	if (!Pawn)
+		return;
+	
+	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Pawn))
+	{
+		if (!Inventory->OnItemGet.IsAlreadyBound(this, &UCharmComponent::AddToCharmSlot))
+			Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
+		
+		if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
+			Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
+		
+		if (Inventory->bLoaded) 
+		{
+			ApplyCharmEffectFromSavedInventory();
+		}
+		else 
+		{
+			Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
+		}
 	}
 }

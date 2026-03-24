@@ -71,7 +71,7 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 	FRotator DeltaRotation = FRotator(0.f, SpinDegreePerSecond * DeltaSeconds, 0.f);
 	AddActorWorldRotation(DeltaRotation);
 
-	if (GetOwner() == nullptr)
+	if (!GetOwner() || GetOwner()->IsPendingKillPending())
 	{
 		Destroy();
 		return;
@@ -85,18 +85,18 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 		int32 OverlappingActorsNum = OverlappingActors.Num() - 1;
 		for (int i = OverlappingActorsNum; i >= 0; i--)
 		{
-			AActor* Monster = OverlappingActors[i];
-			if (!IsValid(TargetActor))
+			AActor* Target = OverlappingActors[i];
+			if (!IsValid(Target))
 				continue;
 
-			if (!IsValidOverlap(TargetActor))
+			if (!IsValidOverlap(Target))
 				continue;
 			
 			// 아군 추적 금지
-			if (TargetActor->ActorHasTag(FName("Player")))
+			if (!UAuraAbilitySystemLibrary::IsNotFriend(GetOwner(), Target))
 				continue;
 			
-			TargetActor = Monster;
+			TargetActor = Target;
 			break;
 		}
 		

@@ -29,12 +29,12 @@ public:
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
-
-public:	
 	virtual void Tick(float DeltaTime) override;
 
+public:
 	UFUNCTION()
-	void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& Location, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
+	void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& StartLocation, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
+	void UpdateDecalVisual();
 
 	void ShowIndicatorOwnerOnly();
 	
@@ -74,7 +74,7 @@ public:
 	
 	virtual void OnRep_Owner() override;
 	
-private:
+protected:
 	// 원형, 부채꼴
 	float Radius = 0.f;
 
@@ -85,9 +85,19 @@ private:
 	// 부채꼴 각도
 	float ConeAngle = 0.f;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FVector RotateStartLocation;
+	
 	UPROPERTY(ReplicatedUsing = OnRep_IndicatorColor)
 	FVector IndicatorColor = FVector::ZeroVector;
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IndicatorColor, meta=(AllowPrivateAccess = true))
 	ERangeShape RangeShape;
+	
+public:
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite)
+	bool bRotate = false;
+	
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite)
+	float RotationSpeed = 90.f;
 };

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayModMagnitudeCalculation.h"
+#include "AuraMMCBase.h"
 #include "MMC_MaxHealth.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class AURA_API UMMC_MaxHealth : public UGameplayModMagnitudeCalculation
+class AURA_API UMMC_MaxHealth : public UAuraMMCBase
 {
 	GENERATED_BODY()
 	

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "LoadScreenSaveGame.h"
 #include "AbilitySystem/Data/ItemInfo.h"
+#include "AbilitySystem/Data/SoundData.h"
 #include "Engine/GameInstance.h"
 #include "AuraGameInstance.generated.h"
 
@@ -112,6 +113,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
 	TObjectPtr<USoundMix> SoundMix;
 	
+	// 사운드 데이터 에셋
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundData> SoundData;
+	
 	// 아이템 정보
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	TSubclassOf<UItemInfo> ItemInfosClass;
@@ -157,6 +162,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> SecondaryAttributes;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> InputBlockEffectClass;
 	
 	FTimerHandle LoadMapTimer;
 	FTimerHandle ReviveInvincibleTimer;

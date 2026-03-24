@@ -54,6 +54,9 @@ public:
 	void PlayMultiplayerButtonPressed();
 	
 	UFUNCTION(BlueprintCallable)
+	void CancelMultiPlay();
+	
+	UFUNCTION(BlueprintCallable)
 	void TutorialButtonPressed();
 	
 	void LoadData();

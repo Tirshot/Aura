@@ -13,6 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardSelectionViewModelInitialized);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardSelectionViewInitialized);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnableSelectButton, bool, bEnable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRerollSelected);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCloseSelected);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpgradeSelectedOnCard);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCloseButtonEnableChanged, bool, bEnable);
 
@@ -32,6 +33,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnUpgradeSelectedOnCard OnUpgradeSelectedOnCardDelegate;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FOnCloseSelected OnCloseSelectedDelegate;
 	
 public:
 	UFUNCTION(BlueprintPure)

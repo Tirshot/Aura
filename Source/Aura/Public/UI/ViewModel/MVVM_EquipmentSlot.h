@@ -22,6 +22,8 @@ class AURA_API UMVVM_EquipmentSlot : public UMVVMViewModelBase
 public:
 	void Initialize(UEquipmentComponent* Equipment, uint8 Index);
 	
+	void LoadInitialData();
+	
 	UFUNCTION(BlueprintCallable)
 	void Reset();
 	

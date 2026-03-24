@@ -141,7 +141,7 @@ void AAuraArcaneMissile::HomingNearestTarget(float DeltaTime)
 	for (AActor* Actor : OutOverlappingActors)
 	{
 		// 아군 추적 금지
-		if (Actor->ActorHasTag(FName("Player")))
+		if (!UAuraAbilitySystemLibrary::IsNotFriend(Owner, Actor))
 			continue;
 		
 		if (ProjectileMovement->HomingTargetComponent == nullptr)

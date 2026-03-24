@@ -111,8 +111,6 @@ void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
     // 랙돌 효과와 무기 드랍
     Super::Die(DeathImpulse, KilledBy);
-
-    HealthBar->DestroyComponent();
     
     if (AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
@@ -288,12 +286,15 @@ void AAuraEnemy::InitializeDefaultAttributes() const
     UAuraAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, Level, AbilitySystemComponent);
 }
 
-void AAuraEnemy::SpawnDropItem()
+void AAuraEnemy::MulticastHandleDeath(const FVector& DeathImpulse)
 {
-    // 아이템 그룹 별 - 소모품, 장비, 기타 등 등장 확률
+    Super::MulticastHandleDeath(DeathImpulse);
     
-    // 캐릭터 클래스에 맞는 아이템 - 그룹 내 아이템 별 등장 확률
-    
+    // 체력바 위젯 제거
+    HealthBar->SetVisibility(false);
+    HealthBar->SetHiddenInGame(true);
+    HealthBar->Deactivate();
+    HealthBar->DestroyComponent();
 }
 
 void AAuraEnemy::AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass)

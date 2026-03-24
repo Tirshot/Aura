@@ -143,6 +143,7 @@ void AAuraCharacter::PossessedBy(AController* NewController)
             {
                 TSubclassOf<UGameplayEffect> DeadTagEffectClass = AuraGI->DeadTagEffectClass;
                 AuraPS->GetAbilitySystemComponent()->RemoveActiveGameplayEffectBySourceEffect(DeadTagEffectClass, AuraPS->GetAbilitySystemComponent());
+                // LoadProgressFromSaveGame(NewController);
                 return;
             }
         }
@@ -207,6 +208,13 @@ void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
                 UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(AuraPlayerState)->SetInventorySlots(SaveData->SavedInventorySlots);
                 UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(AuraPlayerState)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
             }
+            
+            // 기존에 적용된 이펙트 제거 후 재적용
+            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultPrimaryAttributes, AbilitySystemComponent);
+            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
+            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
+            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
+            
             // 1차 속성, 2차 속성 적용
             UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
         }
@@ -348,7 +356,12 @@ void AAuraCharacter::AddToXP_Implementation(int32 InXP)
 
 void AAuraCharacter::LevelUp_Implementation()
 {
+    // 레벨업 효과 발생
     MulticastLevelUpParticles();
+    
+    // 레벨업으로 인한 2차 속성 재계산
+    AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
+    ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);
 }
 
 void AAuraCharacter::MulticastLevelUpParticles_Implementation() const
@@ -617,15 +630,10 @@ void AAuraCharacter::InitializeDefaultAttributes() const
     AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
     AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
     
-    int32 Level = 1.f;
-    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
-    {
-        Level = FMath::Max(1.f, AuraPS->GetCharacterLevel());
-    }
-    ApplyEffectToSelf(DefaultPrimaryAttributes, Level);
-    ApplyEffectToSelf(DefaultSecondaryAttributes, Level);
-    ApplyEffectToSelf(InitializeVitalAttributes, Level);
-    ApplyEffectToSelf(InitializeRegenAttributes, Level);
+    ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);
+    ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);
+    ApplyEffectToSelf(InitializeVitalAttributes, 1.f);
+    ApplyEffectToSelf(InitializeRegenAttributes, 1.f);
 }
 
 int32 AAuraCharacter::GetCharacterLevel_Implementation()

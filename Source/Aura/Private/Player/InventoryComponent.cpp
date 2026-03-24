@@ -102,6 +102,7 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 	
 	// 배열 복제
 	DOREPLIFETIME(UInventoryComponent, SlotList);
+	DOREPLIFETIME(UInventoryComponent, bLoaded);
 }
 
 
@@ -235,12 +236,13 @@ bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, i
 		
 		int StartX = TargetIndex % InventoryWidth;
 		int StartY = TargetIndex / InventoryWidth;
+		int NewIndex = 0;
 		
 		for (int Y = StartY; Y < StartY + Height; Y++)
 		{
 			for (int X = StartX; X < StartX + Width; X++)
 			{
-				int NewIndex = InventoryWidth * Y + X;
+				NewIndex = InventoryWidth * Y + X;
             
 				if (!SlotList.Slots.IsValidIndex(NewIndex))
 					return false;
@@ -269,13 +271,13 @@ bool UInventoryComponent::PlaceItemAt(const FItemData& ItemData, int AddCount, i
 						Slot.ItemCount = AddCount;
 								
 					Slot.ItemData.ItemCounts = Slot.ItemCount;
-					OnItemGet.Broadcast(NewIndex, bIsItemMoved);
 				}
 				SlotList.Inventory = this;
 				SlotList.HandleUIUpdate(NewIndex);
 				SlotList.MarkItemDirty(Slot);
 			}
 		}
+		OnItemGet.Broadcast(NewIndex, bIsItemMoved);
 		return true;
 	}
 	return false;
@@ -454,6 +456,16 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 	SlotList.MarkArrayDirty();
 }
 
+void UInventoryComponent::ForceReplication()
+{
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
+	SlotList.MarkArrayDirty();
+	
+	GetOwner()->ForceNetUpdate();
+}
+
 void UInventoryComponent::Server_MoveItem_Implementation(int OriginalIndex, int TargetIndex)
 {
 	// 서버가 아니면 리턴
@@ -595,6 +607,14 @@ const TArray<FInventorySlot>& UInventoryComponent::GetSlots() const
 	return SlotList.Slots;
 }
 
+bool UInventoryComponent::IsFirstSlotOfItem(const FInventorySlot& Slot)
+{
+	int32 X = Slot.StartPoint.X;
+	int32 Y = Slot.StartPoint.Y;
+	
+	return Slot.SlotID == (InventoryWidth * Y) + X;
+}
+
 int UInventoryComponent::GetDragItemIndex() const
 {
 	return DragItemIndex;
@@ -622,6 +642,7 @@ void UInventoryComponent::OnRep_SlotList()
 	}
 	SlotList.Inventory = this;
 	SlotsReplicated.Broadcast();
+	bLoaded = true;
 }
 
 void UInventoryComponent::OnCharacterInitialized(ACharacter* Character)

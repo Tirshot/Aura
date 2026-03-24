@@ -452,11 +452,6 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
             SourceASC->UpdateAbilityStatus(NewLevel);
             
             IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
-            float CurrentVigor = GetVigor();
-            SetVigor(CurrentVigor);
-            
-            float CurrentIntelligence = GetIntelligence();
-            SetIntelligence(CurrentIntelligence);
             
             if (ACharacter* SourceCharacter = Props.SourceCharacter)
             {

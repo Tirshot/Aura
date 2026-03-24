@@ -31,9 +31,6 @@ public:
 	void AddPlayerToArray(AAuraPlayerController* AuraPC);
 	
 	UFUNCTION()
-	void OnBossMonsterDead(AActor* DeadActor);
-	
-	UFUNCTION()
 	void AddMonsterToArray(AAuraEnemy* Enemy);
 	void RemoveMonsterFromArray(AAuraEnemy* Enemy);
 	
@@ -51,6 +48,10 @@ public:
 public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiCast_BossCharactersSpawned();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_OnBossMonsterDead(AActor* DeadActor);
+	
 	
 private:
 	// 액터 배열

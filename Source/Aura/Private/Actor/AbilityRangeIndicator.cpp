@@ -46,6 +46,8 @@ void AAbilityRangeIndicator::GetLifetimeReplicatedProps(TArray<class FLifetimePr
 	
 	DOREPLIFETIME(AAbilityRangeIndicator, IndicatorColor);
 	DOREPLIFETIME(AAbilityRangeIndicator, RangeShape);
+	DOREPLIFETIME(AAbilityRangeIndicator, bRotate);
+	DOREPLIFETIME(AAbilityRangeIndicator, RotationSpeed);
 }
 
 void AAbilityRangeIndicator::BeginPlay()
@@ -59,7 +61,12 @@ void AAbilityRangeIndicator::BeginPlay()
 void AAbilityRangeIndicator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
+	// 회전 기믹에 따라 데칼도 회전시킴
+	if (bRotate)
+	{
+		AddActorLocalRotation(FRotator(0.f, RotationSpeed * DeltaTime, 0.f));
+	}
 }
 
 void AAbilityRangeIndicator::ShowIndicatorOwnerOnly()
@@ -91,7 +98,7 @@ void AAbilityRangeIndicator::ShowIndicatorOwnerOnly()
 }
 
 void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape,
-                                           const FVector& Location, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
+                                           const FVector& StartLocation, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
 {
 	Radius = InRadius;
 	Width = InWidth;
@@ -104,16 +111,22 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 	// 다이내믹 머티리얼의 값 변경
 	IndicatorColor = Color;
 	
+	// 데칼 모양 레플리케이션, 다이내믹 머티리얼 인스턴스 생성 후 색 변경
 	// 몬스터를 제외하고, 소유자에게만 데칼 보임
-	ShowIndicatorOwnerOnly();
+	UpdateDecalVisual();
 	
 	FHitResult HitResult;
 	FCollisionQueryParams CollisionQueryParams;
 	CollisionQueryParams.AddIgnoredActor(AvatarActor);
 	
-	FVector HitStart = Location + FVector(0.f, 0.f, -300.f);
-	FVector HitEnd = Location + FVector(0.f, 0.f, 300.f);
+	FVector HitStart = StartLocation + FVector(0.f, 0.f, -300.f);
+	FVector HitEnd = StartLocation + FVector(0.f, 0.f, 300.f);
 	FVector ImpactPoint = HitResult.ImpactPoint;
+	
+	if (bRotate)
+	{
+		RotateStartLocation = StartLocation;
+	}
 	
 	GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
 
@@ -139,7 +152,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			}
 			else // 월드에 소환할 경우
 			{
-				SetActorLocation(FVector(Location.X, Location.Y, ImpactPoint.Z));
+				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
 			}
 			// 반지름 값에 따라 데칼 크기 수정
 			float Scale = Radius / 200.f;
@@ -167,7 +180,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			}
 			else // 월드에 소환할 경우
 			{
-				SetActorLocation(FVector(Location.X, Location.Y, ImpactPoint.Z));
+				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
 			}
 			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
 			break;
@@ -192,7 +205,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			}
 			else // 월드에 소환할 경우
 			{
-				SetActorLocation(FVector(Location.X, Location.Y, ImpactPoint.Z));
+				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
 			}
 			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
 			break;
@@ -206,7 +219,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 	}
 }
 
-void AAbilityRangeIndicator::OnRep_IndicatorColor()
+void AAbilityRangeIndicator::UpdateDecalVisual()
 {
 	UMaterialInterface* Target = nullptr;
 	switch (RangeShape)
@@ -232,11 +245,18 @@ void AAbilityRangeIndicator::OnRep_IndicatorColor()
 	{
 		DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
 	}
+	
+	ShowIndicatorOwnerOnly();
+}
+
+void AAbilityRangeIndicator::OnRep_IndicatorColor()
+{
+	UpdateDecalVisual();
 }
 
 void AAbilityRangeIndicator::OnRep_Owner()
 {
 	Super::OnRep_Owner();
 	
-	ShowIndicatorOwnerOnly();
+	UpdateDecalVisual();
 }

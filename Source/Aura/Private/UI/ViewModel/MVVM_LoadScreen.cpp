@@ -46,13 +46,6 @@ UMVVM_LoadSlot* UMVVM_LoadScreen::GetLoadSlotViewModelByIndex(int32 Index)
 
 void UMVVM_LoadScreen::NewSlotButtonPressed(int32 Slot, const FString& EnteredName)
 {
-	// AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
-	// if (IsValid(AuraGameMode) == false)
-	// {
-	// 	GEngine->AddOnScreenDebugMessage(1, 15.f, FColor::Magenta, FString("Please switch to Single Player"));
-	// 	return;
-	// }
-	
 	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
 	{
 		// 새로운 슬롯 생성
@@ -137,6 +130,12 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 	if (!SelectedSlot)
 		return;
 	
+	// 멀티로 연결하던 시도가 있었다면 취소
+	if (GEngine)
+	{
+		GEngine->CancelPending(GetWorld());
+	}
+	
 	if (UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
 	{
 		AuraGameInstance->PlayerStartTag = SelectedSlot->PlayerStartTag;
@@ -168,6 +167,14 @@ void UMVVM_LoadScreen::PlayMultiplayerButtonPressed()
 	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
 	{
 		PC->ClientTravel("127.0.0.1", TRAVEL_Relative);
+	}
+}
+
+void UMVVM_LoadScreen::CancelMultiPlay()
+{
+	if (GEngine)
+	{
+		GEngine->CancelPending(GetWorld());
 	}
 }
 

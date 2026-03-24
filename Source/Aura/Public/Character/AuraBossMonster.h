@@ -28,6 +28,16 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 public:
+	// 전투 인터페이스 오버라이드
+	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
+	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
+	// 전투 인터페이스 끝
+
+public:
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_AttachDeathCam();
+	
+public:
 	UPROPERTY()
 	FOnBossEventStart OnBossEventStart;
 	
@@ -37,12 +47,6 @@ public:
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnBeginBerserkMontage OnBeginBerserkMontage;
 	
-public:
-	// 전투 인터페이스 오버라이드
-	virtual void Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy) override;
-	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
-	// 전투 인터페이스 끝
-
 	UFUNCTION()
 	void ChangeGlobalTimeDilationToDefault();
 	
@@ -62,8 +66,14 @@ public:
 	UFUNCTION()
 	void OnRep_IsRoaring();
 
+	UFUNCTION()
+	void OnRep_Berserk();
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsRoaring)
 	bool bIsRoaring = false;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_Berserk)
+	bool bBerserk = false;
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

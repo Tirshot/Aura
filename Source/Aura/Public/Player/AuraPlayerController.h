@@ -133,6 +133,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RemoveCardSelection(AActor* InteractedActor);
 	
+	UFUNCTION(Client, Reliable)
+	void Client_RemoveCardSelection();
+	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
 	void Server_SelectUpgrade(FGameplayTag SelectedUpgradeTag);
@@ -158,10 +161,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ReviveFromPlayerStart();
 	
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RequestPauseGame(AAuraPlayerController* RequestedPC);
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RequestUnPauseGame(AAuraPlayerController* RequestedPC);
 
 	// 사망 후 관전
@@ -208,7 +211,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> InventoryMenuAction;
-	
+
 	void Move(const struct FInputActionValue& InputActionValue);
 	void Zoom(const struct FInputActionValue& InputActionValue);
 	void ActivateDebugMode(const struct FInputActionValue& InputActionValue);
@@ -286,14 +289,14 @@ public:
 	UFUNCTION()
 	void BossMonsterBind();
 	
-	UFUNCTION()
-	void OnBossEventStart(AActor* BossActor);
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossEventStart(AActor* BossActor);
 
-	UFUNCTION()
-	void OnBossEventEnd(AActor* BossActor);
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossEventEnd(AActor* BossActor);
 	
-	UFUNCTION()
-	void OnBossDead(AActor* BossActor);
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossDead(AActor* BossActor);
 
 	// 카메라 전환
 	void ChangeCameraToBossActor(AActor* BossActor, float BlendTime, float ReturnTime);

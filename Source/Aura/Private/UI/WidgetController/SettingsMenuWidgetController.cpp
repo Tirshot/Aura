@@ -3,9 +3,8 @@
 
 #include "UI/WidgetController/SettingsMenuWidgetController.h"
 
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameUserSettings.h"
-#include "Player/AuraPlayerController.h"
 
 void USettingsMenuWidgetController::Initialize()
 {
@@ -25,6 +24,12 @@ void USettingsMenuWidgetController::Initialize()
 		LastFXVolumeChecked = Settings->GetFXVolumeChecked();
 		LastBackgroundVolumeChecked = Settings->GetBackgroundVolumeChecked();
 	}
+	
+	// 불러온 값으로 볼륨 동기화
+	SetMasterVolumeChecked(LastMasterVolumeChecked);
+	SetBackgroundVolumeChecked(LastBackgroundVolumeChecked);
+	SetFXVolumeChecked(LastFXVolumeChecked);
+	SetUIVolumeChecked(LastUIVolumeChecked);
 }
 
 FString USettingsMenuWidgetController::IntPointToString(FIntPoint IntPoint)
@@ -200,68 +205,68 @@ void USettingsMenuWidgetController::SetShadowQuality(int32 Value)
 	}
 }
 
-void USettingsMenuWidgetController::SetMasterVolume(USoundClass* SoundClass, float Value)
+void USettingsMenuWidgetController::SetMasterVolume(float Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
-			UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, Value);
+			AudioSS->UpdateSoundVolume(MasterVolumeClass, Value);
 			Settings->SetMasterVolume(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetBackgroundVolume(USoundClass* SoundClass, float Value)
+void USettingsMenuWidgetController::SetBackgroundVolume(float Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
-			UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, Value);
+			AudioSS->UpdateSoundVolume(BackgroundVolumeClass, Value);
 			Settings->SetBackgroundVolume(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetFXVolume(USoundClass* SoundClass, float Value)
+void USettingsMenuWidgetController::SetFXVolume(float Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
-			UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, Value);
+			AudioSS->UpdateSoundVolume(FXVolumeClass, Value);
 			Settings->SetFXVolume(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetUIVolume(USoundClass* SoundClass, float Value)
+void USettingsMenuWidgetController::SetUIVolume(float Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
-			UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, Value);
+			AudioSS->UpdateSoundVolume(UIVolumeClass, Value);
 			Settings->SetUIVolume(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetMasterVolumeChecked(USoundClass* SoundClass, bool Value)
+void USettingsMenuWidgetController::SetMasterVolumeChecked(bool Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
 			// 체크박스 체크됨 -> 소리 켜짐
 			if (Value)
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, LastMasterVolume);
+				AudioSS->UpdateSoundVolume(MasterVolumeClass, LastMasterVolume);
 			}
 			else
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, 0.f);
+				AudioSS->UpdateSoundVolume(MasterVolumeClass, 0.f);
 			}
 			Settings->SetMasterVolumeChecked(Value);
 			Settings->SetBackgroundVolumeChecked(Value);
@@ -271,60 +276,60 @@ void USettingsMenuWidgetController::SetMasterVolumeChecked(USoundClass* SoundCla
 	}
 }
 
-void USettingsMenuWidgetController::SetBackgroundVolumeChecked(USoundClass* SoundClass, bool Value)
+void USettingsMenuWidgetController::SetBackgroundVolumeChecked(bool Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
 			// 체크박스 체크됨 -> 소리 켜짐
 			if (Value)
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, LastBackgroundVolume);
+				AudioSS->UpdateSoundVolume(BackgroundVolumeClass, LastBackgroundVolume);
 			}
 			else
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, 0.f);
+				AudioSS->UpdateSoundVolume(BackgroundVolumeClass, 0.f);
 			}
 			Settings->SetBackgroundVolumeChecked(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetFXVolumeChecked(USoundClass* SoundClass, bool Value)
+void USettingsMenuWidgetController::SetFXVolumeChecked(bool Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
 			// 체크박스 체크됨 -> 소리 켜짐
 			if (Value)
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, LastFXVolume);
+				AudioSS->UpdateSoundVolume(FXVolumeClass, LastFXVolume);
 			}
 			else
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, 0.f);
+				AudioSS->UpdateSoundVolume(FXVolumeClass, 0.f);
 			}
 			Settings->SetFXVolumeChecked(Value);
 		}
 	}
 }
 
-void USettingsMenuWidgetController::SetUIVolumeChecked(USoundClass* SoundClass, bool Value)
+void USettingsMenuWidgetController::SetUIVolumeChecked(bool Value)
 {
 	if (UAuraGameUserSettings* Settings = UAuraGameUserSettings::GetAuraGameUserSettings())
 	{
-		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(PlayerController))
+		if (UAuraAudioSubsystem* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
 		{
 			// 체크박스 체크됨 -> 소리 켜짐
 			if (Value)
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, LastUIVolume);
+				AudioSS->UpdateSoundVolume(UIVolumeClass, LastUIVolume);
 			}
 			else
 			{
-				UAuraAbilitySystemLibrary::UpdateSoundVolume(AuraPC, SoundClass, 0.f);
+				AudioSS->UpdateSoundVolume(UIVolumeClass, 0.f);
 			}
 			Settings->SetUIVolumeChecked(Value);
 		}

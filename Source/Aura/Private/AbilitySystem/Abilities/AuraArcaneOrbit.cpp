@@ -133,7 +133,6 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 		ArcaneMissile->OrbitRadius = OrbitRadius;
 		ArcaneMissile->OrbitSpeed = OrbitSpeed;
 		ArcaneMissile->FollowRadius = AbilityRange;
-		ArcaneMissile->SetLifeSpan(MissileLifeSpan);
 		ArcaneMissile->InitialDelayDuration = InitialDelayDuration;
 
 		// 소유 어빌리티 지정
@@ -147,6 +146,7 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 		OutMissiles.Add(ArcaneMissile);
 
 		ArcaneMissile->FinishSpawning(SpawnTransform);
+		ArcaneMissile->SetLifeSpan(MissileLifeSpan);
 	}
 	Missiles = OutMissiles;
 	return OutMissiles;

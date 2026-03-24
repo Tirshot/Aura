@@ -176,8 +176,8 @@ void UElectroTeleport::GhostEffect(TSubclassOf<AGhostEffectActor> GhostClass, UM
 		if (Ghost)
 		{
 			Ghost->SetGhostActorMesh(AuraCharacter->GetMesh(), GhostMaterial);
-			Ghost->SetLifeSpan(GhostLifeSpan + (i * 0.2));
 			Ghost->FinishSpawning(SpawnTransform);
+			Ghost->SetLifeSpan(GhostLifeSpan + (i * 0.2));
 		}
 	}
 }

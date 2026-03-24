@@ -3,9 +3,11 @@
 
 #include "UI/HUD/AuraHUD.h"
 
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
+#include "Player/EquipmentComponent.h"
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "UI/ViewModel/MVVM_CardSelection.h"
 #include "UI/ViewModel/MVVM_DebugMenu.h"

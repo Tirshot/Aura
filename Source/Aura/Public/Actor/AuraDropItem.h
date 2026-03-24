@@ -72,6 +72,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_DropItemData)
 	FItemData DropItemData;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FGuid UniqueID;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
 	FDataTableRowHandle ItemHandle;
 	

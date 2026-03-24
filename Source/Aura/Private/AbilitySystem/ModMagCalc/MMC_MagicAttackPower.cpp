@@ -33,5 +33,8 @@ float UMMC_MagicAttackPower::CalculateBaseMagnitude_Implementation(const FGamepl
 	
 	Intelligence = FMath::Max<float>(Intelligence, 0.f);
 
-	return Intelligence * 0.5f + MAPBonus;
+	float BaseValue = Intelligence * 0.5f + MAPBonus;
+	float BonusValue = GetBonusValue(Spec, FAuraGameplayTags::Get().Attributes_Primary_Intelligence);
+
+	return BaseValue + BonusValue;
 }

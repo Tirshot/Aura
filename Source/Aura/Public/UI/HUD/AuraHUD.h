@@ -3,12 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "GameFramework/HUD.h"
 #include "UI/ViewModel/MVVM_Inventory.h"
 #include "UI/Widget/AuraOverlayWidget.h"
-#include "UI/Widget/ItemToolTipWidget.h"
-#include "UI/WidgetController/AuraWidgetController.h"
 #include "AuraHUD.generated.h"
 
 class UItemToolTipWidgetController;

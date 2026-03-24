@@ -6,6 +6,7 @@
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
+#include "UI/ViewModel/MVVM_Inventory.h"
 #include "EquipmentComponent.generated.h"
 
 struct FEquipmentSlotList;
@@ -17,20 +18,20 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemEquipped, const FItemData&, E
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipmentSlotChanged, int32, Index);
 
 USTRUCT(BlueprintType)
-struct FEquipmentSlotEntry : public FFastArraySerializerItem
+struct FEquipmentSlot : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 	
 public:
-	FEquipmentSlotEntry() 
+	FEquipmentSlot() 
 	{
 		ItemSubGroup = EItemSubGroup::None;
 		ItemData = FItemData();
 		bIsSlotEquipped = false;
 	}
 	
-	FEquipmentSlotEntry(EItemSubGroup InSubGroup) : ItemSubGroup(InSubGroup) {}
-	FEquipmentSlotEntry(EItemSubGroup InSubGroup, FItemData InItemData) : ItemSubGroup(InSubGroup), ItemData(InItemData), bIsSlotEquipped(true) {}
+	FEquipmentSlot(EItemSubGroup InSubGroup) : ItemSubGroup(InSubGroup) {}
+	FEquipmentSlot(EItemSubGroup InSubGroup, FItemData InItemData) : ItemSubGroup(InSubGroup), ItemData(InItemData), bIsSlotEquipped(true) {}
 	
 public:
 	UPROPERTY()
@@ -43,6 +44,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FItemData ItemData;
 
+	UPROPERTY()
+	class UEquipmentComponent* Equipment;
+	
 	UPROPERTY()
 	bool bIsSlotEquipped = false;
 	
@@ -59,18 +63,26 @@ struct FEquipmentSlotList : public FFastArraySerializer
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TArray<FEquipmentSlotEntry> Items;
+	TArray<FEquipmentSlot> Items;
 
 	UPROPERTY()
 	class UEquipmentComponent* OwnerComponent = nullptr;
 	
-	void EquipmentSlotChanged(FEquipmentSlotEntry& Slot);
+	void EquipmentSlotChanged(FEquipmentSlot& Slot);
 
 	// 직렬화
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
 	{
-		return FastArrayDeltaSerialize<FEquipmentSlotEntry, FEquipmentSlotList>(Items, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FEquipmentSlot, FEquipmentSlotList>(Items, DeltaParms, *this);
 	}
+};
+
+
+// FastArray 등록
+template<>
+struct TStructOpsTypeTraits<FEquipmentSlotList> : public TStructOpsTypeTraitsBase2<FEquipmentSlotList>
+{
+	enum { WithNetDeltaSerializer = true };
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -84,10 +96,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 public:	
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_EquipItem(const FItemData& ItemData, int OriginIndex);
 
@@ -97,13 +108,17 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_ClearSlot(EItemSubGroup Slot);
 	
+public:
+	void InitializeEquipmentSlots();
+	void ForceReplication();
+	
 	// 슬롯 비었는지 확인
 	bool IsSlotEmpty(EItemSubGroup Slot) const;
 	
 	// 슬롯 비우기
-	void ClearSlot(FEquipmentSlotEntry* Slot);
+	void ClearSlot(FEquipmentSlot* Slot);
 	
-	FEquipmentSlotEntry* GetSlotEntry(EItemSubGroup Slot);
+	FEquipmentSlot* GetSlotEntry(EItemSubGroup Slot);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetItemDataToEquipmentSlotViewModels();
@@ -113,8 +128,8 @@ public:
 	FEquipmentSlotList& GetSlots(){ return EquipmentSlots; }
 	
 	// 불러오기용, 슬롯 채우기
-	void SetEquipmentSlots(FEquipmentSlotList SavedEquipmentMap);
-	void ApplyItemStat(const FItemData& ItemData, FEquipmentSlotEntry* Slot);
+	void SetEquipmentSlots(const FEquipmentSlotList& SavedEquipmentMap);
+	void ApplyItemStat(const FItemData& ItemData, FEquipmentSlot* Slot);
 	void ReEquipItem();
 	
 	// 아이템 메시 캐릭터에 장착, 해제
@@ -124,6 +139,13 @@ public:
 	void AttachItemMeshToAuraCharacterMesh(const FItemData& ItemData, AAuraCharacter* AuraCharacter);
 	void DetachItemMeshFromAuraCharacterMesh(EItemSubGroup ItemSubGroup);
 	
+protected:
+	// 내부 장착
+	void EquipItem_Internal(const FItemData& ItemData, int OriginIndex);
+	
+	// 내부 장착 해제
+	void UnEquipItem_Internal(FEquipmentSlot* Slot);
+	
 public:
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly)
 	FOnItemEquipped OnItemEquipped;
@@ -131,31 +153,26 @@ public:
 	UPROPERTY()
 	FOnEquipmentSlotChanged OnEquipmentSlotChanged;
 	
-protected:
-	// 내부 장착
-	void EquipItem_Internal(const FItemData& ItemData, int OriginIndex);
+	UFUNCTION()
+	void HUDInitialized();
 	
-	// 내부 장착 해제
-	void UnEquipItem_Internal(FEquipmentSlotEntry* Slot);
+	UFUNCTION()
+	void OnCharacterInitialized(ACharacter* AvatarCharacter);
 	
 public:
 	// 슬롯 타입과 슬롯 정보를 연결
 	UPROPERTY(Replicated)
 	FEquipmentSlotList EquipmentSlots;
+	
+	UPROPERTY()
+	UMVVM_Inventory* InventoryViewModel;
 
 	UPROPERTY()
-	TArray<TObjectPtr<UStaticMeshComponent>> AttachedMesh;
+	TMap<EItemSubGroup, TObjectPtr<UStaticMeshComponent>> AttachedMesh;
 	
 	UPROPERTY()
 	UInventoryComponent* InventoryComponent;
 
 	UPROPERTY()
 	UAuraAbilitySystemComponent* AuraASC;
-};
-
-// FastArray 등록
-template<>
-struct TStructOpsTypeTraits<FEquipmentSlotList> : public TStructOpsTypeTraitsBase2<FEquipmentSlotList>
-{
-	enum { WithNetDeltaSerializer = true };
 };

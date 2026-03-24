@@ -10,6 +10,7 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -76,6 +77,22 @@ void AAuraBossMonster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AAuraBossMonster, bIsRoaring);
+	DOREPLIFETIME(AAuraBossMonster, bBerserk);
+}
+
+void AAuraBossMonster::MultiCast_AttachDeathCam_Implementation()
+{
+	// 뗐다가 다시 붙임
+	SpringArm->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, FName("Pelvis"));
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritRoll = false;
+	SpringArm->bInheritYaw = false;
+	
+	SpringArm->SetRelativeRotation(FRotator(-45.f, 0.f, 0.f));
+	SpringArm->TargetArmLength = 600.f;
+	SpringArm->SocketOffset = FVector(0.f, 0.f, 100.f);
+	SpringArm->bDoCollisionTest = false;
 }
 
 void AAuraBossMonster::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
@@ -83,14 +100,8 @@ void AAuraBossMonster::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy
 	// 랙돌 효과와 무기 드랍
 	Super::Die(DeathImpulse, KilledBy);
 	
-	// 월드 위치에 고정
-	// SpringArm->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-	
 	// 카메라를 척추에 고정
-	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, FName("Pelvis"));
-	SpringArm->bInheritPitch = false;
-	SpringArm->bInheritRoll = false;
-	SpringArm->bInheritYaw = false;
+	MultiCast_AttachDeathCam();
 }
 
 void AAuraBossMonster::SetIsBeingShocked_Implementation(bool bInShock)
@@ -132,6 +143,12 @@ void AAuraBossMonster::OnRoarStart(const FGameplayEventData* EventData)
 		if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
 		{
 			AuraGM->OnAllActorsInvincible.Broadcast(true);
+		}
+		
+		// 음악 재생
+		if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+		{
+			AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
 		}
 	}
 }
@@ -181,6 +198,14 @@ void AAuraBossMonster::BeginBerserkMode(float NewHealth)
 		// 모든 소환수 제거
 		RemoveAllMinions();
 		
+		bBerserk = true;
+		
+		// 음악 재생
+		if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+		{
+			AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase2"));
+		}
+		
 		// 블루프린트로 몽타주 실행, 머티리얼 변경
 		OnBeginBerserkMontage.Broadcast();
 
@@ -203,9 +228,31 @@ void AAuraBossMonster::OnRep_IsRoaring()
 	if (bIsRoaring)
 	{
 		OnBossEventStart.Broadcast(this);
+		
+		// 광폭화 상태라면 실행 안함
+		if (bBerserk)
+			return;
+		
+		// 음악 재생
+		if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+		{
+			AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
+		}
 	}
 	else
 	{
 		OnBossEventEnd.Broadcast(this);
+	}
+}
+
+void AAuraBossMonster::OnRep_Berserk()
+{
+	// 블루프린트로 몽타주 실행, 머티리얼 변경
+	OnBeginBerserkMontage.Broadcast();
+	
+	// 음악 재생
+	if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+	{
+		AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase2"));
 	}
 }

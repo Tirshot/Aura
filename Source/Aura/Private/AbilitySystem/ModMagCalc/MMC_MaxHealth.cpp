@@ -2,6 +2,8 @@
 
 
 #include "AbilitySystem/ModMagCalc/MMC_MaxHealth.h"
+
+#include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "Interaction/CombatInterface.h"
 
@@ -41,6 +43,9 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 			}
 		}
 	}
+	
+	float BaseValue = 80.f + Vigor * 2.5f + 10.f * PlayerLevel;
+	float BonusValue = GetBonusValue(Spec, FAuraGameplayTags::Get().Attributes_Primary_Vigor);
 
-	return 80.f + Vigor * 2.5f + 10.f * PlayerLevel;
+	return BaseValue + BonusValue;
 }

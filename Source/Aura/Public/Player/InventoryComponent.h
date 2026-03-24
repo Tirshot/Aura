@@ -151,6 +151,8 @@ public:
 
 	// 불러오기 용도
 	void SetInventorySlots(const TArray<FInventorySlot>& InSlots);
+	
+	void ForceReplication();
 
 public:
 	UFUNCTION()
@@ -185,6 +187,8 @@ public:
 	
 	FInventorySlotList& GetSlotList() {return SlotList;}
 	
+	bool IsFirstSlotOfItem(const FInventorySlot& Slot);
+	
 	UFUNCTION(BlueprintCallable)
 	int GetDragItemIndex() const;
 	
@@ -217,10 +221,14 @@ protected:
 	// 네트워크 환경에서 인벤토리
 	UPROPERTY(ReplicatedUsing = OnRep_SlotList)
 	FInventorySlotList SlotList;
+	
 public:
 	//
 	UFUNCTION()
 	void OnRep_SlotList();
+	
+	UPROPERTY(Replicated)
+	bool bLoaded = false;
 	
 	UFUNCTION()
 	void OnCharacterInitialized(ACharacter* Character);

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayModMagnitudeCalculation.h"
+#include "AuraMMCBase.h"
 #include "MMC_MagicAttackPower.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class AURA_API UMMC_MagicAttackPower : public UGameplayModMagnitudeCalculation
+class AURA_API UMMC_MagicAttackPower : public UAuraMMCBase
 {
 	GENERATED_BODY()
 	

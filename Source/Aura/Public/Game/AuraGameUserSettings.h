@@ -32,9 +32,9 @@ public:
 	bool GetBackgroundVolumeChecked() { return BackgroundVolumeChecked; }
 	
 	void SetMasterVolumeChecked(bool InMasterVolumeChecked);
-	void SetUIVolumeChecked(bool InUIVolumeChecked){ UIVolumeChecked = InUIVolumeChecked; }
-	void SetFXVolumeChecked(bool InFXVolumeChecked){ FXVolumeChecked = InFXVolumeChecked; }
-	void SetBackgroundVolumeChecked(bool InBackgroundVolumeChecked){ BackgroundVolumeChecked = InBackgroundVolumeChecked; }
+	void SetUIVolumeChecked(bool InUIVolumeChecked){ UIVolumeChecked = InUIVolumeChecked; SaveConfig();}
+	void SetFXVolumeChecked(bool InFXVolumeChecked){ FXVolumeChecked = InFXVolumeChecked; SaveConfig();}
+	void SetBackgroundVolumeChecked(bool InBackgroundVolumeChecked){ BackgroundVolumeChecked = InBackgroundVolumeChecked; SaveConfig();}
 	
 protected:
 	UPROPERTY(Config)

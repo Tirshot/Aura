@@ -294,7 +294,4 @@ public:
 	static UInventoryComponent* GetInventoryComponentByPlayerState(APlayerState* PlayerState);
 	UFUNCTION()
 	static UEquipmentComponent* GetEquipmentComponentByPlayerState(APlayerState* PlayerState);
-	
-	UFUNCTION(BlueprintCallable, Category = "AuraAbilitySystemLibrary|Sound", meta = (DefaultToSelf = "WorldContextObject"))
-	static void UpdateSoundVolume(const AAuraPlayerController* AuraPlayerController, USoundClass* TargetSoundClass, float Volume);
 };

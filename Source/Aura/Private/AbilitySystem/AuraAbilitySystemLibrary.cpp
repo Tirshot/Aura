@@ -498,7 +498,9 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 
 	// 이펙트 적용을 위한 이펙트 스펙 핸들 생성
 	const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(EffectClass, Params.AbilityLevel, EffectContextHandle);
-
+	if (!SpecHandle.IsValid())
+		return FGameplayEffectContextHandle();
+	
 	// Set By Caller Magnitude 설정
 	// 데미지 타입
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Params.DamageType, Params.BaseDamage);
@@ -1198,32 +1200,4 @@ float UAuraAbilitySystemLibrary::GetAttributeValue(const UObject* WorldContextOb
 	}
 		
 	return Value;
-}
-
-void UAuraAbilitySystemLibrary::UpdateSoundVolume(const AAuraPlayerController* AuraPlayerController, USoundClass* TargetSoundClass, float Volume)
-{
-	if (!AuraPlayerController)
-		return;
-	
-	if (!TargetSoundClass)
-		return;
-	
-	if (UWorld* World = AuraPlayerController->GetWorld())
-	{
-		if (UAuraGameInstance* AuraGI = AuraPlayerController->GetGameInstance<UAuraGameInstance>())
-		{
-			USoundMix* SoundMix = AuraGI->SoundMix;
-			if (!SoundMix)
-				return;
-			
-			UGameplayStatics::SetSoundMixClassOverride(
-				AuraPlayerController,
-				SoundMix,
-				TargetSoundClass,
-				Volume);
-		
-			// 변경한 볼륨 즉시 적용
-			UGameplayStatics::PushSoundMixModifier(World, SoundMix);
-		}
-	}
 }

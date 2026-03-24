@@ -801,7 +801,7 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
             }
         }
         // 레벨 요구량보다 레벨이 낮으면 다시 잠그고 넘김
-        if (Level < Info.LevelRequirement)
+        if (Level < Info.LevelRequirement &&)
         {
             if (FoundSpec && GetStatusFromSpec(FoundSpec).MatchesTag(AuraTags.Abilities_Status_Eligible))
             {

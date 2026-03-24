@@ -16,15 +16,39 @@ void UMVVM_Inventory::BindDependencies(const FWidgetControllerParams& WCParams)
 	AbilitySystemComponent = WCParams.AbilitySystemComponent;
 	AttributeSet = WCParams.AttributeSet;
 	
+	Inventory = UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(PlayerState);
+	Equipment = UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(PlayerState);
+	
 	InventoryOpened.AddDynamic(this, &UMVVM_Inventory::OnInventoryOpened);
+	
+	if (!Inventory)
+		return;
+	
+	Inventory->OnInventorySlotChanged.AddDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
+	
+	if (!Equipment)
+		return;
+	
+	Equipment->OnEquipmentSlotChanged.AddDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
+	
+	for (int32 i = 0; i < EquipSlotViewModels.Num(); i++)
+	{
+		EquipmentSlotChanged(i); 
+	}
 }
 
 void UMVVM_Inventory::OnInventoryOpened(bool bIsOpened)
 {
-	const int32 Size = GetInventoryComponent()->GetInventorySize();
-	for (int i = 0; i < Size; ++i)
+	const int32 InventorySize = GetInventoryComponent()->GetInventorySize();
+	for (int i = 0; i < InventorySize; ++i)
 	{
 		InventorySlotChanged(i);
+	}
+	
+	const int32 EquipmentSlotSize = GetAllEquipSlotViewModels().Num();
+	for (int i = 0; i < EquipmentSlotSize; ++i)
+	{
+		EquipmentSlotChanged(i);
 	}
 }
 
@@ -74,12 +98,6 @@ void UMVVM_Inventory::InitializeSlots()
 			EquipSlotViewModels.Add(NewSlotViewModel);
 		}
 	}
-
-	Inventory->OnInventorySlotChanged.RemoveAll(this);
-	Inventory->OnInventorySlotChanged.AddDynamic(this, &UMVVM_Inventory::InventorySlotChanged);
-	
-	Equipment->OnEquipmentSlotChanged.RemoveAll(this);
-	Equipment->OnEquipmentSlotChanged.AddDynamic(this, &UMVVM_Inventory::EquipmentSlotChanged);
 	
 	for (int i = 0; i < EquipSlotViewModels.Num(); i++)
 	{
@@ -131,15 +149,35 @@ void UMVVM_Inventory::InventorySlotChanged(int Index)
 
 void UMVVM_Inventory::EquipmentSlotChanged(int Index)
 {
-	const auto& EquipmentSlotEntry = Equipment->GetSlots();
-
-	if (!EquipmentSlotEntry.Items.IsValidIndex(Index))
+	// auto& EquipmentSlotEntry = Equipment->GetSlots();
+	//
+	// if (!EquipmentSlotEntry.Items.IsValidIndex(Index))
+	// 	return;
+	//
+	// if (UMVVM_EquipmentSlot* SlotViewModel = EquipSlotViewModels[Index])
+	// {
+	// 	FEquipmentSlot& SlotEntry = EquipmentSlotEntry.Items[Index];
+	// 	SlotViewModel->ReInitializeSlotView(SlotEntry.ItemData);
+	// }
+	if (!Equipment)
 		return;
-	
-	UMVVM_EquipmentSlot* SlotViewModel = EquipSlotViewModels[Index];
-	if (SlotViewModel)
+
+	const auto& Items = Equipment->GetSlots().Items;
+	for (const auto& Entry : Items)
 	{
-		SlotViewModel->ReInitializeSlotView(EquipmentSlotEntry.Items[Index].ItemData);
+		if (Entry.SlotID == Index) 
+		{
+			if (auto* SlotVM = GetEquipSlotViewModel(static_cast<EItemSubGroup>(Index)))
+			{
+				SlotVM->ReInitializeSlotView(Entry.ItemData);
+				return;
+			}
+		}
+	}
+
+	if (auto* SlotVM = GetEquipSlotViewModel(static_cast<EItemSubGroup>(Index)))
+	{
+		SlotVM->Reset();
 	}
 }
 
@@ -185,7 +223,10 @@ UMVVM_EquipmentSlot* UMVVM_Inventory::GetEquipSlotViewModel(EItemSubGroup ItemSu
 	int8 Maximum = static_cast<int8>(EItemSubGroup::None);
 	if (Index < Maximum && Index >= 0)
 	{
-		return EquipSlotViewModels[Index];
+		if (!EquipSlotViewModels.IsEmpty())
+		{
+			return EquipSlotViewModels[Index];
+		}
 	}
 	return nullptr;
 }

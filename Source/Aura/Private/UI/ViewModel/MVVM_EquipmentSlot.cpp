@@ -15,12 +15,41 @@ void UMVVM_EquipmentSlot::Initialize(UEquipmentComponent* Equipment, uint8 Index
 		OverlayWidgetController = UAuraAbilitySystemLibrary::GetOverlayWidgetController(AuraPS->GetPlayerController());
 	}
 	
-	// 열거형의 최대치(None)을 넘으면 리턴
-	if (Index > static_cast<int8>(EItemSubGroup::None))
+	switch (Index)
+	{
+	case 0:
+		SetItemSlotGroup(EItemSubGroup::Helmet);
+		break;
+		
+	case 1:
+		SetItemSlotGroup(EItemSubGroup::Armor);
+		break;
+		
+	case 2:
+		SetItemSlotGroup(EItemSubGroup::Boots);
+		break;
+		
+	case 3:
+		SetItemSlotGroup(EItemSubGroup::Weapon);
+		break;
+		
+	default:
+		break;
+	}
+	
+	LoadInitialData();
+}
+
+void UMVVM_EquipmentSlot::LoadInitialData()
+{
+	const FEquipmentSlot* Slot = EquipmentComponent->GetSlotEntry(ItemSlotGroup);
+	if (!Slot)
 		return;
 	
-	EItemSubGroup ItemSubGroup = static_cast<EItemSubGroup>(Index);
-	SetItemSlotGroup(ItemSubGroup);
+	SetItemID(Slot->ItemData.Name);
+	SetIcon(Slot->ItemData.Image);
+	SetDescription(Slot->ItemData.Description);
+	SetbEquipped(true);
 }
 
 void UMVVM_EquipmentSlot::Reset()
@@ -34,9 +63,11 @@ void UMVVM_EquipmentSlot::Reset()
 
 void UMVVM_EquipmentSlot::ReInitializeSlotView(const FItemData& ItemData)
 {
-	EquippedItemData = ItemData;
-	SetItemID(ItemData.Name);
-	SetDescription(ItemData.Description);
+	FItemData CopiedItemData = ItemData;
+	
+	EquippedItemData = CopiedItemData;
+	SetItemID(CopiedItemData.Name);
+	SetDescription(CopiedItemData.Description);
 	SetbEquipped(true);
 	
 	if (UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
