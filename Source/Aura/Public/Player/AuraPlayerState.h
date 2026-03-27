@@ -9,6 +9,7 @@
 #include "Interaction/CombatInterface.h"
 #include "AuraPlayerState.generated.h"
 
+class UCharmComponent;
 class UEquipmentComponent;
 class UInventoryComponent;
 struct FAuraAbilityUpgradeInfo;
@@ -92,6 +93,7 @@ public:
 	FOnDamageSignature& GetOnDamageDelegate() {return OnDamageDelegate;}
 	UInventoryComponent* GetInventoryComponent() {return Inventory;}
 	UEquipmentComponent* GetEquipmentComponent() {return Equipment;}
+	UCharmComponent* GetCharmComponent() {return Charm;}
 	
 public:
 	// 레벨 정보

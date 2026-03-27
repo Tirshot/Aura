@@ -8,6 +8,7 @@
 #include "AbilitySystem/AuraAbilitySystemGlobals.h"
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "Player/InventoryComponent.h"
@@ -39,9 +40,6 @@ void UCharmComponent::TryToBindItemGetAndRemove()
 
 void UCharmComponent::ApplyCharmEffectFromSavedInventory()
 {
-	if (GetOwnerRole() != ROLE_Authority)
-		return;
-	
 	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
 	{
 		// 인벤토리 순회
@@ -78,17 +76,17 @@ void UCharmComponent::BeginPlay()
 	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
 	{
 		AuraPS->OnPawnSet.AddUniqueDynamic(this, &UCharmComponent::OnPawnSet);
-	
-		if (GetOwnerRole() != ROLE_Authority)
-			return;
-			
-		ApplyCharmEffectFromSavedInventory();
 	}
 }
 
 void UCharmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
+
+void UCharmComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
@@ -190,14 +188,9 @@ void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 
 void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 {
-	if (GetOwnerRole() != ROLE_Authority)
-		return;
-	
 	// 아이템 추가가 인벤토리 내의 단순 이동이라면 리턴
 	if (bIsItemMoved)
 		return;
-	
-	UE_LOG(LogTemp, Warning, TEXT("Server: Adding Charm for %s"), *GetOwner()->GetName());
 	
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Cast<AAuraPlayerState>(GetOwner())->GetPawn()))
 	{
@@ -208,6 +201,10 @@ void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 		FItemData& CharmData = InventorySlot->ItemData;
 		if (CharmData.ItemGroup == EItemGroup::Charm)
 		{
+			// 이미 적용된 참은 무시
+			if (AppliedCharms.Contains(CharmData.UniqueID))
+				return;
+			
 			// 참 효과 적용
 			ApplyCharmItemEffect(CharmData);
 		}
@@ -234,7 +231,7 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 		return;
 	
 	FGameplayEffectContextHandle Context = AuraASC->MakeEffectContext();
-	Context.AddInstigator(AuraASC->GetAvatarActor(), AuraASC->GetAvatarActor());
+	Context.AddInstigator(GetOwner(), GetOwner());
 		
 	auto SpecHandle = AuraASC->MakeOutgoingSpec(ItemData.ItemStatEffectClass, 1.f, Context);
 		
@@ -276,11 +273,10 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 
 void UCharmComponent::OnPawnSet(APlayerState* PlayerState, APawn* NewPawn, APawn* OldPawn)
 {
-	APawn* Pawn = PlayerState->GetPawn();
-	if (!Pawn)
+	if (!NewPawn)
 		return;
 	
-	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Pawn))
+	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(NewPawn))
 	{
 		if (!Inventory->OnItemGet.IsAlreadyBound(this, &UCharmComponent::AddToCharmSlot))
 			Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
@@ -288,13 +284,11 @@ void UCharmComponent::OnPawnSet(APlayerState* PlayerState, APawn* NewPawn, APawn
 		if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
 			Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
 		
-		if (Inventory->bLoaded) 
+		Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
+		
+		if (!Inventory->GetSlots().IsEmpty()) 
 		{
 			ApplyCharmEffectFromSavedInventory();
-		}
-		else 
-		{
-			Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
 		}
 	}
 }

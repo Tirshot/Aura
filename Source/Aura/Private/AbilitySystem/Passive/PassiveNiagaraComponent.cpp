@@ -10,6 +10,7 @@
 UPassiveNiagaraComponent::UPassiveNiagaraComponent()
 {
 	bAutoActivate = false;
+	SetIsReplicatedByDefault(true);
 }
 
 void UPassiveNiagaraComponent::BeginPlay()

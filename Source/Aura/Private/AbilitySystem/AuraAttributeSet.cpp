@@ -138,7 +138,7 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     if (Data.EvaluatedData.Attribute == GetHealthAttribute())
     {
         SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
-        const FGameplayTag NoFloatTextTag = FAuraGameplayTags::Get().Init_Attributes;
+        const FGameplayTag NoFloatTextTag = FGameplayTag::RequestGameplayTag("Init");
         if (Data.EffectSpec.CapturedSourceTags.GetSpecTags().HasTag(NoFloatTextTag))
         {
             // 초기화용 효과이므로 데미지 텍스트 표시 생략

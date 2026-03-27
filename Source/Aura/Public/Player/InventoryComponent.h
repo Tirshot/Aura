@@ -8,6 +8,7 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "InventoryComponent.generated.h"
 
+class UCharmComponent;
 class UEquipmentComponent;
 
 USTRUCT(BlueprintType)
@@ -216,6 +217,9 @@ protected:
 	
 	UPROPERTY()
 	UEquipmentComponent* EquipmentComponent;
+	
+	UPROPERTY()
+	UCharmComponent* CharmComponent;
 
 protected:
 	// 네트워크 환경에서 인벤토리

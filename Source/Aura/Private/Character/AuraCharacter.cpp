@@ -23,7 +23,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Kismet/KismetRenderingLibrary.h"
-#include "UI/WidgetController/OverlayWidgetController.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -64,6 +63,7 @@ AAuraCharacter::AAuraCharacter()
     MiniMapCapture->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
     MiniMapCapture->bCaptureEveryFrame = false;
     MiniMapCapture->bCaptureOnMovement = true;
+    MiniMapCapture->PrimaryComponentTick.bCanEverTick = true;
     
     CharacterClass = ECharacterClass::Elementalist;
 }
@@ -75,33 +75,6 @@ void AAuraCharacter::BeginPlay()
     if (const UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet))
     {
         GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
-    }
-    
-    // 내 미니맵만 켜기
-    if (MiniMapCapture)
-    {
-        if (IsLocallyControlled())
-        {
-            MiniMapRenderTarget = NewObject<UTextureRenderTarget2D>(MiniMapCapture, MiniMapRenderTargetClass);
-             if (MiniMapRenderTarget)
-             {
-                 MiniMapRenderTarget->SizeX = 512;
-                 MiniMapRenderTarget->SizeY = 512;
-                 
-                 MiniMapRenderTarget->UpdateResource();
-                 
-                 // 오버레이로 포인터 전달
-                 UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnRenderTargetCreated.Broadcast(MiniMapRenderTarget);
-                 
-                 MiniMapCapture->TextureTarget = MiniMapRenderTarget;
-                 MiniMapCapture->Activate();
-                 MiniMapCapture->CaptureScene();
-             }
-        }
-        else
-        {
-            MiniMapCapture->Deactivate();
-        }
     }
     
     if (APawn* Pawn = Cast<APawn>(this))
@@ -342,9 +315,35 @@ void AAuraCharacter::OnRep_PlayerState()
     }
 }
 
+void AAuraCharacter::InitializeMiniMap()
+{
+    // 내 미니맵만 켜기
+    if (MiniMapCapture)
+    {
+        MiniMapRenderTarget = NewObject<UTextureRenderTarget2D>(this, MiniMapRenderTargetClass);
+        if (MiniMapRenderTarget)
+        {
+            MiniMapRenderTarget->SizeX = 512;
+            MiniMapRenderTarget->SizeY = 512;
+                 
+            MiniMapRenderTarget->UpdateResource();
+                
+            MiniMapCapture->TextureTarget = MiniMapRenderTarget;
+            MiniMapCapture->Activate();
+            MiniMapCapture->CaptureScene();
+        }
+        else
+        {
+            MiniMapCapture->Deactivate();
+        }
+    }
+}
+
 void AAuraCharacter::OnRep_Controller()
 {
     Super::OnRep_Controller();
+    
+    InitializeMiniMap();
 }
 
 void AAuraCharacter::AddToXP_Implementation(int32 InXP)
@@ -618,6 +617,15 @@ UEquipmentComponent* AAuraCharacter::GetEquipmentComponent_Implementation()
     if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
     {
         return AuraPS->GetEquipmentComponent();
+    }
+    return nullptr;
+}
+
+UCharmComponent* AAuraCharacter::GetCharmComponent_Implementation()
+{
+    if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
+    {
+        return AuraPS->GetCharmComponent();
     }
     return nullptr;
 }

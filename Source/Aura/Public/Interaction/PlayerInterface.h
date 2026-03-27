@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "PlayerInterface.generated.h"
 
+class UCharmComponent;
 class UEquipmentComponent;
 class UInventoryComponent;
 // This class does not need to be modified.
@@ -71,6 +72,9 @@ public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UEquipmentComponent* GetEquipmentComponent();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	UCharmComponent* GetCharmComponent();
 	
 	/*
 	/ 범위 지정 스펠

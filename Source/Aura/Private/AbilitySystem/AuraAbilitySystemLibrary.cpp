@@ -8,6 +8,7 @@
 #include "AssetTypeCategories.h"
 #include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
+#include "SocketSubsystem.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "Blueprint/UserWidget.h"
 #include "Character/AuraCharacter.h"
@@ -116,30 +117,12 @@ UGameOverWidgetController* UAuraAbilitySystemLibrary::GetGameOverWidgetControlle
 USettingsMenuWidgetController* UAuraAbilitySystemLibrary::GetSettingsMenuWidgetController(
 	const UObject* WorldContextObject)
 {
-	FWidgetControllerParams WCParams;
-	AAuraHUD* AuraHUD = nullptr;
-
-	// 인게임
-	if (MakeWidgetControllerParams(WorldContextObject, WCParams, AuraHUD))
-	{
-		return AuraHUD->GetSettingsMenuWidgetController(WCParams);
-	}
-	// 메인메뉴
-	if (APlayerController* PC = WCParams.PlayerController)
-	{
-		if (AMainMenuHUD* MainMenuHUD = Cast<AMainMenuHUD>(PC->GetHUD()))
-		{
-			return MainMenuHUD->GetSettingsMenuWidgetController();
-		}
-	}
+	if (!WorldContextObject)
+		return nullptr;
 	
-	// 로드메뉴
-	if (APlayerController* PC = WCParams.PlayerController)
+	if (UAuraGameInstance* AuraGI = WorldContextObject->GetWorld()->GetGameInstance<UAuraGameInstance>())
 	{
-		if (ALoadScreenHUD* LoadScreenHUD = Cast<ALoadScreenHUD>(PC->GetHUD()))
-		{
-			return LoadScreenHUD->GetSettingsMenuWidgetController();
-		}
+		return AuraGI->GetSettingsMenuWidgetController();
 	}
 	return nullptr;
 }
@@ -591,7 +574,7 @@ void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& 
 	}
 }
 
-void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, const FText& AppendText, UTexture2D* Icon)
+void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, FText AppendText, UTexture2D* Icon)
 {
 	UAuraGameInstance* GI = TargetActor->GetGameInstance<UAuraGameInstance>();
 	if (!GI || !GI->MessageTable)
@@ -606,6 +589,26 @@ void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGa
 void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemComponent* ASC, FGameplayTag MessageTag)
 {
 	ASC->RemoveActiveEffectsWithTags(FGameplayTagContainer(MessageTag));
+	
+	if (auto* GI = Cast<UAuraGameInstance>(ASC->GetWorld()->GetGameInstance()))
+	{
+		if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message"))
+		{
+			if (auto AuraPS = Cast<AAuraPlayerState>(ASC->GetOwner()))
+			{
+				if (auto AuraPC = Cast<AAuraPlayerController>(AuraPS->GetPlayerController()))
+				{
+					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
+					{
+						if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(FoundRow->MessageWidget))
+						{
+							AuraHUD->GetOverlayWidget()->WBP_CenterTutorialDescription->TextBlock->SetText(FText::GetEmpty());
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor)
@@ -743,6 +746,19 @@ UEquipmentComponent* UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerSta
 		return AuraPS->GetEquipmentComponent();
 	}
 	return nullptr;
+}
+
+FString UAuraAbilitySystemLibrary::GetLocalIPAddress()
+{
+	bool bCanBindAll;
+	TSharedPtr<FInternetAddr> LocalAddr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBindAll);
+
+	if (LocalAddr.IsValid())
+	{
+		return LocalAddr->ToString(false);
+	}
+
+	return FString(TEXT("네트워크에 연결되지 않음"));
 }
 
 UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)

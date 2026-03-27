@@ -7,8 +7,10 @@
 #include "AbilitySystem/Data/ItemInfo.h"
 #include "AbilitySystem/Data/SoundData.h"
 #include "Engine/GameInstance.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "AuraGameInstance.generated.h"
 
+class USettingsMenuWidgetController;
 class USaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameInstanceInitialized);
 
@@ -26,6 +28,9 @@ public:
 
 	bool bInit = false;
 	
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsOnline = false;
+	
 	// Handle Network Error 함수는 블루프린트로 오버라이드 가능
 	
 public:
@@ -33,6 +38,22 @@ public:
 	class UCharacterClassInfo* GetCharacterClassInfo() {return CharacterClassInfo;}
 	class UAbilityInfo* GetAbilityInfo() {return AbilityInfo;}
 	class UAbilityUpgradeInfo* GetAbilityUpgradeInfo() {return AbilityUpgradeInfo;}
+	USettingsMenuWidgetController* GetSettingsMenuWidgetController();
+	
+public:
+	void HostSession(FString MapName);
+	void FindSession();
+	
+	UFUNCTION(BlueprintCallable)
+	void DestroySession();
+	
+	void CancelFindSession();
+	
+protected:
+	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
+	virtual void OnFindSessionsComplete(bool bWasSuccessful);
+	virtual void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+	virtual void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 	
 public:
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
@@ -46,6 +67,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FString LoadSlotName = FString();
 
+	UPROPERTY(BlueprintReadOnly)
+	FString LoadMapName = FString();
+	
 	UPROPERTY()
 	int32 LoadSlotIndex = 0;
 	
@@ -59,6 +83,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	FName DefaultPlayerStartTag;
+	
+	// 온라인
+	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+
+	FDelegateHandle CreateSessionCompleteDelegateHandle;
+	FDelegateHandle FindSessionsCompleteDelegateHandle;
+	FDelegateHandle JoinSessionCompleteDelegateHandle;
+	FDelegateHandle DestroySessionCompleteDelegateHandle;
 	
 public:
 	// 디버그 옵션 Setter/Getter
@@ -116,6 +148,13 @@ public:
 	// 사운드 데이터 에셋
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
 	TObjectPtr<USoundData> SoundData;
+	
+	// 설정 메뉴 위젯 컨트롤러
+	UPROPERTY()
+	TObjectPtr<USettingsMenuWidgetController> SettingsMenuWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USettingsMenuWidgetController> SettingsMenuWidgetControllerClass;
 	
 	// 아이템 정보
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")

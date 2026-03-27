@@ -1,0 +1,1 @@
+start "" "D:\UnrealEngine\UE_5.6\Engine\Binaries\Win64\UnrealEditor.exe" "D:\UnrealProjects\Aura2\Aura.uproject" /Game/Maps/LoadMenu?listen -game -log -windowed -ResX=1280 -ResY=720

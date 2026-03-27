@@ -262,7 +262,7 @@ public:
 	static void ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText = FText());
 
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|GameplayMechanics")
-	static void AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, const FText& AppendText = FText(), UTexture2D* Icon = nullptr);
+	static void AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, FText AppendText = FText(), UTexture2D* Icon = nullptr);
 	
 	// 메시지 태그 제거
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|Message")
@@ -294,4 +294,8 @@ public:
 	static UInventoryComponent* GetInventoryComponentByPlayerState(APlayerState* PlayerState);
 	UFUNCTION()
 	static UEquipmentComponent* GetEquipmentComponentByPlayerState(APlayerState* PlayerState);
+	
+	// 멀티 플레이어
+	UFUNCTION(BlueprintPure)
+	static FString GetLocalIPAddress();
 };

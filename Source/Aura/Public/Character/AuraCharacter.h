@@ -27,6 +27,8 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnRep_Controller() override;
+	
+	void InitializeMiniMap();
 
 	// 플레이어 인터페이스
 	virtual void AddToXP_Implementation(int32 InXP) override;
@@ -47,6 +49,7 @@ public:
 	virtual void SaveProgress_Implementation(const FName& CheckpointTag) override;
 	virtual UInventoryComponent* GetInventoryComponent_Implementation() override;
 	virtual UEquipmentComponent* GetEquipmentComponent_Implementation() override;
+	virtual UCharmComponent* GetCharmComponent_Implementation() override;
 	// 플레이어 인터페이스 끝
 
 	// 전투 인터페이스
@@ -119,8 +122,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "MiniMap")
 	TSubclassOf<UTextureRenderTarget2D> MiniMapRenderTargetClass;
 	
+public:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UTextureRenderTarget2D> MiniMapRenderTarget;
+	
 private:
 	virtual void InitAbilityActorInfo() override;
 };

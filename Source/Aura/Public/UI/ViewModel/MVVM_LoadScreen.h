@@ -9,7 +9,7 @@
 
 class USaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlotSelected);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNetworkErrorReceived, const FString&, ErrorStr);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNetworkMessageReceived, const FString&, Message);
 
 class UMVVM_LoadSlot;
 
@@ -72,10 +72,13 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FSlotSelected SlotSelected;
 	
-	UPROPERTY()
-	FNetworkErrorReceived NetworkErrorReceived;
+	UPROPERTY(BlueprintAssignable)
+	FNetworkMessageReceived NetworkErrorReceived;
 	
-private:
+	UPROPERTY(BlueprintAssignable)
+	FNetworkMessageReceived NetworkMessageReceived;
+	
+protected:
 	UPROPERTY()
 	TMap<int32, UMVVM_LoadSlot*> LoadSlots;
 
@@ -90,6 +93,9 @@ private:
 
 	UPROPERTY()
 	UMVVM_LoadSlot* SelectedSlot;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 SelectedSlotIndex;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, FieldNotify, Setter, Getter, meta =(AllowPrivateAccess="true"))
 	int32 NumLoadSlots;

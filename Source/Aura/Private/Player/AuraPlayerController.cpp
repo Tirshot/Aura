@@ -233,6 +233,22 @@ void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
         EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(InCharacter);
         InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(InCharacter);
     }
+    
+    if (AAuraCharacter* Aura = Cast<AAuraCharacter>(InCharacter))
+    {
+        if (!Aura->MiniMapRenderTarget)
+        {
+            Aura->InitializeMiniMap();
+        }
+        
+        if (Aura->MiniMapRenderTarget)
+        {
+            if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+            {
+                OverlayWC->OnRenderTargetCreated.Broadcast(Aura->MiniMapRenderTarget);
+            }
+        }
+    }
 }
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit, bool bHealed)
@@ -575,6 +591,9 @@ void AAuraPlayerController::UpdateRangeIndicatorRotation()
 
 void AAuraPlayerController::HighlightActor(AActor* InActor)
 {
+    if (!IsValid(GetPawn())) 
+        return;
+    
     if (!IsValid(InActor) || InActor->IsPendingKillPending()) 
         return;
     
@@ -584,6 +603,9 @@ void AAuraPlayerController::HighlightActor(AActor* InActor)
 
 void AAuraPlayerController::UnHighlightActor(AActor* InActor)
 {
+    if (!IsValid(GetPawn())) 
+        return;
+    
     if (!IsValid(InActor) || InActor->IsPendingKillPending()) 
         return;
     
@@ -1260,6 +1282,9 @@ void AAuraPlayerController::ShowSpellMenu()
 
 void AAuraPlayerController::ShowESCMenu()
 {
+    // 일시정지(0.1배속) 요청
+    Server_RequestPauseGame(this);
+    
     UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnESCMenuKeyPressed.Broadcast();
 }
 
@@ -1378,6 +1403,7 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
             if (ThisActor->Implements<UEnemyInterface>())
             {
                 TargetingStatus = ETargetingStatus::TargetingEnemy;
+                TargetItem = nullptr;
             }
             else if (ThisActor->Implements<UItemInterface>())
             {
@@ -1387,10 +1413,12 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
             else
             {
                 TargetingStatus = ETargetingStatus::TargetingNonEnemy;
+                TargetItem = nullptr;
             }
         }
         else
         {
+            TargetItem = nullptr;
             TargetingStatus = ETargetingStatus::None;
         }
     }

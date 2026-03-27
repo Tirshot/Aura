@@ -38,7 +38,6 @@ public:
 	USpellUpgradesWidgetController* GetSpellUpgradesWidgetController(const FWidgetControllerParams& WCParams);
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
-	USettingsMenuWidgetController* GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams);
 	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel();
 	UMVVM_DebugMenu* GetDebugMenuViewModel(const FWidgetControllerParams& WCParams);
@@ -71,7 +70,7 @@ public:
 	void HideOverlay();
 	
 	UFUNCTION()
-	UAuraUserWidget* GetOverlayWidget() {return OverlayWidget;}
+	UAuraOverlayWidget* GetOverlayWidget() {return OverlayWidget;}
 	
 	UFUNCTION()
 	UAuraUserWidget* GetSaveProgressWidget() {return SaveProgressWidget;}
@@ -125,12 +124,6 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UGameOverWidgetController> GameOverWidgetControllerClass;
 
-	UPROPERTY()
-	TObjectPtr<USettingsMenuWidgetController> SettingsMenuWidgetController;
-
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<USettingsMenuWidgetController> SettingsMenuWidgetControllerClass;
-	
 	UPROPERTY()
 	TObjectPtr<UItemToolTipWidgetController> ItemToolTipWidgetController;
 

@@ -8,6 +8,7 @@
 #include "Game/AuraGameInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
+#include "Player/CharmComponent.h"
 
 void FInventorySlot::PostReplicatedAdd(const FInventorySlotList& InArraySerializer)
 {
@@ -442,6 +443,7 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 	{
 		FInventorySlot& AddedSlot = SlotList.Slots.Add_GetRef(NewSlot);
 		AddedSlot.Inventory = this;
+		OnItemGet.Broadcast(NewSlot.SlotID, false);
 		SlotList.MarkItemDirty(AddedSlot); 
 	}
 	
@@ -667,6 +669,12 @@ void UInventoryComponent::OnCharacterInitialized(ACharacter* Character)
 						EquipmentComponent->OnEquipmentSlotChanged.Broadcast(i);
 					}
 				}
+			}
+			
+			CharmComponent = IPlayerInterface::Execute_GetCharmComponent(Character);
+			if (CharmComponent)
+			{
+				CharmComponent->ApplyCharmEffectFromSavedInventory();
 			}
 		}
 	}

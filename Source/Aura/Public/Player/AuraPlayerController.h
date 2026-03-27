@@ -234,8 +234,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	FVector LastMagicCircleLocation;
 	
-	static void HighlightActor(AActor* InActor);
-	static void UnHighlightActor(AActor* InActor);
+	void HighlightActor(AActor* InActor);
+	void UnHighlightActor(AActor* InActor);
 
 	// 어빌리티 입력
 	void AbilityInputTagPressed(FGameplayTag InputTag);

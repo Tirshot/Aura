@@ -96,7 +96,8 @@ void UMVVM_LoadScreen::SelectSlotButtonPressed(int32 Slot)
 {
 	// 슬롯 선택
 	SlotSelected.Broadcast();
-
+	
+	SelectedSlotIndex = Slot;
 	for (const TPair<int32, UMVVM_LoadSlot*> LoadSlot : LoadSlots)
 	{
 		// 다른 슬롯 선택 비활성화
@@ -131,43 +132,46 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 		return;
 	
 	// 멀티로 연결하던 시도가 있었다면 취소
-	if (GEngine)
-	{
-		GEngine->CancelPending(GetWorld());
-	}
+	CancelMultiPlay();
 	
 	if (UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
 	{
 		AuraGameInstance->PlayerStartTag = SelectedSlot->PlayerStartTag;
 		AuraGameInstance->LoadSlotName = SelectedSlot->GetLoadSlotName();
 		AuraGameInstance->LoadSlotIndex = SelectedSlot->SlotIndex;
+		
+		AuraGameInstance->HostSession(SelectedSlot->GetMapName());
 	}
 	
-	FString LoadSlotName = SelectedSlot->GetLoadSlotName();
-	FName MapName = *SelectedSlot->GetMapName();
-	AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>();
-	if (AuraGM)
-	{
-		AuraGM->TravelToMap(SelectedSlot->GetMapName());
-		return;
-	}
-	
-	UGameplayStatics::OpenLevel(GetWorld(), MapName, true, TEXT("?listen"));
+	// FString LoadSlotName = SelectedSlot->GetLoadSlotName();
+	// FName MapName = *SelectedSlot->GetMapName();
+	// AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>();
+	// if (AuraGM)
+	// {
+	// 	AuraGM->TravelToMap(SelectedSlot->GetMapName());
+	// 	return;
+	// }
+	//
+	// UGameplayStatics::OpenLevel(GetWorld(), MapName, true, TEXT("?listen"));
 }
 
 void UMVVM_LoadScreen::PlayMultiplayerButtonPressed()
 {
+	CancelMultiPlay();
+	
 	if (UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
 	{
 		AuraGameInstance->PlayerStartTag = SelectedSlot->PlayerStartTag;
 		AuraGameInstance->LoadSlotName = SelectedSlot->GetLoadSlotName();
 		AuraGameInstance->LoadSlotIndex = SelectedSlot->SlotIndex;
+		
+		AuraGameInstance->FindSession();
 	}
 	
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-	{
-		PC->ClientTravel("127.0.0.1", TRAVEL_Relative);
-	}
+	// if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	// {
+	// 	PC->ClientTravel("127.0.0.1", TRAVEL_Relative);
+	// }
 }
 
 void UMVVM_LoadScreen::CancelMultiPlay()
@@ -176,10 +180,17 @@ void UMVVM_LoadScreen::CancelMultiPlay()
 	{
 		GEngine->CancelPending(GetWorld());
 	}
+	
+	if (UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
+	{
+		AuraGameInstance->CancelFindSession();
+	}
 }
 
 void UMVVM_LoadScreen::TutorialButtonPressed()
 {
+	CancelMultiPlay();
+	
 	if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
 	{
 		if (UAuraGameInstance* AuraGameInstance = Cast<UAuraGameInstance>(AuraGameMode->GetGameInstance()))
@@ -193,7 +204,7 @@ void UMVVM_LoadScreen::TutorialButtonPressed()
 			AuraGameInstance->LoadSlotIndex = 0;
 			SelectedSlot = nullptr;
 
-			AuraGameMode->TravelToMap(FString("Tutorial"));
+			UGameplayStatics::OpenLevel(GetWorld(), TEXT("Tutorial"), true);
 		}
 	}
 }

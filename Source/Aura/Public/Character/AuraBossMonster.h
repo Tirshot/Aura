@@ -7,6 +7,7 @@
 #include "Character/AuraEnemy.h"
 #include "AuraBossMonster.generated.h"
 
+class USphereComponent;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -58,7 +59,7 @@ public:
 	void OnRoarStart(const FGameplayEventData* EventData);
 	void OnRoarEnd(const FGameplayEventData* EventData);
 	void AddAbilityUpgradeOnBerserkMode();
-
+	
 public:
 	UFUNCTION()
 	void BeginBerserkMode(float NewHealth);
@@ -84,6 +85,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 	TObjectPtr<UCameraComponent> DeathCamera;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<USphereComponent> DetectSphere;
 
 	// 광폭화 시 추가 할 업그레이드 태그
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

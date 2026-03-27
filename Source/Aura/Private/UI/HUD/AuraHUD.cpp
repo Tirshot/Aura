@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "Player/EquipmentComponent.h"
@@ -97,18 +98,6 @@ USaveProgressWidgetController* AAuraHUD::GetSaveProgressWidgetController(const F
     return SaveProgressWidgetController;
 }
 
-USettingsMenuWidgetController* AAuraHUD::GetSettingsMenuWidgetController(const FWidgetControllerParams& WCParams)
-{
-    if (SettingsMenuWidgetController == nullptr)
-    {   // 없으면 생성
-        SettingsMenuWidgetController = NewObject<USettingsMenuWidgetController>(this, SettingsMenuWidgetControllerClass);
-        SettingsMenuWidgetController->SetWidgetControllerParams(WCParams);
-        SettingsMenuWidgetController->BindCallbacksToDependencies();
-    }
-
-    return SettingsMenuWidgetController;
-}
-
 UItemToolTipWidgetController* AAuraHUD::GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams)
 {
     if (ItemToolTipWidgetController == nullptr)
@@ -188,6 +177,19 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
         NewOverlayWidgetController->SetXPBarPercentToOwnValue();
     }
     
+    if (AAuraCharacter* Aura = Cast<AAuraCharacter>(PC->GetPawn()))
+    {
+        if (!Aura->MiniMapRenderTarget)
+        {
+            Aura->InitializeMiniMap();
+        }
+        
+        if (Aura->MiniMapRenderTarget && NewOverlayWidgetController)
+        {
+            NewOverlayWidgetController->OnRenderTargetCreated.Broadcast(Aura->MiniMapRenderTarget);
+        }
+    }
+    
     // 게임오버 위젯 컨트롤러 생성
     GameOverWidgetController = GetGameOverWidgetController(WidgetControllerParams);
     GameOverWidgetController->BindCallbacksToDependencies();
@@ -200,9 +202,6 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     
     // 스펠 업그레이드 위젯 컨트롤러 생성
     SpellUpgradesWidgetController = GetSpellUpgradesWidgetController(WidgetControllerParams);
-
-    // 설정 메뉴 위젯 컨트롤러 생성
-    SettingsMenuWidgetController = GetSettingsMenuWidgetController(WidgetControllerParams);
     
     // 카드 선택 UI 뷰 모델 생성
     CardSelectionViewModel = GetCardSelectionViewModel();
@@ -297,7 +296,6 @@ void AAuraHUD::CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetCla
     if (MessageWidget->Implements<UMessageInterface>())
     {
         IMessageInterface::Execute_SetMessage(MessageWidget, Message, Icon);
-        MessageWidget->AddToViewport();
     }
 }
 

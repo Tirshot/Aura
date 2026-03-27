@@ -10,6 +10,8 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Character/AuraCharacter.h"
+#include "Components/SphereComponent.h"
 #include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -31,6 +33,10 @@ AAuraBossMonster::AAuraBossMonster()
 	DeathCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	DeathCamera->bUsePawnControlRotation = false;
 	DeathCamera->bAutoActivate = true;
+	
+	DetectSphere = CreateDefaultSubobject<USphereComponent>("DetectSphere");
+	DetectSphere->SetSphereRadius(1200.f);
+	DetectSphere->SetupAttachment(RootComponent);
 }
 
 void AAuraBossMonster::BossMontageBind()
@@ -66,7 +72,6 @@ void AAuraBossMonster::PossessedBy(AController* NewController)
 	// 보스 몬스터는 Event.Montage.Boss.RoarEnd 태그 이후에 AI가 작동
 	if (!HasAuthority())
 		return;
-
 
 	// 광폭화 - 체력 변화 델리게이트 바인딩
 	OnHealthChanged.AddDynamic(this, &AAuraBossMonster::BeginBerserkMode);
@@ -144,12 +149,15 @@ void AAuraBossMonster::OnRoarStart(const FGameplayEventData* EventData)
 		{
 			AuraGM->OnAllActorsInvincible.Broadcast(true);
 		}
+	}
 		
-		// 음악 재생
-		if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
-		{
-			AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
-		}
+	if (bBerserk)
+		return;
+	
+	// 음악 재생
+	if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+	{
+		AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
 	}
 }
 
