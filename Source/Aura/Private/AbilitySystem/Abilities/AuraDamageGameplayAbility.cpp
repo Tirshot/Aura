@@ -4,14 +4,11 @@
 #include "AbilitySystem/Abilities/AuraDamageGameplayAbility.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
-#include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "AbilitySystem/Data/AbilityInfo.h"
+#include "Aura/Aura.h"
 #include "Character/AuraCharacter.h"
 #include "Interaction/CombatInterface.h"
 #include "Player/AuraPlayerController.h"
-#include "UI/WidgetController/OverlayWidgetController.h"
 
 void UAuraDamageGameplayAbility::CauseDamage(AActor* TargetActor)
 {
@@ -35,6 +32,24 @@ void UAuraDamageGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Han
                                             bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UAuraDamageGameplayAbility::StoreMouseLocation(const FVector& InMouseLocation)
+{
+	if (UWorld* World = GetWorld())
+	{
+		FHitResult HitResult;
+		FVector HitStart = InMouseLocation + FVector(0.f, 0.f, 1000.f);
+		FVector HitEnd = InMouseLocation + FVector(0.f, 0.f, -1000.f);
+		if (World->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_GroundCheck))
+		{
+			MouseLocation = HitResult.ImpactPoint;
+		}
+		else
+		{
+			MouseLocation = InMouseLocation;
+		}
+	}
 }
 
 void UAuraDamageGameplayAbility::StopAutoRun()
@@ -259,21 +274,11 @@ FVector UAuraDamageGameplayAbility::ReceivedMouseHitResult(const FGameplayAbilit
 
 	const FGameplayAbilityTargetData* TargetData = TargetDataHandle.Get(0);
 	const FHitResult* HitResult = TargetData->GetHitResult();
-
-	// 마우스 히트 정보를 멤버 변수로 만듬
-	return CurrentTargetLocation = HitResult->ImpactPoint;
-
-	// if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
-	// {
-	// 	if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
-	// 	{
-	// 		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
-	// 		{
-	// 			return CurrentTargetLocation = AuraPC->GetMagicCircleLocation();
-	// 		}
-	// 	}
-	// }
-	// return FVector();
+	CurrentTargetLocation = HitResult->ImpactPoint;
+	
+	StoreMouseLocation(CurrentTargetLocation);
+	
+	return CurrentTargetLocation;
 }
 
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const

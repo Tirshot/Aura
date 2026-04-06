@@ -3,7 +3,6 @@
 
 #include "UI/ViewModel/MVVM_TutorialDialogue.h"
 
-#include "Blueprint/UserWidget.h"
 #include "Game/TutorialGameMode.h"
 
 void UMVVM_TutorialDialogue::BlueprintInitialize_Implementation()

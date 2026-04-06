@@ -133,7 +133,6 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 	// 이펙트 클래스 설정
 	ArcaneArea->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 	ArcaneArea->SlowDownEffectClass = SlowDownEffectClass;
-	ArcaneArea->SlowDownDecayEffectClass = SlowDownDecayEffectClass;
 	ArcaneArea->OnDestroyed.AddDynamic(this, &UAuraArcaneAreaAbility::OnArcaneAreaDestroyed);
 	
 	// 멤버 변수 설정
@@ -144,12 +143,13 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 	ArcaneArea->SetTakeDamage(bTakeDamage);
 
 	ArcaneArea->FinishSpawning(AreaTransform);
+	
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
+
 }
 
 void UAuraArcaneAreaAbility::OnArcaneAreaDestroyed(AActor* DestroyedActor)
 {
-	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
-
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
 }
 

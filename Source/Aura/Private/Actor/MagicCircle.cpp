@@ -3,8 +3,6 @@
 
 #include "Actor/MagicCircle.h"
 #include "Components/DecalComponent.h"
-#include "Interaction/EnemyInterface.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 AMagicCircle::AMagicCircle()
 {

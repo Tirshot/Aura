@@ -26,7 +26,6 @@
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
-#include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/AuraGameStateBase.h"
@@ -68,6 +67,9 @@ void AAuraPlayerController::BeginPlay()
         // 튜토리얼에서 메뉴 단축키 사용 금지
         if (!UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
             Subsystem->AddMappingContext(MenuContext, 0);
+        
+        // ESC 일시정지 메뉴
+        Subsystem->AddMappingContext(PauseContext, 0);
     }
 
     // 마우스 커서 활성화
@@ -124,9 +126,6 @@ void AAuraPlayerController::OnPossess(APawn* InPawn)
 void AAuraPlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
-    
-    // TODO::클라이언트 또한 보스 몬스터 이벤트에 바인딩 해야함 
-    
     
     // 인벤토리 뷰모델 초기화
     if (AAuraPlayerState* MyPS = GetPlayerState<AAuraPlayerState>())
@@ -248,6 +247,37 @@ void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
                 OverlayWC->OnRenderTargetCreated.Broadcast(Aura->MiniMapRenderTarget);
             }
         }
+    }
+}
+
+void AAuraPlayerController::AddAllMappingContexts()
+{
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    if (Subsystem)
+    {
+        // IMC, 우선순위
+        Subsystem->AddMappingContext(AuraContext, 0);
+        
+        // 튜토리얼에서 메뉴 단축키 사용 금지
+        if (!UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
+            Subsystem->AddMappingContext(MenuContext, 2);
+        
+        // ESC 일시정지 메뉴
+        Subsystem->AddMappingContext(PauseContext, 3);
+    }
+}
+
+void AAuraPlayerController::RemoveAllMappingContexts()
+{
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+    if (Subsystem)
+    {
+        // 사망 등의 상태일때 컨텍스트 제거
+        FModifyContextOptions Options;
+        Options.bForceImmediately = true;
+        Subsystem->RemoveMappingContext(AuraContext, Options);
+        Subsystem->RemoveMappingContext(MenuContext, Options);
+        Subsystem->RemoveMappingContext(PauseContext, Options);
     }
 }
 
@@ -537,19 +567,51 @@ void AAuraPlayerController::ShowTutorialUI(bool bVisibility)
 
 void AAuraPlayerController::UpdateMagicCircleLocation()
 {
-    if (IsValid(MagicCircle))
+    if (!IsValid(MagicCircle))
+        return;
+    
+    FVector TargetLocation = LastMagicCircleLocation;
+    
+    // 빈 공간에서 데칼을 근처 위치로 옮김
+    if (CursorHit.bBlockingHit)
     {
-        // 빈 공간에서 데칼 숨기기
-        if (CursorHit.bBlockingHit)
+        TargetLocation = CursorHit.ImpactPoint;
+        SearchRadius = DefaultSearchRadius;
+    }
+    else
+    {
+        // 구체 트레이스 실행
+        FVector TraceStart = CursorHit.TraceStart;
+        FVector TraceEnd = CursorHit.TraceEnd;
+        TArray<FHitResult> HitResults;
+        FCollisionQueryParams Params;
+        Params.AddIgnoredActor(GetPawn());
+        Params.AddIgnoredActor(MagicCircle);
+        
+        bool bHit = GetWorld()->SweepMultiByChannel
+        (
+          HitResults,
+          TraceStart,
+          TraceEnd,
+          FQuat::Identity,
+          ECC_GroundCheck,
+          FCollisionShape::MakeSphere(SearchRadius),
+          Params
+        );
+        
+        if (bHit)
         {
-            MagicCircle->SetActorHiddenInGame(false);
-            MagicCircle->SetActorLocation(CursorHit.ImpactPoint);
+            TargetLocation = HitResults[0].ImpactPoint;
+            SearchRadius = DefaultSearchRadius;
         }
         else
         {
-            MagicCircle->SetActorHiddenInGame(true);
+            // 적중하지 않았으면 검색 거리를 늘림
+            SearchRadius += 50;
         }
     }
+    LastMagicCircleLocation = TargetLocation;
+    MagicCircle->SetActorLocation(LastMagicCircleLocation);
 }
 
 void AAuraPlayerController::UpdateRangeIndicatorRotation()
@@ -664,9 +726,19 @@ void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial, f
         MagicCircle->SetOwner(AvatarActor);
         MagicCircle->CircleInitialized.Broadcast(AvatarActor);
         
+        bShowMouseCursor = true;
+        
         if (DecalMaterial)
         {
             MagicCircle->SetDecalMaterial(DecalMaterial);
+        }
+        
+        if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
+        {
+            auto EffectContext = GetASC()->MakeEffectContext();
+            auto Spec = GetASC()->MakeOutgoingSpec(AuraGI->WaitForExecute, 1.0f, EffectContext);
+            
+            GetASC()->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
         }
     }
 }
@@ -683,19 +755,36 @@ void AAuraPlayerController::HideMagicCircle()
         MagicCircle->RemoveCircle.Broadcast(AvatarActor);
         MagicCircle->Destroy();
         
-        UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn())->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag("Player.Abilities.WaitForExecute"));
+        bShowMouseCursor = true;
     }
+    GetASC()->RemoveActiveEffectsWithTags(FGameplayTagContainer(FGameplayTag::RequestGameplayTag("Player.Abilities.WaitForExecute")));
 }
 
 const FVector AAuraPlayerController::GetMagicCircleLocation()
 {
     if (!IsValid(MagicCircle))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("MagicCircle is InValid, return LastLocation"));
-            return LastMagicCircleLocation;
-        }
+    {
+        UE_LOG(LogTemp, Warning, TEXT("MagicCircle is InValid, return LastLocation"));
+        return LastMagicCircleLocation;
+    }
     
-    return MagicCircle->GetActorLocation();
+    FVector MagicCircleLocation = MagicCircle->GetActorLocation();
+    if (UWorld* World = GetWorld())
+    {
+        FHitResult HitResult;
+        FVector HitStart = MagicCircleLocation + FVector(0.f, 0.f, 2000.f);
+        FVector HitEnd = MagicCircleLocation + FVector(0.f, 0.f, -2000.f);
+        if (World->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_GroundCheck))
+        {
+            MagicCircleLocation = HitResult.ImpactPoint;
+        }
+        else
+        {
+            MagicCircleLocation = LastMagicCircleLocation;
+        }
+    }
+    LastMagicCircleLocation = MagicCircleLocation;
+    return MagicCircleLocation;
 }
 
 void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVector& Location, float Radius, float Width, float Height, FVector RGB)
@@ -1168,6 +1257,20 @@ void AAuraPlayerController::Client_CreateMessageWidget_Implementation(const FGam
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {
+    const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
+    const FRotator Rotation = GetControlRotation();
+    const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
+
+    // 회전자의 X축 방향(전방)과 Y축 방향(오른쪽 방향) 단위 벡터를 찾아옴
+    const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+    const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+    if (APawn* ControlledPawn = GetPawn<APawn>())
+    {
+        ControlledPawn->AddMovementInput(ForwardDirection, InputAxisVector.Y);
+        ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
+    }
+    
     UAbilitySystemComponent* ASC = GetASC();
     if (ASC && ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
     {
@@ -1188,20 +1291,6 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
     }
     
     SetAutoRunning(false);
-
-    const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
-    const FRotator Rotation = GetControlRotation();
-    const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
-
-    // 회전자의 X축 방향(전방)과 Y축 방향(오른쪽 방향) 단위 벡터를 찾아옴
-    const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-    const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-    if (APawn* ControlledPawn = GetPawn<APawn>())
-    {
-        ControlledPawn->AddMovementInput(ForwardDirection, InputAxisVector.Y);
-        ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
-    }
 }
 
 void AAuraPlayerController::Zoom(const struct FInputActionValue& InputActionValue)
@@ -1332,7 +1421,11 @@ void AAuraPlayerController::CursorTrace()
     }
 
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
-    ECollisionChannel TraceChannel = IsValid(MagicCircle) ? ECC_ExcludePlayers : ECollisionChannel::ECC_Visibility;
+    ECollisionChannel TraceChannel = ECollisionChannel::ECC_Visibility;
+    
+    // 매직 서클이 표시중이면 트레이스 채널 변경
+    if (IsValid(MagicCircle))
+        TraceChannel = ECC_GroundCheck;
 
     GetHitResultUnderCursor(TraceChannel, false, CursorHit);
 

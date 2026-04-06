@@ -3,8 +3,6 @@
 
 #include "UI/Widget/AuraDragDropOperation.h"
 
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "Interaction/PlayerInterface.h"
 #include "UI/ViewModel/MVVM_Inventory.h"
 
 void UAuraDragDropOperation::DragCancelled_Implementation(const FPointerEvent& PointerEvent)

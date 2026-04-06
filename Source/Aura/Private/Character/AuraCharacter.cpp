@@ -13,6 +13,7 @@
 #include "AbilitySystem/Data/LevelUpInfo.h"
 #include "NiagaraComponent.h"
 #include "AuraGameplayTags.h"
+#include "EnhancedInputSubsystems.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
@@ -111,6 +112,12 @@ void AAuraCharacter::PossessedBy(AController* NewController)
         // 부활
         if (AuraPS->GetAbilitySystemComponent()->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
         {
+            // IMC 해제
+            if (auto AuraPC = Cast<AAuraPlayerController>(NewController))
+            {
+                AuraPC->AddAllMappingContexts();
+            }
+            
             // 사망 태그 제거
             if (UAuraGameInstance* AuraGI = AuraPS->GetGameInstance<UAuraGameInstance>())
             {
@@ -166,30 +173,31 @@ void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
         else
         {
             // 저장된 세이브에서 어빌리티 불러오기
-            AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
+            // AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
+            Client_LoadProgressFromSaveGame();
             
             // 저장된 데이터 불러오기
-            if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
-            {
-                AuraPlayerState->SetLevel(SaveData->PlayerLevel);
-                AuraPlayerState->SetXP(SaveData->XP);
-                AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
-                AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
-                AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
-                
-                // 인벤토리 불러오기
-                UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(AuraPlayerState)->SetInventorySlots(SaveData->SavedInventorySlots);
-                UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(AuraPlayerState)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
-            }
-            
-            // 기존에 적용된 이펙트 제거 후 재적용
-            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultPrimaryAttributes, AbilitySystemComponent);
-            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
-            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
-            AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
-            
-            // 1차 속성, 2차 속성 적용
-            UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
+            // if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+            // {
+            //     AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+            //     AuraPlayerState->SetXP(SaveData->XP);
+            //     AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
+            //     AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
+            //     AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
+            //     
+            //     // 인벤토리 불러오기
+            //     UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(AuraPlayerState)->SetInventorySlots(SaveData->SavedInventorySlots);
+            //     UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(AuraPlayerState)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
+            // }
+            //
+            // // 기존에 적용된 이펙트 제거 후 재적용
+            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultPrimaryAttributes, AbilitySystemComponent);
+            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
+            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
+            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
+            //
+            // // 1차 속성, 2차 속성 적용
+            // UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
         }
     }
 }
@@ -662,6 +670,12 @@ void AAuraCharacter::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
     // 랙돌 효과 발생
     Super::Die(DeathImpulse, KilledBy);
     
+    // IMC 해제
+    if (auto AuraPC = GetController<AAuraPlayerController>())
+    {
+        AuraPC->RemoveAllMappingContexts();
+    }
+    
     // 카메라 추락 방지
     Camera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
     MiniMapCapture->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
@@ -763,9 +777,9 @@ void AAuraCharacter::InitAbilityActorInfo()
         }
     }
     
-    // 속도 맞추기
-    if (UAuraAttributeSet* AS = Cast<UAuraAttributeSet>(GetAttributeSet()))
-    {
-        GetCharacterMovement()->MaxWalkSpeed = AS->GetMovementSpeed();
-    }
+    // // 속도 맞추기
+    // if (UAuraAttributeSet* AS = Cast<UAuraAttributeSet>(GetAttributeSet()))
+    // {
+    //     GetCharacterMovement()->MaxWalkSpeed = AS->GetMovementSpeed();
+    // }
 }

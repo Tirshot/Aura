@@ -29,10 +29,7 @@ public:
 	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
 
 	UFUNCTION(BlueprintCallable)
-	void StoreMouseLocation(const FVector& InLocation);
-
-	UFUNCTION(BlueprintCallable)
-	void DestroyTornadoAndCommitCooldownEndAbility();
+	void DestroyTornadoAndCommitCooldownEndAbility(AActor* DestroyedActor);
 	
 private:
 	UPROPERTY(EditDefaultsOnly)
@@ -43,9 +40,6 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<USoundBase> DestroySound;
-	
-	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
-	FVector MouseLocation = FVector::ZeroVector;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float DamageDeltaSecond = 0.2f;

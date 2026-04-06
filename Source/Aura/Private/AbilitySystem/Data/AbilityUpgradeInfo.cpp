@@ -130,7 +130,19 @@ TArray<FAuraAbilityUpgradeInfo> UAbilityUpgradeInfo::GetAvailableUpgradeInfoForT
 			}
 		}
 	}
-
+	
+	// 미획득한 어빌리티 획득 업그레이드
+	auto AllAbilityTags= FAuraGameplayTags::Get().GameplayAbilitiesTags;
+	for (auto Tag : AllAbilityTags)
+	{
+		// 어빌리티 획득 업그레이드 정보
+		const auto& AbilityGetUpgradeInfo = UpgradeInfosByEffectTag[Tag];
+		if (AbilityGetUpgradeInfo.Rarity == InRarity)
+		{
+			OutInfos.AddUnique(AbilityGetUpgradeInfo);
+		}
+	}
+	
 	return OutInfos;
 }
 

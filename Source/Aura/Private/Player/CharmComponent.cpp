@@ -8,7 +8,6 @@
 #include "AbilitySystem/AuraAbilitySystemGlobals.h"
 #include "Character/AuraCharacter.h"
 #include "Interaction/PlayerInterface.h"
-#include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "Player/InventoryComponent.h"

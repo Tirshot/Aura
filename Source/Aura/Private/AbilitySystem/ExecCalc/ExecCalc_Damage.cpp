@@ -3,15 +3,14 @@
 
 #include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
 #include "AbilitySystemComponent.h"
-#include "AbilitySystem/AuraAttributeSet.h"
-#include "AuraGameplayTags.h"
-#include "AbilitySystem/Data/CharacterClassInfo.h"
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "Interaction/CombatInterface.h"
 #include "AuraAbilityTypes.h"
-#include "AbilitySystem/AuraAbilitySystemGlobals.h"
+#include "AuraGameplayTags.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Abilities/HaloOfProtection.h"
+#include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "Character/AuraCharacter.h"
+#include "Interaction/CombatInterface.h"
 #include "Player/AuraPlayerState.h"
 
 struct AuraDamageStatics

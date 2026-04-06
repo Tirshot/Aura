@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Interaction/CombatInterface.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "GameOverWidgetController.generated.h"
 
+class UGameOverWidget;
 class UAuraUserWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRestartTimer, float, RemainingTime);
@@ -18,8 +18,6 @@ class AURA_API UGameOverWidgetController : public UAuraWidgetController
 	
 public:
 	virtual void BroadcastInitialValues() override;
-	virtual void BindCallbacksToDependencies() override;
-	virtual void BeginDestroy() override;
 
 	UFUNCTION()
 	void HandleOnDeath(AActor* DeadActor);
@@ -30,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ReviveFromRecentPlayerStart();
 	
+	UFUNCTION(BlueprintCallable)
+	void TravelToMenu();
+	
 public:
 	UPROPERTY(BlueprintReadOnly)
 	FTimerHandle RestartTimer;
@@ -39,9 +40,10 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	float RemainingTime = 0.f;
-private:
+	
+protected:
 	UPROPERTY()
-	TObjectPtr<UAuraUserWidget> GameOverWidget;
+	TObjectPtr<UGameOverWidget> GameOverWidget;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAuraUserWidget> GameOverWidgetClass;

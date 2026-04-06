@@ -90,7 +90,7 @@ void UAuraSpawnElectroSphere::CheckAbilityUpgrades()
 	{
 		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), DecreaseSpeed);
 	
-		ElectroSphere->AddMovementSpeed(-250.f * Stacks);
+		ElectroSphere->AddMovementSpeed(-125.f * Stacks);
 	}
 
 	// (3) 가까운 대상 유도

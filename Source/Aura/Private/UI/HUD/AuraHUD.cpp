@@ -3,7 +3,6 @@
 
 #include "UI/HUD/AuraHUD.h"
 
-#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerController.h"
@@ -23,7 +22,6 @@
 #include "UI/WidgetController/GameOverWidgetController.h"
 #include "UI/WidgetController/ItemToolTipWidgetController.h"
 #include "UI/WidgetController/SaveProgressWidgetController.h"
-#include "UI/WidgetController/SettingsMenuWidgetController.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
 UOverlayWidgetController *AAuraHUD::GetOverlayWidgetController(const FWidgetControllerParams &WCParams)
@@ -81,7 +79,6 @@ UGameOverWidgetController* AAuraHUD::GetGameOverWidgetController(const FWidgetCo
         GameOverWidgetController = NewObject<UGameOverWidgetController>(this, GameOverWidgetControllerClass);
         GameOverWidgetController->SetWidgetControllerParams(WCParams);
         GameOverWidgetController->BroadcastInitialValues();
-        GameOverWidgetController->BindCallbacksToDependencies();
     }
     return GameOverWidgetController;
 }

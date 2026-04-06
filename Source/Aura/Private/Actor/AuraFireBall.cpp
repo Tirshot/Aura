@@ -5,8 +5,6 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayCueManager.h"
 #include "AuraGameplayTags.h"
-#include "GameplayCueNotify_Static.h"
-#include "Components/AudioComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 void AAuraFireBall::BeginPlay()

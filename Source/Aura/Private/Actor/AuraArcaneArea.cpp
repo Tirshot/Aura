@@ -63,9 +63,7 @@ void AAuraArcaneArea::ApplySlowEffect()
 			if (auto* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor))
 			{
 				FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownEffectClass, 1, OwnerASC->MakeEffectContext());
-				
-				const float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(TargetActor, FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed);
-				const float Magnitude = -MovementSpeed * SlowSpeedRatio;
+				const float Magnitude = -SlowSpeedRatio;
 
 				// Set By Caller로 매그니튜드 지정 후 이펙트 적용
 				SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);
@@ -80,15 +78,6 @@ void AAuraArcaneArea::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 {
 	if (AAuraEnemy* AuraEnemy = Cast<AAuraEnemy>(OtherActor))
 	{
-		// 초기 이동속도 한 번만 저장
-		if (!MovementSpeeds.Contains(AuraEnemy))
-		{
-			const FGameplayTag& MovementTag = FAuraGameplayTags::Get().Attributes_Secondary_MovementSpeed;
-			const float MovementSpeed = UAuraAbilitySystemLibrary::GetAttributeValue(AuraEnemy, MovementTag);
-				
-			MovementSpeeds.Add(AuraEnemy, MovementSpeed);
-		}
-		
 		DamageEffectParams.TargetAbilitySystemComponent = AuraEnemy->GetAbilitySystemComponent();
 
 		OverlappedActors.AddUnique(OtherActor);
@@ -132,23 +121,9 @@ void AAuraArcaneArea::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponen
 		if (auto* OwnerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
 		{
 			// 이동속도 돌려주기
-			if (auto* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AuraEnemy))
-			{
-				FGameplayEffectSpecHandle SpecHandle = OwnerASC->MakeOutgoingSpec(SlowDownDecayEffectClass, 1, OwnerASC->MakeEffectContext());
-
-				if (float* ValPtr = MovementSpeeds.Find(AuraEnemy))
-				{
-					const float MovementSpeed = *ValPtr;
-					const float Magnitude = MovementSpeed;
-
-					// Set By Caller로 매그니튜드 지정 후 이펙트 적용
-					SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag("Data.MovementSpeed"), Magnitude);
-					OwnerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-				}
-			}
+			auto Tag = FGameplayTag::RequestGameplayTag("Data.MovementSpeed.Slow");
+			OwnerASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(Tag));
 		}
-		//
-		MovementSpeeds.Remove(AuraEnemy);
 		OverlappedActors.Remove(AuraEnemy);
 	}
 }
@@ -181,6 +156,9 @@ void AAuraArcaneArea::DamageAndKnockback()
 		// 유효성을 위해 거꾸로 순회
 		for (int32 i = OverlappedActors.Num() - 1; i >= 0; --i)
 		{
+			if (!OverlappedActors.IsValidIndex(i))
+				return;
+			
 			auto* OtherActor = OverlappedActors[i];
 			if (!OtherActor || OtherActor->IsPendingKillPending())
 			{

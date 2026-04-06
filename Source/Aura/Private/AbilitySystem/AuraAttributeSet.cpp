@@ -16,7 +16,6 @@
 #include "AbilitySystem/Abilities/LifeSiphon.h"
 #include "AbilitySystem/Abilities/ManaSiphon.h"
 #include "Character/AuraCharacter.h"
-#include "Character/AuraCharacterBase.h"
 #include "Game/AuraGameInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -186,6 +185,18 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
     if (Data.EvaluatedData.Attribute == GetIncomingXPAttribute())
     {
         HandleIncomingXP(Props);
+    }
+    
+    // 이동 속도 계산
+    if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
+    {
+        if (AAuraCharacterBase* AuraCharacter = Cast<AAuraCharacterBase>(GetOwningActor()))
+        {
+            if (UCharacterMovementComponent* MoveComp = AuraCharacter->GetCharacterMovement())
+            {
+                MoveComp->MaxWalkSpeed = Data.EvaluatedData.Magnitude;
+            }
+        }
     }
 }
 

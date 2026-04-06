@@ -48,10 +48,6 @@ public:
 	// 슬로우 이펙트
 	UPROPERTY()
 	TSubclassOf<UGameplayEffect> SlowDownEffectClass;
-
-	// 이동 속도 돌려주기
-	UPROPERTY()
-	TSubclassOf<UGameplayEffect> SlowDownDecayEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float LifeSpan = 5.f;
@@ -89,10 +85,4 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<UDecalComponent> Decal;
-
-	// 각 액터 별 초기 이동속도 저장
-	UPROPERTY(BlueprintReadOnly)
-	TMap<AActor*, float> MovementSpeeds;
-
-
 };

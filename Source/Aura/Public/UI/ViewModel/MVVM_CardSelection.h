@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "MVVMViewModelBase.h"
 #include "MVVM_CardSelection.generated.h"
 

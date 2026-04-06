@@ -3,8 +3,6 @@
 
 #include "UI/WidgetController/SpellMenuWidgetController.h"
 
-#include <string>
-
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Abilities/AuraPassiveAbility.h"
@@ -12,7 +10,6 @@
 #include "Character/AuraCharacter.h"
 #include "Interaction/CombatInterface.h"
 #include "Player/AuraPlayerState.h"
-#include "UI/HUD/AuraHUD.h"
 
 void USpellMenuWidgetController::BroadcastInitialValues()
 {

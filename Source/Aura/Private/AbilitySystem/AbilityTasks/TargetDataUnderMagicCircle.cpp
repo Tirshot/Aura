@@ -60,7 +60,7 @@ void UTargetDataUnderMagicCircle::SendMagicCircleData()
 		return;
 	
 	FHitResult HitResult;
-	AuraPC->GetHitResultUnderMagicCircle(ECC_Visibility, false, HitResult);
+	AuraPC->GetHitResultUnderMagicCircle(ECC_GroundCheck, false, HitResult);
 
 	FGameplayAbilityTargetDataHandle DataHandle;
 	FGameplayAbilityTargetData_SingleTargetHit* Data = new FGameplayAbilityTargetData_SingleTargetHit();

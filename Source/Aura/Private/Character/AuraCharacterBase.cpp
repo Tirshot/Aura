@@ -68,6 +68,8 @@ void AAuraCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	
+	GetMesh()->bOnlyAllowAutonomousTickPose = false;
+	
 	OnASCRegistered.AddUObject(this, &AAuraCharacterBase::ASCRegistered);
 	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetPlayerState()))
 	{
@@ -468,35 +470,35 @@ void AAuraCharacterBase::SetCharacterDebugInvincible_Implementation(bool InbInvi
 
 void AAuraCharacterBase::ASCRegistered(UAbilitySystemComponent* ASC)
 {
-	UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet);
-	if (ASC && AuraAS)
-	{
-		ASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
-			this, &AAuraCharacterBase::OnMovementSpeedChanged);
-        
-		// 초기화 시점에 한 번 속도를 설정
-		OnMovementSpeedChanged(FOnAttributeChangeData());
-	}
+	// UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet);
+	// if (ASC && AuraAS)
+	// {
+	// 	ASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
+	// 		this, &AAuraCharacterBase::OnMovementSpeedChanged);
+ //        
+	// 	// 초기화 시점에 한 번 속도를 설정
+	// 	OnMovementSpeedChanged(FOnAttributeChangeData());
+	// }
 }
 
 void AAuraCharacterBase::AuraPlayerStateInitialized(AAuraPlayerState* AuraPS)
 {
-	if (UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet))
-	{
-		if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
-		{
-			AuraASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
-				this, &AAuraCharacterBase::OnMovementSpeedChanged);
-        
-			// 초기화 시점에 한 번 속도를 설정
-			OnMovementSpeedChanged(FOnAttributeChangeData());
-		}
-	}
+	// if (UAuraAttributeSet* AuraAS = Cast<UAuraAttributeSet>(AttributeSet))
+	// {
+	// 	if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
+	// 	{
+	// 		AuraASC->GetGameplayAttributeValueChangeDelegate(AuraAS->GetMovementSpeedAttribute()).AddUObject(
+	// 			this, &AAuraCharacterBase::OnMovementSpeedChanged);
+ //        
+	// 		// 초기화 시점에 한 번 속도를 설정
+	// 		OnMovementSpeedChanged(FOnAttributeChangeData());
+	// 	}
+	// }
 }
 
 void AAuraCharacterBase::OnMovementSpeedChanged(const FOnAttributeChangeData& Data)
 {
-	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+	// GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
 
 void AAuraCharacterBase::StopMovementInput()

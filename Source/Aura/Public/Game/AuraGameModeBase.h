@@ -108,6 +108,8 @@ public:
 	UFUNCTION()
 	void HandlePlayerStateInitialized(AAuraPlayerState* InitializedPlayerState);
 	
+	FAuraAbilityUpgradeInfo GetUpgradeRecursive(EUpgradeRarity Rarity, TMap<EUpgradeRarity, TArray<FAuraAbilityUpgradeInfo>>& Buckets);
+	
 	UFUNCTION()
 	TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three(AAuraPlayerState* AuraPS);
 

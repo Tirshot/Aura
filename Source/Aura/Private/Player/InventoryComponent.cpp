@@ -445,6 +445,9 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 		AddedSlot.Inventory = this;
 		OnItemGet.Broadcast(NewSlot.SlotID, false);
 		SlotList.MarkItemDirty(AddedSlot); 
+		
+		// if (AddedSlot.ItemData.)
+		// LoadedCharm.Add();
 	}
 	
 	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))

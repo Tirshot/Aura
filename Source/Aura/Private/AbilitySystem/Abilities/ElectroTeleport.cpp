@@ -6,7 +6,6 @@
 #include "AbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "NavigationSystem.h"
-#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Actor/GhostEffectActor.h"
 #include "Character/AuraCharacter.h"
 #include "Components/CapsuleComponent.h"

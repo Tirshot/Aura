@@ -6,7 +6,6 @@
 #include "AbilityUpgradeInfo.h"
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
-#include "Player/CharmInstance.h"
 #include "ItemInfo.generated.h"
 
 enum class ECharacterClass : uint8;

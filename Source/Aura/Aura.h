@@ -9,5 +9,5 @@
 #define CUSTOM_DEPTH_TAN 252
 #define ECC_Projectile ECollisionChannel::ECC_GameTraceChannel1
 #define ECC_Target ECollisionChannel::ECC_GameTraceChannel2
-#define ECC_ExcludePlayers ECollisionChannel::ECC_GameTraceChannel3
+#define ECC_GroundCheck ECollisionChannel::ECC_GameTraceChannel3
 #define ECC_GASActor ECollisionChannel::ECC_GameTraceChannel14

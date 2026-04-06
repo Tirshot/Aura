@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "AuraMessageBoxWidget.h"
 #include "Components/CanvasPanel.h"
-#include "Components/MenuAnchor.h"
 #include "Interaction/MessageInterface.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "AuraOverlayWidget.generated.h"

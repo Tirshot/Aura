@@ -6,8 +6,6 @@
 #include "AuraGameplayTags.h"
 #include "Actor/AuraFireBall.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
-#include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-#include "Actor/AbilityRangeIndicator.h"
 
 UAuraFireBlast::UAuraFireBlast()
 {

@@ -3,14 +3,10 @@
 
 #include "CheckPoint/MapEntrance.h"
 
-#include "AuraGameplayTags.h"
-#include "Character/AuraCharacter.h"
 #include "Components/SphereComponent.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
-#include "Player/AuraPlayerController.h"
-#include "Player/AuraPlayerState.h"
 
 AMapEntrance::AMapEntrance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

@@ -107,6 +107,12 @@ void AAuraBossMonster::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy
 	
 	// 카메라를 척추에 고정
 	MultiCast_AttachDeathCam();
+	
+	// 음악 재생
+	if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+	{
+		AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Defeated"));
+	}
 }
 
 void AAuraBossMonster::SetIsBeingShocked_Implementation(bool bInShock)

@@ -4,13 +4,11 @@
 #include "Player/AuraPlayerState.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemGlobals.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
-#include "Game/AuraGameInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/CharmComponent.h"
 #include "Player/EquipmentComponent.h"
@@ -371,6 +369,9 @@ TArray<FGameplayTag> AAuraPlayerState::GetAllActiveAbilityTags() const
 
         if (Spec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Eligible)
             || Spec.GetDynamicSpecSourceTags().HasTag(FAuraGameplayTags::Get().Abilities_Status_Locked))
+            continue;
+        
+        if (Spec.Level <= 0)
             continue;
 
         if (AbilityTagContainer.HasTag(FGameplayTag::RequestGameplayTag(TEXT("Abilities.Fire")))

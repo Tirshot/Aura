@@ -222,21 +222,22 @@ protected:
 	UCharmComponent* CharmComponent;
 
 protected:
-	// 네트워크 환경에서 인벤토리
-	UPROPERTY(ReplicatedUsing = OnRep_SlotList)
-	FInventorySlotList SlotList;
-	
-public:
 	//
 	UFUNCTION()
 	void OnRep_SlotList();
 	
-	UPROPERTY(Replicated)
-	bool bLoaded = false;
-	
 	UFUNCTION()
 	void OnCharacterInitialized(ACharacter* Character);
 	
+	// 네트워크 환경에서 인벤토리
+	UPROPERTY(ReplicatedUsing = OnRep_SlotList)
+	FInventorySlotList SlotList;
+	
+	TArray<FInventorySlot> LoadedCharm;
+	
+public:
 	FOnInventorySlotsReplicated SlotsReplicated;
-		
+	
+	UPROPERTY(Replicated)
+	bool bLoaded = false;
 };

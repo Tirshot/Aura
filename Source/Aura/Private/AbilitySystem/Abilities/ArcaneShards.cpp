@@ -60,8 +60,6 @@ void UArcaneShards::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
                                const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	HideMagicCircleAndRangeIndicator();
 	
 	// 데미지 입힘 종료
 	if (UWorld* World = GetWorld())

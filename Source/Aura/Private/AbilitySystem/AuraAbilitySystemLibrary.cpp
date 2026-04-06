@@ -5,12 +5,10 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemGlobals.h"
-#include "AssetTypeCategories.h"
 #include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
 #include "SocketSubsystem.h"
 #include "AbilitySystem/AuraAttributeSet.h"
-#include "Blueprint/UserWidget.h"
 #include "Character/AuraCharacter.h"
 #include "Character/AuraEnemy.h"
 #include "Game/AuraGameModeBase.h"
@@ -24,7 +22,6 @@
 #include "Game/AuraGameInstance.h"
 #include "Player/AuraPlayerController.h"
 #include "UI/HUD/LoadScreenHUD.h"
-#include "UI/HUD/MainMenuHUD.h"
 #include "UI/Widget/AuraCenterDescriptionWidget.h"
 #include "UI/WidgetController/SpellUpgradesWidgetController.h"
 
@@ -590,25 +587,31 @@ void UAuraAbilitySystemLibrary::RemoveMessageTagEffectToSelf(UAbilitySystemCompo
 {
 	ASC->RemoveActiveEffectsWithTags(FGameplayTagContainer(MessageTag));
 	
-	if (auto* GI = Cast<UAuraGameInstance>(ASC->GetWorld()->GetGameInstance()))
-	{
-		if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message"))
-		{
-			if (auto AuraPS = Cast<AAuraPlayerState>(ASC->GetOwner()))
-			{
-				if (auto AuraPC = Cast<AAuraPlayerController>(AuraPS->GetPlayerController()))
-				{
-					if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
-					{
-						if (UAuraCenterDescriptionWidget* CenterWidget = Cast<UAuraCenterDescriptionWidget>(FoundRow->MessageWidget))
-						{
-							AuraHUD->GetOverlayWidget()->WBP_CenterTutorialDescription->TextBlock->SetText(FText::GetEmpty());
-						}
-					}
-				}
-			}
-		}
-	}
+	// if (auto* GI = Cast<UAuraGameInstance>(ASC->GetWorld()->GetGameInstance()))
+	// {
+	// 	if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message"))
+	// 	{
+	// 		if (auto AuraPS = Cast<AAuraPlayerState>(ASC->GetOwner()))
+	// 		{
+	// 			if (auto AuraPC = Cast<AAuraPlayerController>(AuraPS->GetPlayerController()))
+	// 			{
+	// 				if (auto AuraHUD = AuraPC->GetHUD<AAuraHUD>())
+	// 				{
+	// 					if (FoundRow->MessageWidget->GetDefaultObject<UAuraCenterDescriptionWidget>())
+	// 					{
+	// 						if (auto OverlayWidget = AuraHUD->GetOverlayWidget())
+	// 						{
+	// 							if (auto Center = OverlayWidget->WBP_CenterTutorialDescription)
+	// 							{
+	// 								Center->TextBlock->SetText(FText::GetEmpty());
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 TArray<FGameplayTag> UAuraAbilitySystemLibrary::GetAllActiveAbilityTagsFromAvatarActor(AActor* AvatarActor)

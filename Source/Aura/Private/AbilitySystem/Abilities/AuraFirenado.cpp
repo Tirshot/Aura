@@ -84,10 +84,6 @@ void UAuraFirenado::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
-	// 매직 서클, 범위 표시기 숨기기
-	HideMagicCircleAndRangeIndicator();
-	StopAutoRun();
-
 	GetWorld()->GetTimerManager().ClearTimer(DestroyTimer);
 }
 
@@ -102,9 +98,6 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 	HideMagicCircleAndRangeIndicator();
 	StopAutoRun();
 	
-	if (!GetAvatarActorFromActorInfo()->HasAuthority())
-		return nullptr;
-	
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(Location);
 
@@ -116,64 +109,29 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 		Cast<APawn>(GetOwningActorFromActorInfo()),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	if (UWorld* World = GetWorld())
-	{
-		FHitResult HitResult;
-		FVector HitStart = Location + FVector(0.f, 0.f, 2000.f);
-		FVector HitEnd = Location + FVector(0.f, 0.f, -2000.f);
-		
-		World->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility);
-
-		Tornado->SetActorLocation(HitResult.ImpactPoint);
-	}
-
+	Tornado->SetLifeSpan(SpawnTime);
+	Tornado->SetActorLocation(MouseLocation);
 	Tornado->SetDamageDeltaSecond(DamageDeltaSecond);
 	Tornado->SetFollowRadius(FollowRadius);
 	Tornado->SetDamageRadius(DamageRadius);
 	
 	Tornado->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 	Tornado->SetOwner(GetAvatarActorFromActorInfo());
+	Tornado->OnDestroyed.AddDynamic(this, &UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility);
 
 	Tornado->FinishSpawning(SpawnTransform);
-
-	// 파괴 타이머 설정
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(DestroyTimer, this, &UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility, SpawnTime, false);
-	}
 	
 	FireTornado = Tornado;
 	K2_CommitAbilityCost();
+	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
+
 	return Tornado;
 }
 
-void UAuraFirenado::StoreMouseLocation(const FVector& InLocation)
-{
-	if (!InLocation.IsNearlyZero())
-	{
-		MouseLocation = InLocation;
-		return;
-	}
-	if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
-	{
-		if (APawn* AvatarPawn = Cast<APawn>(AvatarActor))
-		{
-			if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(AvatarPawn->GetController()))
-			{
-				MouseLocation = AuraPC->GetMagicCircleLocation();
-			}
-		}
-	}
-}
-
-void UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility()
+void UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility(AActor* DestroyedActor)
 {
 	// 사운드 재생
-	UGameplayStatics::PlaySoundAtLocation(this, DestroySound, FireTornado->GetActorLocation());
-	if (IsValid(FireTornado))
-		FireTornado->Destroy();
-
-	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
+	UGameplayStatics::PlaySoundAtLocation(this, DestroySound, DestroyedActor->GetActorLocation());
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

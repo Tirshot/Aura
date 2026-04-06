@@ -218,9 +218,9 @@ void AAuraEnemy::BeginPlay()
             &AAuraEnemy::HitReactTagChanged
         );
 
-        // 이동 속도는 어트리뷰트를 사용함
-        // 이동 속도 설정
-        GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
+        // // 이동 속도는 어트리뷰트를 사용함
+        // // 이동 속도 설정
+        // GetCharacterMovement()->MaxWalkSpeed = AuraAS->GetMovementSpeed();
 
         OnHealthChanged.Broadcast(AuraAS->GetHealth());
         OnMaxHealthChanged.Broadcast(AuraAS->GetMaxHealth());

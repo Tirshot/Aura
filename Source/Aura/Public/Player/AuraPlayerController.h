@@ -61,6 +61,9 @@ protected:
 public:
 	UFUNCTION()
 	void CharacterInitialized(ACharacter* InCharacter);
+	
+	void AddAllMappingContexts();
+	void RemoveAllMappingContexts();
 
 public:
 	UFUNCTION(Client, Reliable)
@@ -185,6 +188,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> MenuContext;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputMappingContext> PauseContext;
+	
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> MoveAction;
 
@@ -228,6 +234,8 @@ protected:
 
 	void CursorTrace();
 	FHitResult CursorHit;
+	float SearchRadius = 500.f;
+	float DefaultSearchRadius = 500.f;
 	TObjectPtr<AActor> LastActor;
 	TObjectPtr<AActor> ThisActor;
 	

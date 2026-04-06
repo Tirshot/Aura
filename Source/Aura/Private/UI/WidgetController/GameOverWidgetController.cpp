@@ -7,27 +7,22 @@
 #include "Blueprint/UserWidget.h"
 #include "Player/AuraPlayerController.h"
 #include "UI/Widget/AuraUserWidget.h"
+#include "UI/Widget/GameOverWidget.h"
 
 void UGameOverWidgetController::BroadcastInitialValues()
 {
+	// 부활 시간을 블루프린트의 값에서 가져옴
+	if (GameOverWidget)
+		ReviveTime = GameOverWidget->ReviveTimeOverride;
+	
 	RemainingTime = ReviveTime;
-}
-
-void UGameOverWidgetController::BindCallbacksToDependencies()
-{
-	RemainingTime = ReviveTime;
-}
-
-void UGameOverWidgetController::BeginDestroy()
-{
-	Super::BeginDestroy();
 }
 
 void UGameOverWidgetController::HandleOnDeath(AActor* DeadActor)
 {
 	// 게임오버 위젯 생성
 	UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), GameOverWidgetClass);
-	GameOverWidget = Cast<UAuraUserWidget>(Widget);
+	GameOverWidget = Cast<UGameOverWidget>(Widget);
 
 	// 위젯에 위젯 컨트롤러를 연결
 	GameOverWidget->SetWidgetController(this);
@@ -59,5 +54,14 @@ void UGameOverWidgetController::ReviveFromRecentPlayerStart()
 	if (IsValid(GetAuraPC()))
 	{
 		GetAuraPC()->Server_ReviveFromPlayerStart();
+	}
+}
+
+void UGameOverWidgetController::TravelToMenu()
+{
+	// 세션에서 나가고 메뉴로 이동
+	if (PlayerController)
+	{
+		PlayerController->ClientTravel("Game/Maps/LoadMenu", ETravelType::TRAVEL_Absolute);
 	}
 }

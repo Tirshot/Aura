@@ -11,6 +11,7 @@
 #include "Character/AuraCharacter.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Interaction/CombatInterface.h"
+#include "Player/AuraPlayerController.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
 void UAuraAbilitySystemComponent::AbilityActorInfoSet()
@@ -553,6 +554,14 @@ void UAuraAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
                 else
                 {
                     CancelAbilityHandle(AbilitySpec.Handle);
+                    if (APlayerController* PC = AbilityActorInfo->PlayerController.Get())
+                    {
+                        if (auto AuraPC = Cast<AAuraPlayerController>(PC))
+                        {
+                            AuraPC->HideMagicCircle();
+                            AuraPC->HideRangeIndicator();
+                        }
+                    }
                 }
             }
         }

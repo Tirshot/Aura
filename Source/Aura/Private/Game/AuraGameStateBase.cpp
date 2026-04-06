@@ -4,7 +4,6 @@
 #include "Game/AuraGameStateBase.h"
 
 #include "Character/AuraBossMonster.h"
-#include "Game/AuraGameModeBase.h"
 #include "Player/AuraPlayerController.h"
 
 void AAuraGameStateBase::AddPlayerToArray(AAuraPlayerController* AuraPC)

@@ -39,6 +39,9 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	UFUNCTION(BlueprintCallable)
+	void StoreMouseLocation(const FVector& InMouseLocation);
+	
+	UFUNCTION(BlueprintCallable)
 	void StopAutoRun();
 	
 	UFUNCTION(BlueprintPure)
@@ -126,4 +129,7 @@ protected:
 public:
 	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<ESpellType> SpellType = ESpellType::NonTargeting;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FVector MouseLocation = FVector::ZeroVector;
 };
