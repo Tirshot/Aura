@@ -137,6 +137,7 @@ AAuraElectroSphere* UAuraSpawnElectroSphere::SpawnElectroSphere(const FVector& L
 	Sphere->SetOwner(GetAvatarActorFromActorInfo());
 
 	Sphere->FinishSpawning(SpawnTransform);
+	Sphere->SetLifeSpan(SpawnTime);
 	
 	ElectroSphere = Sphere;
 	

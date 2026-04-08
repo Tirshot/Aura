@@ -114,7 +114,7 @@ public:
 	
 	// 슬롯 비었는지 확인
 	bool IsSlotEmpty(EItemSubGroup Slot) const;
-	
+
 	// 슬롯 비우기
 	void ClearSlot(FEquipmentSlot* Slot);
 	

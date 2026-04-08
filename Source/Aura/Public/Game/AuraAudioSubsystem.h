@@ -21,7 +21,7 @@ public:
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Aura|AudioSubSystem")
-	void PlayMusic(USoundBase* Sound, float StartTime, bool bLooping, float LoopStart, float LoopDuration);
+	void PlayMusic(USoundBase* Sound, float StartTime, bool bLooping, float LoopStart, float LoopDuration, FGameplayTag SoundTag = FGameplayTag());
 	
 	UFUNCTION(BlueprintCallable, Category = "Aura|AudioSubSystem")
 	void PlayMusicByTag(FGameplayTag SoundTag, float StartTime, bool bLooping, float LoopStart, float LoopDuration);
@@ -45,4 +45,7 @@ private:
 	
 	UPROPERTY()
 	TObjectPtr<USoundMix> LoadedSoundMix;
+	
+	UPROPERTY()
+	FGameplayTag CurrentPlayingSoundTag; 
 };

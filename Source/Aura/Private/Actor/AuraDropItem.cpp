@@ -5,6 +5,7 @@
 #include "Aura/Aura.h"
 #include "Components/WidgetComponent.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameStateBase.h"
 #include "Net/UnrealNetwork.h"
 
 AAuraDropItem::AAuraDropItem()
@@ -46,6 +47,22 @@ void AAuraDropItem::BeginPlay()
 	}
 	
 	InitializeItem(DropItemData);
+	
+	// 드랍된 아이템을 게임 스테이트에서 관리
+	if (auto AuraState = GetWorld()->GetGameState<AAuraGameStateBase>())
+	{
+		AuraState->AddDroppedItem(this);
+	}
+}
+
+void AAuraDropItem::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (auto AuraState = GetWorld()->GetGameState<AAuraGameStateBase>())
+	{
+		AuraState->RemoveDroppedItem(this);
+	}
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void AAuraDropItem::Tick(float DeltaTime)

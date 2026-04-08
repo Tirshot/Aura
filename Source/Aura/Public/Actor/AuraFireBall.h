@@ -14,9 +14,13 @@ class AURA_API AAuraFireBall : public AAuraProjectile
 public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartOutgoingTimeline();
+	
+	void SetShowBlastIndicator(bool bShow) {bShowBlastIndicator = bShow;}
+	void SetTravelDistance(float Distance) {TravelDistance = Distance;}
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<AActor> ReturnToActor;
+	
 	UPROPERTY(BlueprintReadWrite)
 	FDamageEffectParams ExplosionDamageParams;
 
@@ -26,13 +30,19 @@ protected:
 	
 	virtual void OnHit() override;
 
-private:
-	UPROPERTY(BlueprintReadWrite, meta =(AllowPrivateAccess = true))
+protected:
+	UPROPERTY(BlueprintReadWrite)
 	FVector FinalLocation;
 	
-	UPROPERTY(BlueprintReadWrite, meta =(AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadWrite)
 	FVector ApexLocation;
 	
-	UPROPERTY(BlueprintReadWrite, meta =(AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadWrite)
 	float ExplodeDistance = 150.f;
+	
+	UPROPERTY(BlueprintReadWrite)
+	float TravelDistance = 800.f;
+	
+	UPROPERTY(EditDefaultsOnly)
+	bool bShowBlastIndicator = false;
 };

@@ -28,6 +28,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void ReadyToSpawnShards();
+	
+	UFUNCTION(BlueprintCallable)
+	void SpawnRangeIndicators();
 
 	UFUNCTION(BlueprintCallable)
 	void SpawnShards();
@@ -73,6 +76,9 @@ protected:
 	FRotator ShardSpawnRotation = FRotator::ZeroRotator;
 
 	UPROPERTY()
+	FTimerHandle IndicatorTimerHandle;
+
+	UPROPERTY()
 	FTimerHandle ShardSpawnTimer;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -84,5 +90,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float ShardSpawnDelay = 0.5f;
 
+	UPROPERTY(EditDefaultsOnly)
+	float IndicatorLifeSpan = 1.f;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bShowIndicator = false;
+	
 	int32 Idx = 0;
 };

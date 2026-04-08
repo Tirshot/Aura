@@ -200,6 +200,12 @@ public:
 	TSubclassOf<UGameplayEffect> FullHPMPEffect;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> ItemApplyHPHealEffect;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> ItemApplyMPHealEffect;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> WaitForExecute;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")

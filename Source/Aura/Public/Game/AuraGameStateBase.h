@@ -10,6 +10,7 @@ class UGameplayEffect;
 class AAuraEnemy;
 class AAuraBossMonster;
 class AAuraPlayerController;
+class AAuraDropItem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMonsterCountChanged, int32, MonsterCount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossMonsterCountChanged, int32, BossCount);
@@ -39,11 +40,17 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	int32 GetMonsterCharacterLength() { return EnemyCharacters.Num(); }
+	
+public:
+	// 드랍 아이템 관리
+	void AddDroppedItem(AAuraDropItem* Item) { DroppedItems.Add(Item); }
+	void RemoveDroppedItem(AAuraDropItem* Item) { DroppedItems.Remove(Item); }
 
 public:
 	const TArray<TSoftObjectPtr<AAuraEnemy>>& GetEnemyCharactersArray(){return EnemyCharacters;}
 	const TArray<TSoftObjectPtr<AAuraBossMonster>>& GetBossCharactersArray(){return BossCharacters;}
 	const TArray<TSoftObjectPtr<AAuraPlayerController>>& GetPlayersArray(){return Players;}
+	const TArray<AAuraDropItem*>& GetDroppedItemsArray(){return DroppedItems;}
 	
 public:
 	UFUNCTION(NetMulticast, Reliable)
@@ -63,5 +70,8 @@ private:
 	
 	UPROPERTY()
 	TArray<TSoftObjectPtr<AAuraPlayerController>> Players;
+	
+	UPROPERTY()
+	TArray<AAuraDropItem*> DroppedItems;
 	
 };

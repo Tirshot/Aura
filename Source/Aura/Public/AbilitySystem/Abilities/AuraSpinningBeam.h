@@ -36,8 +36,19 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TArray<AAuraSpinningBeamActor*> LightningBeams;
 	
+	UPROPERTY(BlueprintReadWrite)
+	TArray<FRotator> SavedRotators;
+	
+	// 회전 횟수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float MaxRotations = 3.f;
+	
+	// 각도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float SpreadDegree = 360.f;
+	
 	// 회전 속도(각속도, per sec)
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float AngleSpeed = 90.f;
 	
 	// 빔 갯수
@@ -47,10 +58,6 @@ protected:
 	// 최대 거리
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float OrbitRadius = 800.f;
-	
-	// 빔 지속 시간
-	UPROPERTY(EditDefaultsOnly)
-	float BeamLifeSpan = 5.f;
 	
 	// 데미지 간격
 	UPROPERTY(EditDefaultsOnly)

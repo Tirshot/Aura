@@ -240,8 +240,11 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UO
 	
 	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
 	
-	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, SaveGame->Health);
-	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, SaveGame->Mana);
+	float MaxHealth = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float MaxMana = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, SaveGame->Health * MaxHealth);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, SaveGame->Mana * MaxMana);
 
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 
@@ -299,8 +302,12 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(const 
 	
 	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
 	
-	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, Health);
-	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, Mana);
+	// 바이탈 속성, 비율로 저장
+	float MaxHealth = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float MaxMana = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, MaxHealth * Health);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, MaxMana * Mana);
 
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 

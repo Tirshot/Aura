@@ -130,15 +130,31 @@ void UArcaneShards::ReadyToSpawnShards()
 	
 	if (UWorld* World = GetWorld())
 	{
+		World->GetTimerManager().SetTimer(IndicatorTimerHandle, this, &UArcaneShards::SpawnRangeIndicators, SpawnShardsDeltaTime, true);
 		World->GetTimerManager().SetTimer(ShardSpawnTimer, this, &UArcaneShards::SpawnShards,SpawnShardsDeltaTime, true);
 	}
-
+	
 	// 쿨다운, 코스트 적용
 	CommitAbility(GetCurrentAbilitySpecHandle(),
 		GetCurrentActorInfo(),
 		GetCurrentActivationInfo());
 
 	StopAutoRun();
+}
+
+void UArcaneShards::SpawnRangeIndicators()
+{
+	if (bShowIndicator)
+	{
+		// 파편 위치 계산
+		if (Idx < GroundPoints.Num())
+		{
+			ShardSpawnLocation = GroundPoints[Idx]->GetComponentTransform().GetLocation();
+			ShardSpawnRotation = GroundPoints[Idx]->GetComponentTransform().GetRotation().Rotator();
+	
+			SpawnRangeIndicator(ShardSpawnLocation, false, ERangeShape::ERS_Circle, RadialDamageOuterRadius, 0.f, 0.f, FVector(5,0,0), IndicatorLifeSpan);
+		}
+	}
 }
 
 void UArcaneShards::SpawnShards()

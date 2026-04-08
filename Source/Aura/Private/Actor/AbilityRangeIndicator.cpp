@@ -3,6 +3,7 @@
 
 #include "Actor/AbilityRangeIndicator.h"
 
+#include "Character/AuraEnemy.h"
 #include "Components/DecalComponent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -38,6 +39,9 @@ AAbilityRangeIndicator::AAbilityRangeIndicator()
 	{
 		RectMaterial = RectMI.Object;
 	}
+	
+	// 데칼 오프셋 설정
+	DecalComponent->SetRelativeLocation(FVector(1.f, 0.f, 0.f));
 }
 
 void AAbilityRangeIndicator::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -121,7 +125,6 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 	
 	FVector HitStart = StartLocation + FVector(0.f, 0.f, -300.f);
 	FVector HitEnd = StartLocation + FVector(0.f, 0.f, 300.f);
-	FVector ImpactPoint = HitResult.ImpactPoint;
 	
 	if (bRotate)
 	{
@@ -129,6 +132,7 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 	}
 	
 	GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
+	FVector ImpactPoint = HitResult.ImpactPoint;
 
 	// Shape에 따른 데칼 모양과 크기 결정
 	switch (Shape)
@@ -145,8 +149,8 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			// 액터에게 붙일 경우
 			if (bAttachToActor)
 			{
-				AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
-				FVector RelativeLocation = Owner->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
 		
 				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
 			}
@@ -172,17 +176,20 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			// 액터에게 붙일 경우
 			if (bAttachToActor)
 			{
-				AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
-				FVector RelativeLocation = Owner->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
-		
-				SetActorRelativeLocation(FVector(Height, 0.f, RelativeLocation.Z));
+				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
 				
+				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
+				
+				// 몬스터의 데칼만 옮김
+				if (Cast<AAuraEnemy>(AvatarActor))
+					DecalComponent->SetRelativeLocation(FVector(Height, 0.f, 0.f));
 			}
 			else // 월드에 소환할 경우
 			{
 				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
 			}
-			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
+			SetActorScale3D(FVector(1.0f, Width / DecalComponent->DecalSize.Y, Height / DecalComponent->DecalSize.Z));
 			break;
 		}
 		
@@ -198,8 +205,8 @@ void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToAc
 			// 액터에게 붙일 경우
 			if (bAttachToActor)
 			{
-				AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
-				FVector RelativeLocation = Owner->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
 		
 				SetActorRelativeLocation(FVector(Height, 0.f, RelativeLocation.Z));
 			}

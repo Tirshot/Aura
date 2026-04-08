@@ -24,6 +24,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "UI/WidgetController/OverlayWidgetController.h"
 
 AAuraCharacter::AAuraCharacter()
 {
@@ -87,9 +88,11 @@ void AAuraCharacter::BeginPlay()
 
 void AAuraCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::EndPlay(EndPlayReason);
-
+    // 미니맵 캡쳐 해제
+    GetWorldTimerManager().ClearTimer(MiniMapUpdateTimerHandle);
     GetWorldTimerManager().ClearTimer(DeathTimer);
+    
+    Super::EndPlay(EndPlayReason);
 }
 
 void AAuraCharacter::PossessedBy(AController* NewController)
@@ -136,6 +139,19 @@ void AAuraCharacter::PossessedBy(AController* NewController)
         if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
         {
             AuraGameMode->LoadWorldState(GetWorld());
+        }
+        
+        if (IsLocallyControlled())
+        {
+            InitializeMiniMap();
+        
+            if (MiniMapRenderTarget)
+            {
+                if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+                {
+                    OverlayWC->OnRenderTargetCreated.Broadcast(MiniMapRenderTarget);
+                }
+            }
         }
     }
 }
@@ -325,9 +341,12 @@ void AAuraCharacter::OnRep_PlayerState()
 
 void AAuraCharacter::InitializeMiniMap()
 {
-    // 내 미니맵만 켜기
-    if (MiniMapCapture)
+    if (IsLocallyControlled())
     {
+        // 내 미니맵만 켜기
+        if (!MiniMapCapture)
+            return;
+    
         MiniMapRenderTarget = NewObject<UTextureRenderTarget2D>(this, MiniMapRenderTargetClass);
         if (MiniMapRenderTarget)
         {
@@ -336,13 +355,18 @@ void AAuraCharacter::InitializeMiniMap()
                  
             MiniMapRenderTarget->UpdateResource();
                 
+            // 타이머로 수동 캡쳐
             MiniMapCapture->TextureTarget = MiniMapRenderTarget;
-            MiniMapCapture->Activate();
-            MiniMapCapture->CaptureScene();
-        }
-        else
-        {
-            MiniMapCapture->Deactivate();
+            MiniMapCapture->bCaptureEveryFrame = false;
+            MiniMapCapture->bCaptureOnMovement = false;
+        
+            GetWorldTimerManager().SetTimer(
+                MiniMapUpdateTimerHandle, 
+                this, 
+                &AAuraCharacter::UpdateMiniMap, 
+                MiniMapUpdateInterval, 
+                true
+            );
         }
     }
 }
@@ -351,7 +375,18 @@ void AAuraCharacter::OnRep_Controller()
 {
     Super::OnRep_Controller();
     
-    InitializeMiniMap();
+    if (IsLocallyControlled())
+    {
+        InitializeMiniMap();
+        
+        if (MiniMapRenderTarget)
+        {
+            if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
+            {
+                OverlayWC->OnRenderTargetCreated.Broadcast(MiniMapRenderTarget);
+            }
+        }
+    }
 }
 
 void AAuraCharacter::AddToXP_Implementation(int32 InXP)
@@ -548,9 +583,15 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         SaveData->Resilience = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetResilienceAttribute());
         SaveData->Vigor = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetVigorAttribute());
 
-        // 바이탈 속성
-        SaveData->Health = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetHealthAttribute());
-        SaveData->Mana = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetManaAttribute());
+        // 바이탈 속성, 비율로 저장
+        
+        float MaxHealth = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth));
+        float Health = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetHealthAttribute());
+        float MaxMana = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana));
+        float Mana = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetManaAttribute());
+        
+        SaveData->Health = Health / MaxHealth;
+        SaveData->Mana = Mana / MaxMana;
         
         SaveData->bFirstTimeLoading = false;
         
@@ -744,6 +785,14 @@ void AAuraCharacter::OnRep_Invincible()
     else
     {
         InvincibleBuffComponent->Deactivate();
+    }
+}
+
+void AAuraCharacter::UpdateMiniMap()
+{
+    if (MiniMapCapture && MiniMapRenderTarget)
+    {
+        MiniMapCapture->CaptureScene();
     }
 }
 

@@ -234,8 +234,6 @@ protected:
 
 	void CursorTrace();
 	FHitResult CursorHit;
-	float SearchRadius = 500.f;
-	float DefaultSearchRadius = 500.f;
 	TObjectPtr<AActor> LastActor;
 	TObjectPtr<AActor> ThisActor;
 	

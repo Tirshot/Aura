@@ -41,6 +41,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	float ShardFireBallDelay = 0.5f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bShowBlastIndicator = false;
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraFireBall> FireBallClass;

@@ -16,7 +16,7 @@ void UAuraSpinningBeam::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 void UAuraSpinningBeam::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	// 아바타 액터의 이동속도 복구
+	SavedRotators.Empty();
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -24,22 +24,31 @@ void UAuraSpinningBeam::EndAbility(const FGameplayAbilitySpecHandle Handle, cons
 void UAuraSpinningBeam::SpawnBeam()
 {
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (!AvatarActor)
+	if (!AvatarActor || AngleSpeed <= 0.f)
 		return;
 	
-	// 빔 갯수에 맞춰 일정한 각도로 분포한 씬 컴포넌트를 생성하고 배열에 보관
-	TArray<FRotator> Rotators = UAuraAbilitySystemLibrary::EvenlySpacedRotators(
-		AvatarActor->GetActorForwardVector(), FVector::UpVector, 360.f, BeamCount);
+	float HalfSpread = SpreadDegree / 2.f;
+	float StartAngle = AvatarActor->GetActorRotation().Yaw - HalfSpread;
+	float BeamLifeSpan = 0.f;
+	
+	if (FMath::IsNearlyEqual(SpreadDegree, 360.f))
+	{
+		BeamLifeSpan = (MaxRotations * 360.f) / AngleSpeed;
+	}
+	else
+	{
+		BeamLifeSpan = SpreadDegree / AngleSpeed;
+	}
 	
 	for (int i = 0; i < BeamCount; i++)
 	{
-		FVector Direction = Rotators[i].Vector();
-		float Angle = FMath::DegreesToRadians((360.f / BeamCount) * i);
+		FVector Direction = SavedRotators[i].Vector();
+		float Angle = FMath::DegreesToRadians(StartAngle + (SpreadDegree/BeamCount) * i);
 		
 		FTransform SpawnTransform;
 
 		SpawnTransform.SetLocation(AvatarActor->GetActorLocation() + Direction * OrbitRadius);
-		SpawnTransform.SetRotation(Rotators[i].Quaternion());
+		SpawnTransform.SetRotation(SavedRotators[i].Quaternion());
 
 		// 월드에 미사일 생성
 		AAuraSpinningBeamActor* Beam = GetWorld()->SpawnActorDeferred<AAuraSpinningBeamActor>(

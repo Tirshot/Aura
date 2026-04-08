@@ -104,7 +104,7 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLevelUpParticles() const;
 
-private:
+protected:
 	// 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category="Camera")
 	TObjectPtr<class USpringArmComponent> SpringArm;
@@ -116,11 +116,21 @@ private:
 	TObjectPtr<UBoxComponent> Box;
 
 	// 미니맵
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap", meta=(AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MiniMap")
 	TObjectPtr<USceneCaptureComponent2D> MiniMapCapture;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "MiniMap")
 	TSubclassOf<UTextureRenderTarget2D> MiniMapRenderTargetClass;
+	
+	// 미니맵 업데이트용
+	FTimerHandle MiniMapUpdateTimerHandle;
+
+	// 업데이트 주기
+	UPROPERTY(EditAnywhere, Category = "MiniMap")
+	float MiniMapUpdateInterval = 0.1f;
+
+	// 미니맵 수동 캡쳐
+	void UpdateMiniMap();
 	
 public:
 	UPROPERTY(VisibleAnywhere)

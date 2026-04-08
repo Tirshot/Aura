@@ -174,19 +174,6 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
         NewOverlayWidgetController->SetXPBarPercentToOwnValue();
     }
     
-    if (AAuraCharacter* Aura = Cast<AAuraCharacter>(PC->GetPawn()))
-    {
-        if (!Aura->MiniMapRenderTarget)
-        {
-            Aura->InitializeMiniMap();
-        }
-        
-        if (Aura->MiniMapRenderTarget && NewOverlayWidgetController)
-        {
-            NewOverlayWidgetController->OnRenderTargetCreated.Broadcast(Aura->MiniMapRenderTarget);
-        }
-    }
-    
     // 게임오버 위젯 컨트롤러 생성
     GameOverWidgetController = GetGameOverWidgetController(WidgetControllerParams);
     GameOverWidgetController->BindCallbacksToDependencies();

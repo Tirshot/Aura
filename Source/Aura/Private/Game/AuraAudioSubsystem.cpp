@@ -39,7 +39,7 @@ void UAuraAudioSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	PlayMusicByTag(FGameplayTag::RequestGameplayTag("Sound.Background.Ambient"), 2.f, true, 2.f, 90.f);
 }
 
-void UAuraAudioSubsystem::PlayMusic(USoundBase* Sound, float StartTime, bool bLooping, float LoopStart, float LoopDuration)
+void UAuraAudioSubsystem::PlayMusic(USoundBase* Sound, float StartTime, bool bLooping, float LoopStart, float LoopDuration, FGameplayTag SoundTag)
 {
 	if (!Sound)
 		return;
@@ -51,7 +51,12 @@ void UAuraAudioSubsystem::PlayMusic(USoundBase* Sound, float StartTime, bool bLo
 	// 이미 재생 중인 음악이 있다면 페이드 아웃, 정지
 	if (SoundComponent && SoundComponent->IsPlaying())
 	{
+		// 동일한 사운드면 재생하지 않음
 		if (SoundComponent->GetSound() == Sound)
+			return;
+		
+		// 지금 재생중인 음악과 동일한 태그를 가지면 재생하지 않음
+		if (CurrentPlayingSoundTag.MatchesTagExact(SoundTag))
 			return;
 		
 		StopMusic();
@@ -74,6 +79,9 @@ void UAuraAudioSubsystem::PlayMusic(USoundBase* Sound, float StartTime, bool bLo
 
 	// 페이드인
 	SoundComponent->FadeIn(0.5f, 1.0f);
+	
+	if (SoundTag.IsValid())
+		CurrentPlayingSoundTag = SoundTag;
 }
 
 void UAuraAudioSubsystem::PlayMusicByTag(FGameplayTag SoundTag, float StartTime, bool bLooping, float LoopStart,
@@ -84,11 +92,12 @@ void UAuraAudioSubsystem::PlayMusicByTag(FGameplayTag SoundTag, float StartTime,
 	
 	if (USoundBase* SoundBase = LoadedSoundData->GetSoundByTag(SoundTag))
 	{
-		PlayMusic(SoundBase, StartTime, bLooping, LoopStart, LoopDuration);
+		PlayMusic(SoundBase, StartTime, bLooping, LoopStart, LoopDuration, SoundTag);
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AuraAudioSubsystem::PlayMusicByTag - Sound Not Found by Given GameplayTag : %s"), *SoundTag.ToString());
+		CurrentPlayingSoundTag = FGameplayTag::EmptyTag;
 	}
 }
 
@@ -101,11 +110,12 @@ void UAuraAudioSubsystem::PlayMusicByTag_NoVariable(FGameplayTag SoundTag)
 	
 	if (USoundBase* SoundBase = LoadedSoundData->GetSoundByTag(SoundTag))
 	{
-		PlayMusic(SoundBase, SoundContext.StartTime, SoundContext.bLooping, SoundContext.LoopStartTime, SoundContext.LoopDuration);
+		PlayMusic(SoundBase, SoundContext.StartTime, SoundContext.bLooping, SoundContext.LoopStartTime, SoundContext.LoopDuration, SoundTag);
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AuraAudioSubsystem::PlayMusicByTag - Sound Not Found by Given GameplayTag : %s"), *SoundTag.ToString());
+		CurrentPlayingSoundTag = FGameplayTag::EmptyTag;
 	}
 }
 
@@ -114,10 +124,9 @@ void UAuraAudioSubsystem::StopMusic()
 	if (SoundComponent && SoundComponent->IsPlaying())
 	{
 		SoundComponent->FadeOut(0.5f, 0.0f);
+		CurrentPlayingSoundTag = FGameplayTag::EmptyTag;
 	}
 }
-
-
 
 void UAuraAudioSubsystem::UpdateSoundVolume(USoundClass* TargetSoundClass, float Volume)
 {

@@ -75,7 +75,6 @@ protected:
 	bool bTakeDamage = false;
 
 	FTimerHandle TimerHandle;
-
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USphereComponent> Sphere;

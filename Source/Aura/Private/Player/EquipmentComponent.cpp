@@ -8,6 +8,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Character/AuraCharacter.h"
+#include "Game/AuraGameInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
@@ -150,8 +151,47 @@ bool UEquipmentComponent::IsSlotEmpty(EItemSubGroup Slot) const
 
 void UEquipmentComponent::ClearSlot(FEquipmentSlot* Slot)
 {
+	float OldMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float OldHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health);
+	float OldMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+	float OldMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana);
+	float HPRatio = OldHP / OldMaxHP;
+	float MPRatio = OldMP / OldMaxMP;
+	
 	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
 	AuraASC->RemoveActiveGameplayEffectBySourceEffect(Slot->ItemData.ItemStatEffectClass, nullptr);
+	
+	// 비율에 따라 HP 감소시키기
+	float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float TargetHP = HPRatio * NewMaxHP;
+	float HPDelta = TargetHP - OldHP;
+	
+	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float TargetMP = MPRatio * NewMaxMP;
+	float MPDelta = TargetMP - OldMP;
+	
+	if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	{
+		FGameplayEffectContextHandle DeHealHPContext = AuraASC->MakeEffectContext();
+		DeHealHPContext.AddInstigator(GetOwner(), GetOwner());
+
+		auto DEHealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealHPContext);
+		if (DEHealHPHandle.IsValid())
+		{
+			DEHealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta); 
+			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealHPHandle.Data);
+		}
+		
+		FGameplayEffectContextHandle DeHealMPContext = AuraASC->MakeEffectContext();
+		DeHealMPContext.AddInstigator(GetOwner(), GetOwner());
+
+		auto DEHealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealMPContext);
+		if (DEHealMPHandle.IsValid())
+		{
+			DEHealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta); 
+			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealMPHandle.Data);
+		}
+	}
 	
 	// 게임플레이 이펙트 제거
 	for (const auto EffectAndStack : Slot->ItemData.EffectAndStacks)
@@ -348,7 +388,15 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			const float HealthRegen = ItemStat.HealthRegeneration;
 			const float ManaRegen = ItemStat.ManaRegeneration;
 			const float CriticalChance = ItemStat.CriticalHitChance;
-		
+			
+			float OldMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+			float OldHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health);
+			float OldMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+			float OldMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana);
+
+			float HPRatio = (OldMaxHP > 0.f) ? (OldHP / OldMaxHP) : 1.f;
+			float MPRatio = (OldMaxMP > 0.f) ? (OldMP / OldMaxMP) : 1.f;
+			
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Primary_Strength, Str);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Primary_Intelligence, Int);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Primary_Resilience, Res);
@@ -364,6 +412,37 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_CriticalHitChance, CriticalChance);
 		
 			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
+			
+			float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+			float TargetHP = HPRatio * NewMaxHP;
+			float HPDelta = TargetHP - OldHP;
+			
+			float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+			float TargetMP = MPRatio * NewMaxMP;
+			float MPDelta = TargetMP - OldMP;
+			
+			if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+			{
+				FGameplayEffectContextHandle HealHPHandleContext = AuraASC->MakeEffectContext();
+				HealHPHandleContext.AddInstigator(GetOwner(), GetOwner());
+
+				auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, Context);
+				if (HealHPHandle.IsValid())
+				{
+					HealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta);
+					AuraASC->ApplyGameplayEffectSpecToSelf(*HealHPHandle.Data);
+				}
+				
+				FGameplayEffectContextHandle HealMPHandleContext = AuraASC->MakeEffectContext();
+				HealMPHandleContext.AddInstigator(GetOwner(), GetOwner());
+
+				auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, Context);
+				if (HealMPHandle.IsValid())
+				{
+					HealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta);
+					AuraASC->ApplyGameplayEffectSpecToSelf(*HealMPHandle.Data);
+				}
+			}
 			
 			Slot->bIsSlotEquipped = true;
 		}

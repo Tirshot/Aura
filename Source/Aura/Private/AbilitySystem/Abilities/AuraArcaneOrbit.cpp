@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Abilities/AuraArcaneOrbit.h"
 
+#include "AbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraArcaneMissile.h"
@@ -98,6 +99,13 @@ void UAuraArcaneOrbit::CheckAbilityUpgrades()
 
 TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 {
+	FGameplayCueParameters Params;
+	Params.NormalizedMagnitude = OrbitRadius / 100.f;
+	Params.Normal = GetAvatarActorFromActorInfo()->GetActorLocation();
+	Params.TargetAttachComponent = GetAvatarActorFromActorInfo()->GetRootComponent();
+	
+	GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.Arcane.Spawn"), Params);
+	
 	CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
 	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
 	

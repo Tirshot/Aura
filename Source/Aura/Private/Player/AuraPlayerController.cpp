@@ -201,8 +201,8 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
             float Distance = FVector::Dist(AuraLocation, ItemLocation);
             if (Distance <= 150.f)
             {
-                Server_TryPickUpItem(DropItem, this);
                 TargetItem = nullptr;
+                Server_TryPickUpItem(DropItem, this);
             }
         }
     }
@@ -231,22 +231,6 @@ void AAuraPlayerController::CharacterInitialized(ACharacter* InCharacter)
     {
         EquipmentComponent = IPlayerInterface::Execute_GetEquipmentComponent(InCharacter);
         InventoryComponent = IPlayerInterface::Execute_GetInventoryComponent(InCharacter);
-    }
-    
-    if (AAuraCharacter* Aura = Cast<AAuraCharacter>(InCharacter))
-    {
-        if (!Aura->MiniMapRenderTarget)
-        {
-            Aura->InitializeMiniMap();
-        }
-        
-        if (Aura->MiniMapRenderTarget)
-        {
-            if (UOverlayWidgetController* OverlayWC = UAuraAbilitySystemLibrary::GetOverlayWidgetController(this))
-            {
-                OverlayWC->OnRenderTargetCreated.Broadcast(Aura->MiniMapRenderTarget);
-            }
-        }
     }
 }
 
@@ -318,15 +302,6 @@ void AAuraPlayerController::AutoRun()
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
-        }
-        
-        // 미니맵 갱신
-        if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(ControlledPawn))
-        {
-            if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
-            {
-                MiniMapCapture->CaptureScene();
-            }
         }
     }
 }
@@ -576,39 +551,6 @@ void AAuraPlayerController::UpdateMagicCircleLocation()
     if (CursorHit.bBlockingHit)
     {
         TargetLocation = CursorHit.ImpactPoint;
-        SearchRadius = DefaultSearchRadius;
-    }
-    else
-    {
-        // 구체 트레이스 실행
-        FVector TraceStart = CursorHit.TraceStart;
-        FVector TraceEnd = CursorHit.TraceEnd;
-        TArray<FHitResult> HitResults;
-        FCollisionQueryParams Params;
-        Params.AddIgnoredActor(GetPawn());
-        Params.AddIgnoredActor(MagicCircle);
-        
-        bool bHit = GetWorld()->SweepMultiByChannel
-        (
-          HitResults,
-          TraceStart,
-          TraceEnd,
-          FQuat::Identity,
-          ECC_GroundCheck,
-          FCollisionShape::MakeSphere(SearchRadius),
-          Params
-        );
-        
-        if (bHit)
-        {
-            TargetLocation = HitResults[0].ImpactPoint;
-            SearchRadius = DefaultSearchRadius;
-        }
-        else
-        {
-            // 적중하지 않았으면 검색 거리를 늘림
-            SearchRadius += 50;
-        }
     }
     LastMagicCircleLocation = TargetLocation;
     MagicCircle->SetActorLocation(LastMagicCircleLocation);
@@ -800,7 +742,7 @@ void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVe
         RangeIndicator->SetOwner(AvatarActor);
         RangeIndicator->IndicatorInitialized.Broadcast(
             AvatarActor, true, RangeShape, Location,
-            Radius, Width, Height, 0.f,
+            Radius, Width, Height/2, 0.f,
             RGB);
     }
 }
@@ -1282,14 +1224,6 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
         return;
     }
     
-    if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(GetPawn()))
-    {
-        if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
-        {
-            MiniMapCapture->CaptureScene();
-        }
-    }
-    
     SetAutoRunning(false);
 }
 
@@ -1384,19 +1318,23 @@ void AAuraPlayerController::ShowInventoryMenu()
 
 void AAuraPlayerController::ShowItemTitle(const FInputActionValue& Value)
 {
-    const bool InputValue = Value.Get<bool>();
-    if (InputValue)
+    if (auto AuraState = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
-        for (TActorIterator<AAuraDropItem> It(GetWorld()); It; ++It)
+        auto& Items = AuraState->GetDroppedItemsArray();
+        const bool InputValue = Value.Get<bool>();
+        if (InputValue)
         {
-            It->SetTitleWidgetVisibility(true);
+            for (auto& Item : Items)
+            {
+                Item->SetTitleWidgetVisibility(true);
+            }
         }
-    }
-    else
-    {
-        for (TActorIterator<AAuraDropItem> It(GetWorld()); It; ++It)
+        else
         {
-            It->SetTitleWidgetVisibility(false);
+            for (auto& Item : Items)
+            {
+                Item->SetTitleWidgetVisibility(false);
+            }
         }
     }
 }
@@ -1645,15 +1583,6 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
             // 방향 벡터 구하기
             const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
             ControlledPawn->AddMovementInput(WorldDirection);
-            
-            // 미니맵 갱신
-            if (AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(ControlledPawn))
-            {
-                if (auto MiniMapCapture = AuraCharacter->GetMiniMapCapture())
-                {
-                    MiniMapCapture->CaptureScene();
-                }
-            }
         }
     }
 }

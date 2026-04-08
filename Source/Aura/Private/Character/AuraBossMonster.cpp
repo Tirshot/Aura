@@ -155,15 +155,15 @@ void AAuraBossMonster::OnRoarStart(const FGameplayEventData* EventData)
 		{
 			AuraGM->OnAllActorsInvincible.Broadcast(true);
 		}
-	}
 		
-	if (bBerserk)
-		return;
-	
-	// 음악 재생
-	if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
-	{
-		AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
+		if (bBerserk)
+			return;
+		
+		// 음악 재생
+		if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+		{
+			AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Phase1"));
+		}
 	}
 }
 
