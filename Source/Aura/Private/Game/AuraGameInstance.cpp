@@ -19,40 +19,40 @@
 
 void UAuraGameInstance::Init()
 {
-	// // 네트워크 어댑터 검색
-	// ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-	// if (SocketSubsystem)
-	// {
-	// 	TArray<TSharedPtr<FInternetAddr>> AdapterAddresses;
-	// 	if (SocketSubsystem->GetLocalAdapterAddresses(AdapterAddresses))
-	// 	{
-	// 		FString TargetIP = "";
-	//
-	// 		for (const auto& Address : AdapterAddresses)
-	// 		{
-	// 			FString CurrentIP = Address->ToString(false);
- //                
-	// 			// 라드민 IP 검색
-	// 			if (CurrentIP.StartsWith(TEXT("26.")))
-	// 			{
-	// 				TargetIP = CurrentIP;
-	// 				UE_LOG(LogTemp, Warning, TEXT("Radmin Adapter Found: %s"), *TargetIP);
-	// 				break;
-	// 			}
-	// 		}
-	//
-	// 		// MultiHome 강제 주입
-	// 		if (!TargetIP.IsEmpty())
-	// 		{
-	// 			// 이미 설정된 MultiHome이 없을 때만 추가
-	// 			if (!FParse::Param(FCommandLine::Get(), TEXT("MultiHome")))
-	// 			{
-	// 				FCommandLine::Append(*FString::Printf(TEXT(" -MultiHome=%s"), *TargetIP));
-	// 				UE_LOG(LogTemp, Warning, TEXT("Successfully forced MultiHome to Radmin IP: %s"), *TargetIP);
-	// 			}
-	// 		}
-	// 	}
-	// }
+	// 네트워크 어댑터 검색
+	ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+	if (SocketSubsystem)
+	{
+		TArray<TSharedPtr<FInternetAddr>> AdapterAddresses;
+		if (SocketSubsystem->GetLocalAdapterAddresses(AdapterAddresses))
+		{
+			FString TargetIP = "";
+	
+			for (const auto& Address : AdapterAddresses)
+			{
+				FString CurrentIP = Address->ToString(false);
+                
+				// 라드민 IP 검색
+				if (CurrentIP.StartsWith(TEXT("26.")))
+				{
+					TargetIP = CurrentIP;
+					UE_LOG(LogTemp, Warning, TEXT("Radmin Adapter Found: %s"), *TargetIP);
+					break;
+				}
+			}
+	
+			// MultiHome 강제 주입
+			if (!TargetIP.IsEmpty())
+			{
+				// 이미 설정된 MultiHome이 없을 때만 추가
+				if (!FParse::Param(FCommandLine::Get(), TEXT("MultiHome")))
+				{
+					FCommandLine::Append(*FString::Printf(TEXT(" -MultiHome=%s"), *TargetIP));
+					UE_LOG(LogTemp, Warning, TEXT("Successfully forced MultiHome to Radmin IP: %s"), *TargetIP);
+				}
+			}
+		}
+	}
 	Super::Init();
 
 	UGameUserSettings* Settings = GEngine->GetGameUserSettings();
@@ -200,10 +200,20 @@ void UAuraGameInstance::CancelFindSession()
 {
 	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
 	{
+		// IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
+		// if (SessionInterface.IsValid())
+		// {
+		// 	SessionInterface->CancelFindSessions();
+		// }
+	
 		IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
 		if (SessionInterface.IsValid())
 		{
-			SessionInterface->CancelFindSessions();
+			FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+			if (ExistingSession)
+			{
+				SessionInterface->DestroySession(NAME_GameSession);
+			}
 		}
 	}
 }
@@ -256,19 +266,20 @@ void UAuraGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 				}
 			}
 			
-			// 내 세션이 아닌 세션에 조인
+			// 내 세션에 조인
 			for (const auto& SearchResult : SessionSearch->SearchResults)
 			{
-				TSharedPtr<const FUniqueNetId> LocalPlayerId = GetFirstGamePlayer()->GetPreferredUniqueNetId().GetUniqueNetId();
-				if (SearchResult.Session.OwningUserId.IsValid() && LocalPlayerId.IsValid())
+				//TSharedPtr<const FUniqueNetId> LocalPlayerId = GetFirstGamePlayer()->GetPreferredUniqueNetId().GetUniqueNetId();
+				if (SearchResult.Session.OwningUserId.IsValid()) //&& LocalPlayerId.IsValid())
 				{
-					if (*SearchResult.Session.OwningUserId == *LocalPlayerId)
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Found my own session, skipping..."));
-						continue; 
-					}
+					// if (*SearchResult.Session.OwningUserId == *LocalPlayerId)
+					// {
+					// 	UE_LOG(LogTemp, Warning, TEXT("Found my own session, skipping..."));
+					// 	continue; 
+					// }
 					// 조인 시도
 					SessionInterface->JoinSession(0, NAME_GameSession, SearchResult);
+					return;
 				}
 			}
 		}
@@ -303,6 +314,13 @@ void UAuraGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionC
 				if (APlayerController* PlayerController = GetFirstLocalPlayerController())
 				{
 					bIsOnline = true;
+					
+					// 만약 포트가 없거나 0이라면 강제로 7777을 붙임
+					if (!Address.Contains(TEXT(":")) || Address.EndsWith(TEXT(":0")))
+					{
+						Address.RemoveFromEnd(TEXT(":0"));
+						Address.Append(TEXT(":7777")); 
+					}
 					
 					// 서버로 이동
 					PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);

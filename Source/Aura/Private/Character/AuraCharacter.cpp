@@ -21,6 +21,7 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
+#include "Game/AuraGameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -164,6 +165,7 @@ void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
     // 게임 인스턴스에 접근
     if (UAuraGameInstance* AuraGI = PC->GetGameInstance<UAuraGameInstance>())
     {
+
         // 저장 슬롯 찾기
         const FString InGameLoadSlotName = AuraGI->LoadSlotName;
         const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
@@ -172,6 +174,12 @@ void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
         if (SaveData == nullptr)
             return;
 
+        // 마우스 이동 설정 가져오기
+        if (auto AuraPC = Cast<AAuraPlayerController>(PC))
+        {
+            AuraPC->SetMoveToMouse(UAuraGameUserSettings::GetAuraGameUserSettings()->GetMoveToMouse());
+        }
+        
         UAuraAbilitySystemComponent* AuraASC = CastChecked<UAuraAbilitySystemComponent>(AbilitySystemComponent);
         if (!AuraASC)
             return;

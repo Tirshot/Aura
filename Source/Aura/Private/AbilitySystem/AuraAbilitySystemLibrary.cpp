@@ -554,28 +554,28 @@ TArray<FVector> UAuraAbilitySystemLibrary::EvenlyRotatedVectors(const FVector& F
 
 void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& Tag, AActor* AvatarActor, FText AppendText)
 {
-	AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
-	if (AuraCharacter == nullptr)
-		return;
-	
-	UAbilitySystemComponent* ASC = AuraCharacter->GetAbilitySystemComponent();
-	if (ASC == nullptr)
-		return;
-	
-	// 기본 GE 클래스 생성 후 태그 부여
-	static TSubclassOf<UGameplayEffect> GETagGrantingClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/Blueprints/AbilitySystem/Aura/Effects/GE_GrandInfiniteTag.GE_GrandInfiniteTag_C")); 
-
-	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GETagGrantingClass, 1.f, EffectContext);
-
-	if (SpecHandle.IsValid())
-	{
-		SpecHandle.Data.Get()->AddDynamicAssetTag(Tag);
-		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-		
-		FGameplayTagContainer CurrentOwnedTags;
-		ASC->GetOwnedGameplayTags(CurrentOwnedTags);
-	}
+	// AAuraCharacter* AuraCharacter = Cast<AAuraCharacter>(AvatarActor);
+	// if (AuraCharacter == nullptr)
+	// 	return;
+	//
+	// UAbilitySystemComponent* ASC = AuraCharacter->GetAbilitySystemComponent();
+	// if (ASC == nullptr)
+	// 	return;
+	//
+	// // 기본 GE 클래스 생성 후 태그 부여
+	// static TSubclassOf<UGameplayEffect> GETagGrantingClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/Blueprints/AbilitySystem/Aura/Effects/GE_GrandInfiniteTag.GE_GrandInfiniteTag_C")); 
+	//
+	// FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	// FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GETagGrantingClass, 1.f, EffectContext);
+	//
+	// if (SpecHandle.IsValid())
+	// {
+	// 	SpecHandle.Data.Get()->AddDynamicAssetTag(Tag);
+	// 	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	// 	
+	// 	FGameplayTagContainer CurrentOwnedTags;
+	// 	ASC->GetOwnedGameplayTags(CurrentOwnedTags);
+	// }
 }
 
 void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, FText AppendText, UTexture2D* Icon)

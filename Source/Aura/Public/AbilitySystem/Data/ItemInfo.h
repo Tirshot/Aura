@@ -18,7 +18,8 @@ enum class EItemGroup : uint8
 	Usable = 0,
 	Equipment = 1,
 	Charm = 2,
-	ETC = 3
+	ETC = 3,
+	None = 4 // 아이템 미등장 확률 계산 용
 };
 
 UENUM(BlueprintType)

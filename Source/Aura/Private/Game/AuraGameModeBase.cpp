@@ -3,6 +3,7 @@
 
 #include "Game/AuraGameModeBase.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AuraGameplayTags.h"
 #include "EngineUtils.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
@@ -694,6 +695,55 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 	return UpgradeCards;
 }
 
+void AAuraGameModeBase::SendXPToAllPlayers(AActor* KilledActor, AActor* KillerActor)
+{
+	if (!KilledActor->Implements<UCombatInterface>())
+		return;
+
+	const int32 TargetLevel = ICombatInterface::Execute_GetCharacterLevel(KilledActor);
+	const ECharacterClass TargetClass = ICombatInterface::Execute_GetCharacterClass(KilledActor);
+	const int32 TotalXP = UAuraAbilitySystemLibrary::GetXPRewardForClassAndLevel(KilledActor, TargetClass, TargetLevel);
+
+	// 모든 컨트롤러 순회
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
+			continue;
+
+		APawn* Pawn = PC->GetPawn();
+		if (!Pawn)
+			continue;
+
+		UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Pawn);
+		if (!ASC)
+			continue;
+		
+		// 분배 방식에 따라 XP 조정
+		int32 PlayerCount = GetNumPlayers();
+		int32 KillerXP = TotalXP / FMath::Max(XPDistributionRatio, 1);
+		int32 SharedXP = TotalXP / FMath::Max(PlayerCount, 1);
+		FGameplayEventData Payload;
+		Payload.EventTag = FAuraGameplayTags::Get().Attributes_Meta_IncomingXP;
+		if (KillerActor && Pawn == KillerActor)
+		{
+			// 직접 몬스터를 처치한 플레이어가 더 많은 비율을 가져감
+			Payload.EventMagnitude = KillerXP;
+		}
+		else
+		{
+			// 직접 처치하지 않았다면 절반만 가져감
+			Payload.EventMagnitude = SharedXP;
+		}
+
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			Pawn,
+			FAuraGameplayTags::Get().Attributes_Meta_IncomingXP,
+			Payload
+		);
+	}
+}
+
 bool AAuraGameModeBase::GiveItemToCharacter(AAuraCharacter* Character, const FItemData& ItemData, int ItemCount)
 {
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(Character))
@@ -709,17 +759,11 @@ void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	int32 RandValue = FMath::RandRange(0, 6);
-	int32 RandValue2 = FMath::RandRange(0, RandValue);
+	int32 RandValue = FMath::RandRange(3, 8);
+	const float DropRadius = FMath::RandRange(150.f, 300.f); 
 	
-	float RandLocationX = FMath::RandRange(0, 50);
-	float RandLocationY = FMath::RandRange(0, 50);
-	
-	ItemSpawnLocation.X += RandLocationX;
-	ItemSpawnLocation.Y += RandLocationY;
-	
-	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
-	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
+	FVector Offset = FVector(DropRadius, 0.f, 0.f).RotateAngleAxis(360.f / RandValue, FVector::UpVector);
+	FVector FinalSpawnLocation = ItemSpawnLocation + Offset;
 	
 	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
 	if (AuraGI == nullptr)
@@ -727,40 +771,24 @@ void AAuraGameModeBase::SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const
 	
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
 		AuraGI->DropItemClass,
-		ItemSpawnLocation,
-		RandRotation,
+		FinalSpawnLocation,
+		FRotator(),
 		SpawnParams);
 
 	if (DropItemActor)
 	{
 		DropItemActor->InitializeItem(DropItemData);
-		DropItemActor->SetItemCount(DropItemData.ItemCounts); // 아이템 갯수
+		DropItemActor->SetItemCount(DropItemData.ItemCounts);
 		DropItemActor->SetOwner(OwnedCharacter);
 	}
 }
 
-void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FName ItemID)
+void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FItemData ItemData)
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	
 	FVector ItemSpawnLocation = Actor->GetActorLocation();
-
-	int32 RandValue = FMath::RandRange(0, 6);
-	int32 RandValue2 = FMath::RandRange(0, RandValue);
-	
-	float RandLocationX = FMath::RandRange(0, 50);
-	float RandLocationY = FMath::RandRange(0, 50);
-	
-	ItemSpawnLocation.X += RandLocationX;
-	ItemSpawnLocation.Y += RandLocationY;
-	
-	FItemData DropItemData = UAuraAbilitySystemLibrary::GetItemDataByItemName(this, ItemID);
-	
-	// 아이템에 Guid 설정
-	DropItemData.UniqueID = FGuid::NewGuid();
-	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(ItemSpawnLocation.ForwardVector, FVector::UpVector, 360.f, RandValue);
-	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 	
 	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
 	if (AuraGI == nullptr)
@@ -769,13 +797,13 @@ void AAuraGameModeBase::SpawnDropItemToActorLocation(AActor* Actor, FName ItemID
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
 		AuraGI->DropItemClass,
 		ItemSpawnLocation,
-		RandRotation,
+		FRotator(),
 		SpawnParams);
 
 	if (DropItemActor)
 	{
-		DropItemActor->InitializeItem(DropItemData);
-		DropItemActor->SetItemCount(1); // 아이템 갯수
+		DropItemActor->InitializeItem(ItemData);
+		DropItemActor->SetItemCount(1);
 		DropItemActor->SetOwner(Actor);
 	}
 }
@@ -784,22 +812,11 @@ void AAuraGameModeBase::SpawnDropItemToLocation(FVector Location, FName ItemID)
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	int32 RandValue = FMath::RandRange(0, 6);
-	int32 RandValue2 = FMath::RandRange(0, RandValue);
-	
-	float RandLocationX = FMath::RandRange(0, 50);
-	float RandLocationY = FMath::RandRange(0, 50);
-	
-	Location.X += RandLocationX;
-	Location.Y += RandLocationY;
 	
 	FItemData DropItemData = UAuraAbilitySystemLibrary::GetItemDataByItemName(this, ItemID);
 	
 	// 아이템에 Guid 설정
 	DropItemData.UniqueID = FGuid::NewGuid();
-	TArray<FRotator> ItemSpawnRotation = UAuraAbilitySystemLibrary::EvenlySpacedRotators(Location.ForwardVector, FVector::UpVector, 360.f, RandValue);
-	FRotator RandRotation = ItemSpawnRotation[FMath::Clamp(RandValue2 - 1, 0, 6)];
 		
 	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
 	if (AuraGI == nullptr)
@@ -808,14 +825,13 @@ void AAuraGameModeBase::SpawnDropItemToLocation(FVector Location, FName ItemID)
 	auto DropItemActor = GetWorld()->SpawnActor<AAuraDropItem>(
 		AuraGI->DropItemClass,
 		Location,
-		RandRotation,
+		FRotator(),
 		SpawnParams);
 
 	if (DropItemActor)
 	{
 		DropItemActor->InitializeItem(DropItemData);
-		DropItemActor->SetItemCount(1); // 아이템 갯수
-		// DropItemActor->SetOwner();
+		DropItemActor->SetItemCount(1);
 	}
 }
 
@@ -828,126 +844,128 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 		return;
 	
 	ECharacterClass EnemyCharacterClass = ICombatInterface::Execute_GetCharacterClass(DeadEnemy);
+	auto AuraGI = GetGameInstance<UAuraGameInstance>();
+	if (!AuraGI)
+		return;
 	
 	// 아이템 드랍 테이블 가져오기
-	if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
-	{
-		if (auto ItemInfos = AuraGI->GetItemInfos())
-		{
-			auto DropList = ItemInfos->DropList;
-			
-			// 그룹 별 아이템 드랍 확률
-			if (const FDropItemGroupArray* ItemGroupArray = ItemInfos->GetDropItemGroup(EnemyCharacterClass))
-			{
-				// 해당하는 몬스터 클래스의 아이템 그룹들 가져오기
-				const TArray<FDropItemGroup>& ItemGroups = ItemGroupArray->Groups;
-				const int32 DropCounts = ItemGroupArray->DropCounts;
-				
-				// 그룹 뽑기, 기본적으로 아이템 그룹은 '기타'
-				EItemGroup SelectedItemGroup = EItemGroup::ETC;
-			
-				// 전체 아이템 그룹의 확률 합산 - 가중치 확률 분모 구하기
-				float AllItemGroupProbability = 0.f;
-				for (const FDropItemGroup& ItemGroup : ItemGroups)
-				{
-					AllItemGroupProbability += ItemGroup.GroupProbability;
-				}
-			
-				// 동시 드랍 아이템 갯수만큼 스폰 반복
-				for (int i = 0; i < DropCounts; i++)
-				{
-					float RandGroupValue = FMath::RandRange(0.f, AllItemGroupProbability);
-					float SumGroupProbability = 0.f;
-			
-					// 아이템 그룹 선택
-					for (const FDropItemGroup& ItemGroup : ItemGroups)
-					{
-						// usable->Equipment->Charm->ETC 순으로 계산
-						SumGroupProbability += ItemGroup.GroupProbability;
-				
-						// 당첨
-						if (RandGroupValue <= SumGroupProbability)
-						{
-							SelectedItemGroup = ItemGroup.ItemGroup;
-							break;
-						}
-					}
-			
-					// 선택된 아이템 그룹의 확률 합산 - 가중치 확률 분모 구하기
-					float AllItemsInSelectedGroupProbability = 0.f;
-					for (const FDropItemGroup& ItemGroup : ItemGroups)
-					{
-						for (auto Item : ItemGroup.Items)
-						{
-							auto DropItemsGroup = ItemGroup.ItemGroup;
-						
-							// 이미 당첨된 아이템 그룹이 아니면 넘어감
-							if (DropItemsGroup != SelectedItemGroup)
-								continue;
-						
-							auto DropItemProbability = Item.DropProbability;
-							
-							AllItemsInSelectedGroupProbability += DropItemProbability;
-						}
-					}
-			
-					// 엣지 케이스
-					if (FMath::IsNearlyZero(AllItemsInSelectedGroupProbability))
-					{
-						switch (SelectedItemGroup)
-						{
-						case EItemGroup::Charm :
-							UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Charm'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
-							continue;
-						case EItemGroup::Equipment :
-							UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Equipment'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
-							continue;
-						case EItemGroup::Usable :
-							UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Usable'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
-							continue;
-						case EItemGroup::ETC :
-							UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'ETC'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
-							continue;
-						}
-					}
-				
-					float RandItemValue = FMath::RandRange(0.f, AllItemsInSelectedGroupProbability);
-					float SumItemProbability = 0.f;
-					FItemData DropItemData;
-			
-					// 데이터 테이블의 행 핸들과 확률을 가짐
-					for (const FDropItemGroup& ItemGroup : ItemGroups)
-					{
-						for (const FDropItemProbability& Item : ItemGroup.Items)
-						{
-							auto DropItemsHandle = Item.ItemHandle;
-							auto DropItemsInfo = DropItemsHandle.GetRow<FItemData>("ItemInfo");
-							auto DropItemsGroup = DropItemsInfo->ItemGroup;
-				
-							// 이미 당첨된 아이템 그룹이 아니면 넘어감
-							if (DropItemsGroup != SelectedItemGroup)
-								continue;
-				
-							auto DropItemProbability = Item.DropProbability;
-				
-							// 아이템 뽑기
-							SumItemProbability += DropItemProbability;
-							if (RandItemValue <= SumItemProbability)
-							{
-								DropItemData = *DropItemsInfo;
-								break;
-							}
-						}
-					}
+	auto ItemInfos = AuraGI->GetItemInfos();
+	if (!ItemInfos)
+		return;
 	
-					// 아이템에 Guid 설정
-					DropItemData.UniqueID = FGuid::NewGuid();
-					
-					// 월드에 아이템 드랍
-					FVector ItemSpawnLocation = DeadEnemy->GetActorLocation();
-					SpawnDropItemActor(KilledBy, DropItemData, ItemSpawnLocation);
-				}
+	// 그룹 별 아이템 드랍 확률
+	const FDropItemGroupArray* ItemGroupArray = ItemInfos->GetDropItemGroup(EnemyCharacterClass);
+	if (!ItemGroupArray)
+		return;
+	
+	// 해당하는 몬스터 클래스의 아이템 그룹들 가져오기
+	const TArray<FDropItemGroup>& ItemGroups = ItemGroupArray->Groups;
+	const int32 DropCounts = ItemGroupArray->DropCounts;
+			
+	// 전체 아이템 그룹의 확률 합산 - 가중치 확률 분모 구하기
+	float GroupProbability = 0.f;
+	for (const FDropItemGroup& ItemGroup : ItemGroups)
+	{
+		GroupProbability += ItemGroup.GroupProbability;
+	}
+			
+	// 동시 드랍 아이템 갯수만큼 스폰 반복
+	for (int i = 0; i < DropCounts; i++)
+	{
+		// 그룹 뽑기, 기본적으로 아이템 그룹은 '기타'
+		EItemGroup SelectedGroup = EItemGroup::ETC;
+		
+		float RandGroupValue = FMath::RandRange(0.f, GroupProbability);
+		float SumGroupProbability = 0.f;
+			
+		// 아이템 그룹 선택
+		for (const FDropItemGroup& ItemGroup : ItemGroups)
+		{
+			// usable->Equipment->Charm->ETC->None 순으로 계산
+			SumGroupProbability += ItemGroup.GroupProbability;
+				
+			// 당첨
+			if (RandGroupValue <= SumGroupProbability)
+			{
+				SelectedGroup = ItemGroup.ItemGroup;
+				break;
 			}
+		}
+					
+		// None 그룹에 당첨될 경우 컨티뉴
+		if (SelectedGroup == EItemGroup::None)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s : 꽝 당첨"), *DeadEnemy->GetName());
+			continue;
+		}
+			
+		// 선택된 아이템 그룹에 해당하는 아이템 모으기 및 확률 합산(가중치 확률 분모 구하기)
+		TArray<const FDropItemProbability*> SelectedItems;
+		float SelectedGroupItemsProbSum = 0.f;
+
+		for (const auto& Group : ItemGroups)
+		{
+			if (Group.ItemGroup != SelectedGroup) continue;
+			for (const auto& Item : Group.Items)
+			{
+				SelectedItems.Add(&Item);
+				SelectedGroupItemsProbSum += Item.DropProbability;
+			}
+		}
+			
+		// 엣지 케이스
+		if (FMath::IsNearlyZero(SelectedGroupItemsProbSum))
+		{
+			switch (SelectedGroup)
+			{
+			case EItemGroup::Charm :
+				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Charm'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
+				continue;
+			case EItemGroup::Equipment :
+				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Equipment'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
+				continue;
+			case EItemGroup::Usable :
+				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'Usable'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
+				continue;
+			case EItemGroup::ETC :
+				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'ETC'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
+				continue;
+			case EItemGroup::None :
+				continue;
+			}
+		}
+				
+		float RandItemValue = FMath::RandRange(0.f, SelectedGroupItemsProbSum);
+		float SumItemProbability = 0.f;
+		FItemData DropItemData;
+		bool bFound = false;
+			
+		// 아이템 후보 내에서 확률 계산
+		for (const auto* Item : SelectedItems)
+		{
+			// 바구니 내의 아이템들의 종합 확률
+			SumItemProbability += Item->DropProbability;
+			
+			// 목록 중 최상단부터 계산하기
+			if (RandItemValue <= SumItemProbability)
+			{
+				if (FItemData* RowData = Item->ItemHandle.GetRow<FItemData>("ItemInfo"))
+				{
+					DropItemData = *RowData;
+					bFound = true;
+				}
+				break;
+			}
+		}
+		
+		// 행을 찾았을 때만 월드에 드랍
+		if (bFound)
+		{
+			// 아이템에 Guid 설정
+			DropItemData.UniqueID = FGuid::NewGuid();
+					
+			// 월드에 아이템 드랍
+			SpawnDropItemActor(KilledBy, DropItemData, DeadEnemy->GetActorLocation());
 		}
 	}
 }

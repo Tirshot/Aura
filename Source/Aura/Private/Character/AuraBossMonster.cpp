@@ -239,6 +239,9 @@ void AAuraBossMonster::BeginBerserkMode(float NewHealth)
 
 void AAuraBossMonster::OnRep_IsRoaring()
 {
+	if (IsLocallyControlled())
+		return;
+	
 	if (bIsRoaring)
 	{
 		OnBossEventStart.Broadcast(this);
@@ -261,6 +264,9 @@ void AAuraBossMonster::OnRep_IsRoaring()
 
 void AAuraBossMonster::OnRep_Berserk()
 {
+	if (IsLocallyControlled())
+		return;
+	
 	// 블루프린트로 몽타주 실행, 머티리얼 변경
 	OnBeginBerserkMontage.Broadcast();
 	

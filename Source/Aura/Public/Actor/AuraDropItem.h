@@ -49,8 +49,12 @@ public:
 	void SetItemCount(int32 InCount) {ItemCount = InCount;}
 	
 	void SetTitleWidgetVisibility(bool InValue);
+	
 	UFUNCTION()
 	void OnRep_DropItemData();
+	
+	UFUNCTION()
+	void OnRep_IsPickedUp();
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnDropItemInitialized OnDropItemInitialized;
@@ -81,4 +85,8 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Category="ItemData"))
 	int32 ItemCount = 1;
+	
+	// 서버 RPC에 의해 줍고 있는 중인지 판단하는 불리언
+	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
+	bool bIsPickedUp = false;
 };

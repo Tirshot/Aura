@@ -76,6 +76,7 @@ void AAuraDropItem::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AAuraDropItem, DropItemData);
+	DOREPLIFETIME(AAuraDropItem, bIsPickedUp);
 }
 
 void AAuraDropItem::HighlightActor_Implementation()
@@ -142,4 +143,11 @@ void AAuraDropItem::SetTitleWidgetVisibility(bool InValue)
 void AAuraDropItem::OnRep_DropItemData()
 {
 	SetMeshAndMaterial();
+}
+
+void AAuraDropItem::OnRep_IsPickedUp()
+{
+	// 아이템 중복 습득 방지를 더 견고하게
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
 }

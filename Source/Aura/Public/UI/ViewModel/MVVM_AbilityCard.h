@@ -8,6 +8,7 @@
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "MVVM_AbilityCard.generated.h"
 
+class UMVVM_CardSelection;
 struct FAuraAbilityUpgradeInfo;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeSelected, FGameplayTag, SelectedUpgradeTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeTagAssigned, const FGameplayTag&, UpgradeTag);
@@ -47,6 +48,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void UpgradeButtonClicked();
+	
+public:
+	UPROPERTY()
+	UMVVM_CardSelection* CardSelectionViewModel;
 	
 private:
 	/*필드 노티파이*/

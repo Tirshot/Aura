@@ -3,6 +3,8 @@
 
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 
+#include "UI/ViewModel/MVVM_CardSelection.h"
+
 void UMVVM_AbilityCard::SetUpgradeTag(FGameplayTag InGameplayTag)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(UpgradeTag, InGameplayTag);
@@ -55,5 +57,11 @@ void UMVVM_AbilityCard::SetUpgradeRarityString(FString InRarity)
 void UMVVM_AbilityCard::UpgradeButtonClicked()
 {
 	// 바인딩은 플레이어 컨트롤러에서!!
-	OnUpgradeSelectedDelegate.Broadcast(UpgradeTag);
+	// OnUpgradeSelectedDelegate.Broadcast(UpgradeTag);
+	
+	// 부모 뷰 모델에게 알림
+	if (!CardSelectionViewModel)
+		return;
+	
+	CardSelectionViewModel->OnUpgradeSelectedOnCardDelegate.Broadcast(UpgradeTag);
 }

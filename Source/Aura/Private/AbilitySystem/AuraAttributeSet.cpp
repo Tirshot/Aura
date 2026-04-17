@@ -17,7 +17,9 @@
 #include "AbilitySystem/Abilities/ManaSiphon.h"
 #include "Character/AuraCharacter.h"
 #include "Game/AuraGameInstance.h"
+#include "Game/AuraGameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -302,8 +304,8 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
                 auto DeathImpulse = UAuraAbilitySystemLibrary::GetDeathImpulse(Props.EffectContextHandle);
                 
                 AAuraCharacter* AuraCharacter = nullptr;
-                if (Props.TargetAvatarActor)
-                    AuraCharacter = Cast<AAuraCharacter>(Props.TargetAvatarActor);
+                if (Props.SourceAvatarActor)
+                    AuraCharacter = Cast<AAuraCharacter>(Props.SourceAvatarActor);
                 
                 CombatInterface->Die(DeathImpulse, AuraCharacter);
                 
@@ -523,15 +525,11 @@ void UAuraAttributeSet::SendXPEvent(const FEffectProperties& Props)
 
         const int32 XPReward = UAuraAbilitySystemLibrary::GetXPRewardForClassAndLevel(Props.TargetCharacter, TargetClass, TargetLevel);
 
-        // 이벤트 전달
-        const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
-        
-        // 페이로드 수정
-        FGameplayEventData Payload;
-        Payload.EventTag = GameplayTags.Attributes_Meta_IncomingXP;
-        Payload.EventMagnitude = XPReward;
-
-        UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Props.SourceCharacter, GameplayTags.Attributes_Meta_IncomingXP, Payload);
+        // 접속 중인 플레이어 모두에게 경험치 분배
+        if (AAuraGameModeBase* GM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(Props.SourceCharacter)))
+        {
+            GM->SendXPToAllPlayers(Props.TargetCharacter, Props.SourceCharacter);
+        }
     }
 }
 

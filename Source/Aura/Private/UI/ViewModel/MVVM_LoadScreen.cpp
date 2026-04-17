@@ -131,6 +131,9 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 	if (!SelectedSlot)
 		return;
 	
+	// 첫 실행 시 조작법 선택 UI 노출
+	
+	
 	// 멀티로 연결하던 시도가 있었다면 취소
 	CancelMultiPlay();
 	
@@ -140,19 +143,19 @@ void UMVVM_LoadScreen::PlayButtonPressed()
 		AuraGameInstance->LoadSlotName = SelectedSlot->GetLoadSlotName();
 		AuraGameInstance->LoadSlotIndex = SelectedSlot->SlotIndex;
 		
-		//AuraGameInstance->HostSession(SelectedSlot->GetMapName());
+		AuraGameInstance->HostSession(SelectedSlot->GetMapName());
 	}
 	
-	FString LoadSlotName = SelectedSlot->GetLoadSlotName();
-	FName MapName = *SelectedSlot->GetMapName();
-	AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>();
-	if (AuraGM)
-	{
-		AuraGM->TravelToMap(SelectedSlot->GetMapName());
-		return;
-	}
+	// FString LoadSlotName = SelectedSlot->GetLoadSlotName();
+	// FName MapName = *SelectedSlot->GetMapName();
+	// AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>();
+	// if (AuraGM)
+	// {
+	// 	AuraGM->TravelToMap(SelectedSlot->GetMapName());
+	// 	return;
+	// }
 	
-	UGameplayStatics::OpenLevel(GetWorld(), MapName, true, TEXT("listen"));
+	// UGameplayStatics::OpenLevel(GetWorld(), MapName, true, TEXT("listen"));
 }
 
 void UMVVM_LoadScreen::PlayMultiplayerButtonPressed()
@@ -165,13 +168,13 @@ void UMVVM_LoadScreen::PlayMultiplayerButtonPressed()
 		AuraGameInstance->LoadSlotName = SelectedSlot->GetLoadSlotName();
 		AuraGameInstance->LoadSlotIndex = SelectedSlot->SlotIndex;
 		
-		//AuraGameInstance->FindSession();
+		AuraGameInstance->FindSession();
 	}
 	
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-	{
-		PC->ClientTravel("127.0.0.1", TRAVEL_Relative);
-	}
+	// if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	// {
+	// 	PC->ClientTravel("127.0.0.1", TRAVEL_Relative);
+	// }
 }
 
 void UMVVM_LoadScreen::CancelMultiPlay()

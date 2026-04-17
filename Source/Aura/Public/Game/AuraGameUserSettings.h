@@ -36,6 +36,18 @@ public:
 	void SetFXVolumeChecked(bool InFXVolumeChecked){ FXVolumeChecked = InFXVolumeChecked; SaveConfig();}
 	void SetBackgroundVolumeChecked(bool InBackgroundVolumeChecked){ BackgroundVolumeChecked = InBackgroundVolumeChecked; SaveConfig();}
 	
+	UFUNCTION(BlueprintCallable)
+	bool GetMoveToMouse() { return MoveToMouse; }
+	
+	UFUNCTION(BlueprintCallable)
+	void SetMoveToMouse(bool bInMove) {MoveToMouse = bInMove; SaveConfig();}
+	
+	UFUNCTION(BlueprintCallable)
+	bool GetFirstTimePlaying() { return FirstTimePlaying; }
+	
+	UFUNCTION(BlueprintCallable)
+	void SetFirstTimePlaying(bool bInFirstTime) {FirstTimePlaying = bInFirstTime;}
+	
 protected:
 	UPROPERTY(Config)
 	float MasterVolume = 1.f;
@@ -60,4 +72,10 @@ protected:
 	
 	UPROPERTY(Config)
 	bool BackgroundVolumeChecked;
+	
+	UPROPERTY(Config)
+	bool MoveToMouse;
+	
+	UPROPERTY(Config)
+	bool FirstTimePlaying = true;
 };

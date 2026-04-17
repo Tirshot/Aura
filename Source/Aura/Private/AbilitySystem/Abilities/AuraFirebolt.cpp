@@ -64,6 +64,17 @@ FString UAuraFirebolt::GetNextLevelDescription(int32 Level, const UObject* World
 
 void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride, bool bNumProjectileOverride, int32 NumProjectileOverride, AActor* HomingTarget)
 {
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	if (!HasAuthority(&CurrentActivationInfo))
+	{
+		return;
+	}
+	
 	// 무기의 소켓 위치 가져오기
 	const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(
 		GetAvatarActorFromActorInfo(),

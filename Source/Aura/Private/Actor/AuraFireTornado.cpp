@@ -43,8 +43,6 @@ void AAuraFireTornado::BeginPlay()
 		OnRep_DamageRadius();
 	}
 	
-	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
-
 	// 타이머 설정
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUFunction(this, FName("ApplyDamageAndKnockback"));
@@ -116,12 +114,6 @@ void AAuraFireTornado::Tick(float DeltaSeconds)
 
 void AAuraFireTornado::Destroyed()
 {
-	if (LoopingSoundComponent)
-	{
-		LoopingSoundComponent->Stop();
-		LoopingSoundComponent->DestroyComponent();
-	}
-
 	// 타이머 리셋
 	GetWorldTimerManager().ClearTimer(TimerHandle);
 	
@@ -226,5 +218,4 @@ void AAuraFireTornado::OnRep_DamageRadius()
 	FVector NewScale(NewScaleValue);
 	
 	Mesh->SetWorldScale3D(NewScale);
-
 }

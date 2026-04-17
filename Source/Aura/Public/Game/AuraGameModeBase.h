@@ -112,6 +112,14 @@ public:
 	
 	UFUNCTION()
 	TArray<FAuraAbilityUpgradeInfo> GetRandomUpgradeInfosForActivatedAbility_Three(AAuraPlayerState* AuraPS);
+	
+	// 경험치 분배
+	UFUNCTION()
+	void SendXPToAllPlayers(AActor* KilledActor, AActor* KillerActor);
+	
+	// 처치자가 가져가는 경험치 비율
+	UPROPERTY()
+	float XPDistributionRatio = 0.7f;
 
 public:
 	/*
@@ -122,7 +130,7 @@ public:
 	void SpawnDropItemActor(AAuraCharacter* OwnedCharacter, const FItemData& DropItemData, FVector ItemSpawnLocation);
 	
 	UFUNCTION(BlueprintCallable)
-	void SpawnDropItemToActorLocation(AActor* Actor, FName ItemID);
+	void SpawnDropItemToActorLocation(AActor* Actor, FItemData ItemData);
 	
 	UFUNCTION(BlueprintCallable)
 	void SpawnDropItemToLocation(FVector Location, FName ItemID);

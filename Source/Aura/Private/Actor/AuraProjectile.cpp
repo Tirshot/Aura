@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "GameplayCueManager.h"
 #include "Aura/Aura.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -41,8 +42,7 @@ void AAuraProjectile::BeginPlay()
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
 	{
 		FGameplayCueParameters CueParams;
-		CueParams.Location = GetActorLocation();
-		CueParams.Instigator = GetOwner();
+		CueParams.TargetAttachComponent = GetRootComponent();
 		CueParams.EffectCauser = this;
 		CueParams.SourceObject = this;
 		ASC->AddGameplayCue(LoopingGameplayCue, CueParams);
@@ -57,8 +57,7 @@ void AAuraProjectile::Destroyed()
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
 	{
 		FGameplayCueParameters CueParams;
-		CueParams.Location = GetActorLocation();
-		CueParams.Instigator = GetOwner();
+		CueParams.TargetAttachComponent = GetRootComponent();
 		CueParams.EffectCauser = this;
 		CueParams.SourceObject = this;
 		ASC->RemoveGameplayCue(LoopingGameplayCue);

@@ -66,7 +66,7 @@ void UAuraFirenado::CheckAbilityUpgrades()
 	{
 		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseRange);
 
-		DamageRadius += 200.f * Stacks;
+		DamageRadius = DamageRadius + 200.f * Stacks;
 	}
 }
 
@@ -98,6 +98,19 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 	HideMagicCircleAndRangeIndicator();
 	StopAutoRun();
 	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return nullptr;
+	}
+
+	if (!HasAuthority(&CurrentActivationInfo))
+	{
+		// 클라이언트에서는 큐만 생성하기
+		
+		return nullptr;
+	}
+	
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(Location);
 
@@ -127,21 +140,9 @@ AAuraFireTornado* UAuraFirenado::SpawnTornadoToLocation(const FVector& Location)
 	
 	Tornado->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 	Tornado->SetOwner(GetAvatarActorFromActorInfo());
-	Tornado->OnDestroyed.AddDynamic(this, &UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility);
 
 	Tornado->FinishSpawning(SpawnTransform);
 	
 	FireTornado = Tornado;
-	K2_CommitAbilityCost();
-	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-
 	return Tornado;
-}
-
-void UAuraFirenado::DestroyTornadoAndCommitCooldownEndAbility(AActor* DestroyedActor)
-{
-	// 사운드 재생
-	UGameplayStatics::PlaySoundAtLocation(this, DestroySound, DestroyedActor->GetActorLocation());
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

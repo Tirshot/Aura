@@ -68,9 +68,6 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	float SpinDegreePerSecond = -360.f;
 	
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<USoundBase> LoopingSound;
-
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess = true))
 	TArray<AActor*> OverlappingActors;
 

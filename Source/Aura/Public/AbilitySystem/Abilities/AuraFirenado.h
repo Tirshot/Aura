@@ -28,18 +28,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AAuraFireTornado* SpawnTornadoToLocation(const FVector& Location);
 
-	UFUNCTION(BlueprintCallable)
-	void DestroyTornadoAndCommitCooldownEndAbility(AActor* DestroyedActor);
-	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraFireTornado> FireTornadoClass;
 
 	UPROPERTY()
 	TObjectPtr<AAuraFireTornado> FireTornado;
-
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<USoundBase> DestroySound;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	float DamageDeltaSecond = 0.2f;

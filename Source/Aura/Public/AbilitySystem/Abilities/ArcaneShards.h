@@ -97,4 +97,6 @@ protected:
 	bool bShowIndicator = false;
 	
 	int32 Idx = 0;
+	
+	bool bHasAdditionalShards = false;
 };

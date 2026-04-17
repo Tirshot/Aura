@@ -109,9 +109,6 @@ FOnDeath* AAuraEnemy::GetOnDeathDelegate()
 
 void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
-    // 랙돌 효과와 무기 드랍
-    Super::Die(DeathImpulse, KilledBy);
-    
     if (AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
         AuraGS->RemoveMonsterFromArray(this);
@@ -137,6 +134,9 @@ void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
             GM->DropItemOnMonsterDied(this, KilledBy);
         }
     }
+    
+    // 랙돌 효과와 무기 드랍
+    Super::Die(DeathImpulse, KilledBy);
 }
 
 void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)

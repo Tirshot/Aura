@@ -145,12 +145,11 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 	ArcaneArea->FinishSpawning(AreaTransform);
 	
 	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
-
 }
 
 void UAuraArcaneAreaAbility::OnArcaneAreaDestroyed(AActor* DestroyedActor)
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+
 }
 
 void UAuraArcaneAreaAbility::CalculateSlowRadiusAndSlowRatio()

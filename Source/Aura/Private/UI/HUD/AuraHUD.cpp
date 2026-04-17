@@ -291,7 +291,6 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
         CardSelectionWidget = CreateWidget<ULoadScreenWidget>(GetWorld(), CardSelectionWidgetClass);
         CardSelectionWidget->AddToViewport();
         CardSelectionWidget->BlueprintInitializeWidget();
-        CardSelectionViewModel->CardSelectionView = CardSelectionWidget;
         CardSelectionViewModel->OnCardSelectionViewInitialized.Broadcast();
     }
     

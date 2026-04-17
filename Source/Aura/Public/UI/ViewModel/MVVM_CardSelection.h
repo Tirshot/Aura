@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "MVVMViewModelBase.h"
 #include "MVVM_CardSelection.generated.h"
 
+class UCardSelectionWidget;
 class ULoadScreenWidget;
 class UMVVM_AbilityCard;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardSelectionViewModelInitialized);
@@ -13,7 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardSelectionViewInitialized);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnableSelectButton, bool, bEnable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRerollSelected);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCloseSelected);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpgradeSelectedOnCard);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeSelectedOnCard, FGameplayTag, UpgradeTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCloseButtonEnableChanged, bool, bEnable);
 
 UCLASS()
@@ -47,15 +49,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RerollButtonClicked();
 
+	UFUNCTION(BlueprintCallable)
+	void OnCloseSelected();
+	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnCloseButtonEnableChanged OnCloseButtonEnableChangedDelegate;
 	
 public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMVVM_AbilityCard> AbilityCardViewModelClass;
-
-	UPROPERTY()
-	ULoadScreenWidget* CardSelectionView;
 	
 private:
 	UPROPERTY()

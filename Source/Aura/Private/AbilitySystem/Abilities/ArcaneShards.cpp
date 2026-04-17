@@ -84,6 +84,10 @@ void UArcaneShards::CheckAbilityUpgrades()
 		// 투사체 갯수 증가
 		AdditionalShards = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseNum);
 		NumPoints += AdditionalShards;
+		if (AdditionalShards > 0)
+		{
+			bHasAdditionalShards = true;
+		}
 	}
 
 	FGameplayTag FirstShardLarge = Tags.Upgrades_Arcane_ArcaneShards_FirstShardLarge;
@@ -96,7 +100,8 @@ void UArcaneShards::CheckAbilityUpgrades()
 
 void UArcaneShards::CreatePointCollection()
 {
-	NumPoints = GetAbilityLevel();
+	if (!bHasAdditionalShards)
+		NumPoints = GetAbilityLevel();
 
 	GroundPoints.Empty();
 	
@@ -203,7 +208,7 @@ void UArcaneShards::SpawnCueAndApplyDamage()
 			CueParams.Instigator = AvatarActor;
 			CueParams.EffectCauser = AvatarActor;
 			
-			GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
 			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius + SizeMultiplier);
 		}
 		else
@@ -215,7 +220,7 @@ void UArcaneShards::SpawnCueAndApplyDamage()
 			CueParams.Instigator = AvatarActor;
 			CueParams.EffectCauser = AvatarActor;
 		
-			GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
+			K2_ExecuteGameplayCueWithParams(FGameplayTag::RequestGameplayTag("GameplayCue.ArcaneShards"), CueParams);
 			ApplyRadialDamage(OutOverlappingActors, RadialDamageOuterRadius);
 		}
 	}

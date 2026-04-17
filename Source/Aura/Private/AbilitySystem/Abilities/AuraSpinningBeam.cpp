@@ -69,12 +69,12 @@ void UAuraSpinningBeam::SpawnBeam()
 		
 		// 클래스 디폴트의 데미지 값 적용
 		Beam->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
-		Beam->SetOwner(GetAvatarActorFromActorInfo());
 
 		LightningBeams.Add(Beam);
 
 		Beam->FinishSpawning(SpawnTransform);
 		Beam->SetLifeSpan(BeamLifeSpan);
+		Beam->SetOwner(GetAvatarActorFromActorInfo());
 		
 		FGameplayCueParameters CueParams;
 		CueParams.SourceObject = Beam;

@@ -28,6 +28,9 @@ public:
 
 	bool bInit = false;
 	
+	UPROPERTY(BlueprintReadWrite)
+	bool bSavedAllowMoveToMouse = false;
+	
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsOnline = false;
 	

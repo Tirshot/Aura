@@ -504,9 +504,9 @@ void AAuraPlayerState::OnRep_AttributePoint(int32 OldAttributePoint)
     // 사용 가능한 포인트 있음 알리기
     if (OldAttributePoint > 0)
     {
-        UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(
-            FGameplayTag::RequestGameplayTag("Message.LevelUp"),
-            AbilitySystemComponent->GetAvatarActor());
+        UAuraAbilitySystemLibrary::AddMessageToActor(
+            AbilitySystemComponent->GetAvatarActor(),
+            FGameplayTag::RequestGameplayTag("Message.LevelUp"));
     }
     else
     {
@@ -524,9 +524,9 @@ void AAuraPlayerState::OnRep_SpellPoint(int32 OldSpellPoint)
     // 사용 가능한 포인트 있음 알리기
     if (OldSpellPoint > 0)
     {
-        UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(
-            FGameplayTag::RequestGameplayTag("Message.LevelUp"),
-            AbilitySystemComponent->GetAvatarActor());
+        UAuraAbilitySystemLibrary::AddMessageToActor(
+            AbilitySystemComponent->GetAvatarActor(),
+            FGameplayTag::RequestGameplayTag("Message.LevelUp"));
     }
     else
     {

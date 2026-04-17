@@ -34,7 +34,6 @@ enum class ETargetingStatus : uint8
 };
 
 DECLARE_MULTICAST_DELEGATE(FOnCardSelected);
-DECLARE_MULTICAST_DELEGATE(FOnBossMonsterAddedToGameMode);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReviveTimerEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCharacterInit, ACharacter*, AvatarCharacter);
 
@@ -49,6 +48,8 @@ public:
 public:
 	UPROPERTY()
 	FOnCharacterInit OnCharacterInit;
+	
+	FOnReviveTimerEnd OnReviveTimerEnd;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -136,9 +137,6 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RemoveCardSelection(AActor* InteractedActor);
 	
-	UFUNCTION(Client, Reliable)
-	void Client_RemoveCardSelection();
-	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
 	void Server_SelectUpgrade(FGameplayTag SelectedUpgradeTag);
@@ -169,7 +167,10 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RequestUnPauseGame(AAuraPlayerController* RequestedPC);
-
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyWaitForExecuteTag();
+	
 	// 사망 후 관전
 	UFUNCTION(Server, UnReliable)
 	void Server_StartSpectating();
@@ -181,6 +182,106 @@ public:
 	UFUNCTION(Client, Unreliable)
 	void Client_CreateMessageWidget(const FGameplayTag& MessageTag, const FText& AppendText, UTexture2D* Icon);
 	
+	UFUNCTION(Client, Reliable)
+	void Client_RemoveCardSelection();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossEventStart(AActor* BossActor);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossEventEnd(AActor* BossActor);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OnBossDead(AActor* BossActor);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_RemovePendingPickUpItem(AAuraDropItem* DropItem);
+	
+protected: // 입력, 이동 함수
+	void Move(const struct FInputActionValue& InputActionValue);
+	void Zoom(const struct FInputActionValue& InputActionValue);
+	void ActivateDebugMode(const struct FInputActionValue& InputActionValue);
+	void ShowAttributeMenu();
+	void ShowSpellMenu();
+	void ShowESCMenu();
+	void ShowInventoryMenu();
+	void ShowItemTitle(const FInputActionValue& Value);
+	
+	void ShiftPressed() { bShiftKeyDown = true; }
+	void ShiftReleased() { bShiftKeyDown = false; }
+
+	void CursorTrace();
+	
+	void HighlightActor(AActor* InActor);
+	void UnHighlightActor(AActor* InActor);
+
+	// 어빌리티 입력
+	void AbilityInputTagPressed(FGameplayTag InputTag);
+	void AbilityInputTagReleased(FGameplayTag InputTag);
+	void AbilityInputTagHeld(FGameplayTag InputTag);
+	
+	void AutoRun();
+
+	UFUNCTION(BlueprintCallable)
+	void AutoRunToLocation(const FVector& Location);
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void SetMoveToMouse(bool bAllow);
+	
+	UFUNCTION(BlueprintCallable)
+	void AutoRunToActor(AActor* Actor);
+	
+protected: // 클릭, 이동 관련 변수 들
+	// 마우스로 이동하기 여부 - 기본적으로 비활성화
+	bool bAllowMoveToMouse = false;
+	FHitResult CursorHit;
+	TObjectPtr<AActor> LastActor;
+	TObjectPtr<AActor> ThisActor;
+	
+	// 자동 달리기 허용 반경
+	UPROPERTY(EditDefaultsOnly)
+	float AutoRunAcceptanceRadius = 50.f;
+	
+	bool bDebugModeActivated = false;
+	bool bShiftKeyDown = false;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FVector LastMagicCircleLocation;
+	
+	/* 클릭으로 이동 */
+	FVector CachedDestination = FVector::ZeroVector;
+	float FollowTime = 0.f;
+	float ShortPressThreshold = 0.5f;
+	bool bAutoRunning = false;
+	ETargetingStatus TargetingStatus = ETargetingStatus::None;
+
+	// 드랍 아이템 자동 이동 후 습득하기
+	UPROPERTY()
+	AActor* TargetItem = nullptr;
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void StopAutoRun();
+
+public:
+	UFUNCTION()
+	void BossMonsterBind();
+
+	// 카메라 전환
+	void ChangeCameraToBossActor(AActor* BossActor, float BlendTime, float ReturnTime);
+	void ChangeCameraToOwn(float BlendTime);
+
+	// 인풋 모드 변경
+	void SetPlayerInputEnable(bool bEnable);
+	
+	void UpdateMagicCircleLocation();
+	void UpdateRangeIndicatorRotation();
+
+public:
+	/* 튜토리얼 다이얼로그 UI */
+	void ShowTutorialUI(bool bVisibility);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> AuraContext;
@@ -218,52 +319,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputAction> InventoryMenuAction;
 
-	void Move(const struct FInputActionValue& InputActionValue);
-	void Zoom(const struct FInputActionValue& InputActionValue);
-	void ActivateDebugMode(const struct FInputActionValue& InputActionValue);
-	void ShowAttributeMenu();
-	void ShowSpellMenu();
-	void ShowESCMenu();
-	void ShowInventoryMenu();
-	void ShowItemTitle(const FInputActionValue& Value);
-	bool bDebugModeActivated = false;
-	
-	void ShiftPressed() { bShiftKeyDown = true; }
-	void ShiftReleased() { bShiftKeyDown = false; }
-	bool bShiftKeyDown = false;
-
-	void CursorTrace();
-	FHitResult CursorHit;
-	TObjectPtr<AActor> LastActor;
-	TObjectPtr<AActor> ThisActor;
-	
-	UPROPERTY(BlueprintReadOnly)
-	FVector LastMagicCircleLocation;
-	
-	void HighlightActor(AActor* InActor);
-	void UnHighlightActor(AActor* InActor);
-
-	// 어빌리티 입력
-	void AbilityInputTagPressed(FGameplayTag InputTag);
-	void AbilityInputTagReleased(FGameplayTag InputTag);
-	void AbilityInputTagHeld(FGameplayTag InputTag);
-
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UAuraInputConfig> InputConfig;
 
 	UPROPERTY()
 	TObjectPtr<UAuraAbilitySystemComponent> AuraAbilitySystemComponent;
-
-	/* 클릭으로 이동 */
-	FVector CachedDestination = FVector::ZeroVector;
-	float FollowTime = 0.f;
-	float ShortPressThreshold = 0.5f;
-	bool bAutoRunning = false;
-	ETargetingStatus TargetingStatus = ETargetingStatus::None;
-
-	// 자동 달리기 허용 반경
-	UPROPERTY(EditDefaultsOnly)
-	float AutoRunAcceptanceRadius = 50.f;
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USplineComponent> Spline;
@@ -271,50 +331,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UNiagaraSystem> ClickNiagaraSystem;
 	
-	// 드랍 아이템 자동 이동 후 습득하기
-	UPROPERTY()
-	AActor* TargetItem = nullptr;
-
-	void AutoRun();
-
-	UFUNCTION(BlueprintCallable)
-	void AutoRunToLocation(const FVector& Location);
-
-	UFUNCTION(BlueprintCallable)
-	void AutoRunToActor(AActor* Actor);
-
-public:
-	UFUNCTION(BlueprintCallable)
-	void StopAutoRun();
-
-public:
-	// 보스 이벤트 바인딩
-	FOnBossMonsterAddedToGameMode OnBossMonsterAdded;
-	FOnReviveTimerEnd OnReviveTimerEnd;
-	
-	UFUNCTION()
-	void BossMonsterBind();
-	
-	UFUNCTION(Client, Reliable)
-	void Client_OnBossEventStart(AActor* BossActor);
-
-	UFUNCTION(Client, Reliable)
-	void Client_OnBossEventEnd(AActor* BossActor);
-	
-	UFUNCTION(Client, Reliable)
-	void Client_OnBossDead(AActor* BossActor);
-
-	// 카메라 전환
-	void ChangeCameraToBossActor(AActor* BossActor, float BlendTime, float ReturnTime);
-	void ChangeCameraToOwn(float BlendTime);
-
-	// 인풋 모드 변경
-	void SetPlayerInputEnable(bool bEnable);
-
-public:
-	/* 튜토리얼 다이얼로그 UI */
-	void ShowTutorialUI(bool bVisibility);
-
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UMVVM_TutorialDialogue> TutorialDialogueViewModel;
@@ -341,6 +357,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<AAbilityRangeIndicator> RangeIndicator;
 	
-	void UpdateMagicCircleLocation();
-	void UpdateRangeIndicatorRotation();
+	// 이제 줍기 시작한 아이템 저장(클라이언트 Only)
+	UPROPERTY()
+	TSet<AAuraDropItem*> PendingPickupItems;
 };

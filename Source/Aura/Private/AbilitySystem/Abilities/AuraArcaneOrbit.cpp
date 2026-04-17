@@ -3,8 +3,10 @@
 
 #include "AbilitySystem/Abilities/AuraArcaneOrbit.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
+#include "GameplayCueManager.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Actor/AuraArcaneMissile.h"
 
@@ -99,12 +101,19 @@ void UAuraArcaneOrbit::CheckAbilityUpgrades()
 
 TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 {
+	if (!GetActorInfo().IsNetAuthority())
+	{
+		return TArray<AAuraArcaneMissile*>();
+	}
+	
 	FGameplayCueParameters Params;
 	Params.NormalizedMagnitude = OrbitRadius / 100.f;
 	Params.Normal = GetAvatarActorFromActorInfo()->GetActorLocation();
 	Params.TargetAttachComponent = GetAvatarActorFromActorInfo()->GetRootComponent();
 	
-	GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.Arcane.Spawn"), Params);
+	// 복제 되는 게임플레이 큐
+	K2_ExecuteGameplayCueWithParams(
+		FGameplayTag::RequestGameplayTag("GameplayCue.Arcane.Spawn"), Params);
 	
 	CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
 	CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false);
@@ -157,6 +166,8 @@ TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()
 		ArcaneMissile->SetLifeSpan(MissileLifeSpan);
 	}
 	Missiles = OutMissiles;
+	
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	return OutMissiles;
 }
 
@@ -180,10 +191,4 @@ void UAuraArcaneOrbit::MissileDestroyed(AActor* DestroyedMissile)
 	
 	if (AAuraArcaneMissile* Missile = Cast<AAuraArcaneMissile>(DestroyedMissile))
 		Missiles.Remove(Missile);
-
-	// 미사일이 모두 파괴되었으면 어빌리티 종료
-	if (Missiles.IsEmpty())
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	}
 }
