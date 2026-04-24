@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "Game/AuraGameInstance.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "MVVM_LoadScreen.generated.h"
 
 class USaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSlotSelected);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNetworkMessageReceived, const FString&, Message);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSessionsFound, FAuraSessionInfo, FoundSessions, int32, Index);
 
 class UMVVM_LoadSlot;
 
@@ -75,8 +77,11 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FNetworkMessageReceived NetworkErrorReceived;
 	
-	UPROPERTY(BlueprintAssignable)
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FNetworkMessageReceived NetworkMessageReceived;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnSessionsFound OnSessionsFound;
 	
 protected:
 	UPROPERTY()

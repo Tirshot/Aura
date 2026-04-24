@@ -8,6 +8,7 @@
 #include "UI/Widget/AuraOverlayWidget.h"
 #include "AuraHUD.generated.h"
 
+class AAuraBossMonster;
 class UItemToolTipWidgetController;
 class USettingsMenuWidgetController;
 class UMVVM_DebugMenu;
@@ -47,7 +48,9 @@ public:
 	
 	UFUNCTION()
 	void ResetWidgetControllerAndViewModels();
-	
+	void CreateBossHealthBarWidget(AAuraBossMonster* BossMonster);
+	void DestroyBossHealthBarWidget();
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -129,6 +132,12 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UItemToolTipWidgetController> ItemToolTipWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UAuraUserWidget> BossHealthBarWidget;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UAuraUserWidget> BossHealthBarWidgetClass;
 
 public:
 	// MVVM

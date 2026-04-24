@@ -16,6 +16,32 @@ void USpellMenuWidgetController::BroadcastInitialValues()
 	BroadcastAbilityInfo();
 
 	OnSpellPointsChanged.Broadcast(GetAuraPS()->GetSpellPoints());
+	
+	// 창을 껐다 키면 지금의 장착 상태를 다시 가져옴
+	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
+	{
+		// 현재 장착된 모든 어빌리티 슬롯 정보 재브로드캐스트
+		for (const FGameplayAbilitySpec& Spec : AuraASC->GetActivatableAbilities())
+		{
+			const FGameplayTag AbilityTag = AuraASC->GetAbilityTagFromSpec(Spec);
+			const FGameplayTag StatusTag = AuraASC->GetStatusFromSpec(Spec);
+			const FGameplayTag SlotTag = AuraASC->GetInputTagFromSpec(Spec);
+
+			if (!AbilityTag.IsValid() || !SlotTag.IsValid())
+				continue;
+			
+			// 장착된 어빌리티만
+			if (!StatusTag.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
+				continue;
+
+			if (FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
+			{
+				Info->StatusTag = StatusTag;
+				Info->InputTag = SlotTag;
+				AbilityInfoDelegate.Broadcast(*Info);
+			}
+		}
+	}
 }
 
 void USpellMenuWidgetController::BindCallbacksToDependencies()
@@ -32,7 +58,6 @@ void USpellMenuWidgetController::BindCallbacksToDependencies()
 
 void USpellMenuWidgetController::OnSpellPointChanged(int32 SpellPoints)
 {
-	// �������Ʈ�� ����
 	OnSpellPointsChanged.Broadcast(SpellPoints);
 	CurrentSpellPoints = SpellPoints;
 
@@ -51,14 +76,8 @@ void USpellMenuWidgetController::OnSpellPointChanged(int32 SpellPoints)
 			}
 									
 			int32 CurrentLevel = Spec->Level;
-			if (CurrentLevel >= MaxLevel)
-			{
-				ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
-			}
-			else
-			{
-				ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-			}
+			bool bIsExceedMaxLevel = CurrentLevel >= MaxLevel;
+			ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, bIsExceedMaxLevel);
 		}
 	}
 	else
@@ -66,12 +85,10 @@ void USpellMenuWidgetController::OnSpellPointChanged(int32 SpellPoints)
 		ShouldEnableButtons(SelectedAbility.Status, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
 	}
 		
-	// �����Ƽ ����
 	FString Description;
 	FString NextLevelDescription;
 	GetAuraASC()->GetDescriptionsByAbilityTag(SelectedAbility.Ability, Description, NextLevelDescription);
 
-	// �������Ʈ�� ��ε�ĳ����
 	OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 }
 
@@ -99,14 +116,8 @@ void USpellMenuWidgetController::OnAbilityStatusChanged(const FGameplayTag& Abil
 				}
 						
 				int32 CurrentLevel = Spec->Level;
-				if (CurrentLevel >= MaxLevel)
-				{
-					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
-				}
-				else
-				{
-					ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-				}
+				bool bIsExceedMaxLevel = CurrentLevel >= MaxLevel;
+				ShouldEnableButtons(StatusTag, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, bIsExceedMaxLevel);
 			}
 		}
 		else
@@ -125,6 +136,9 @@ void USpellMenuWidgetController::OnAbilityStatusChanged(const FGameplayTag& Abil
 	if (AbilityInfo)
 	{
 		FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+		if (!Info)
+			return;
+		
 		Info->StatusTag = StatusTag;
 		AbilityInfoDelegate.Broadcast(*Info);
 	}
@@ -134,40 +148,33 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 {
 	if (bWaitForEquipSelection)
 	{
-		// ���� ���� �� ���� �ִϸ��̼� �ߴ�
 		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
 
-	// ���� ����Ʈ, �����Ƽ ����
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 	const int32 SpellPoints = GetAuraPS()->GetSpellPoints();
 	FGameplayTag AbilityStatus;
 
-	// (1) �����Ƽ �±װ� ��ȿ�Ѱ�
 	const bool bTagValid = AbilityTag.IsValid();
 	const bool bTagNone = AbilityTag.MatchesTag(GameplayTags.Abilities_None);
 
-	// (2) Ȱ��ȭ ������ �����Ƽ�ΰ�
 	const FGameplayAbilitySpec* Spec = GetAuraASC()->GetSpecFromAbilityTag(AbilityTag);
 	const bool bSpecValid = Spec != nullptr;
 	
-	// (3) �����Ƽ ���� �Ǵ�
 	if (bTagValid == false || bTagNone == true || bSpecValid == false)
 	{
 		AbilityStatus = GameplayTags.Abilities_Status_Locked;
 	}
-	else // �±װ� ��ȿ�ϸ� Abilities.None�� �ƴϰ� �����Ƽ ������ ��ȿ
+	else
 	{
 		AbilityStatus = GetAuraASC()->GetStatusFromSpec(*Spec);
 	}
 
-	// �����Ƽ ���� ����
 	SelectedAbility.Ability = AbilityTag;
 	SelectedAbility.Status = AbilityStatus;
 
-	// (4) ��ư Ȱ��ȭ
 	bool bEnableSpendPoints = false;
 	bool bEnableEquip = false;
 	
@@ -183,14 +190,8 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 			}
 						
 			int32 CurrentLevel = Spec->Level;
-			if (CurrentLevel >= MaxLevel)
-			{
-				ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, true);
-			}
-			else
-			{
-				ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
-			}
+			bool bIsExceedMaxLevel = CurrentLevel >= MaxLevel;
+			ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, bIsExceedMaxLevel);
 		}
 	}
 	else
@@ -198,7 +199,6 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 		ShouldEnableButtons(AbilityStatus, CurrentSpellPoints, bEnableSpendPoints, bEnableEquip, false);
 	}
 	
-	// �����Ƽ ����
 	FString Description;
 	FString NextLevelDescription;
 	GetAuraASC()->GetDescriptionsByAbilityTag(AbilityTag, Description, NextLevelDescription);
@@ -207,7 +207,6 @@ void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityT
 	if (Spec && Spec->Level <= 0)
 		bEnableEquip = false;
 	
-	// �������Ʈ�� ��ε�ĳ����
 	OnSpellGlobeSelected.Broadcast(bEnableSpendPoints, bEnableEquip, Description, NextLevelDescription);
 }
 
@@ -240,10 +239,7 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 							AuraASC->ServerSpendSpellPoint(SelectedAbility.Ability);
 							return;
 						}
-						else
-						{
-							UAuraAbilitySystemLibrary::AddMessageToActor(AvatarActor, FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
-						}
+						UAuraAbilitySystemLibrary::AddMessageToActor(AvatarActor, FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
 					}
 				}
 				else
@@ -265,10 +261,7 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 									AuraASC->ServerSpendSpellPoint(SelectedAbility.Ability);
 									return;
 								}
-								else
-								{
-									UAuraAbilitySystemLibrary::AddMessageToActor(Cast<AAuraCharacter>(AvatarActor), FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
-								}
+								UAuraAbilitySystemLibrary::AddMessageToActor(Cast<AAuraCharacter>(AvatarActor), FGameplayTag::RequestGameplayTag("Message.NotEnoughLevel"), FText::AsNumber(LevelReq));
 							}
 						}
 					}
@@ -286,32 +279,26 @@ void USpellMenuWidgetController::GlobeDeselect()
 {
 	if (bWaitForEquipSelection)
 	{
-		// ���� ���� �� ���� �ִϸ��̼� �ߴ�
 		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 		StopWaitForEquipDelegate.Broadcast(SelectedAbilityType);
 		bWaitForEquipSelection = false;
 	}
 
-	// ���õ� �����Ƽ ����
 	SelectedAbility.Ability = FAuraGameplayTags::Get().Abilities_None;
 	SelectedAbility.Status = FAuraGameplayTags::Get().Abilities_Status_Locked;
 
-	// �۷κ� ���� ����
 	OnSpellGlobeSelected.Broadcast(false, false, FString(), FString());
 }
 
 void USpellMenuWidgetController::EquipButtonPressed()
 {
-	// (1) equip �ִϸ��̼� ���
 	const FGameplayTag& AbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 
 	WaitForEquipDelegate.Broadcast(AbilityType);
 	bWaitForEquipSelection = true;
 
-	// �����Ƽ ���� ��������
 	const FGameplayTag SelectedStatus = GetAuraASC()->GetStatusFromAbilityTag(SelectedAbility.Ability);
 
-	// ������ �����Ƽ�� ���� �Է� �±� ��������
 	if (SelectedStatus.MatchesTagExact(FAuraGameplayTags::Get().Abilities_Status_Equipped))
 	{
 		SelectedSlot = GetAuraASC()->GetSlotFromAbilityTag(SelectedAbility.Ability);
@@ -323,19 +310,18 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 	if (bWaitForEquipSelection == false)
 		return;
 
-	// ��Ƽ�� �����Ƽ�� �нú� ĭ�� ������ �� ����, �ݴ뵵 ����
 	const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
 	if (SelectedAbilityType.MatchesTagExact(AbilityType) == false)
 		return;
 
-	// �������� �˸�
 	GetAuraASC()->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
 	
 	// 튜토리얼 조건 : 감전사 장착
-	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
+	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability.MatchesTag(FAuraGameplayTags::Get().Abilities_Lightning_Electrocute))
 	{
 		// 튜토리얼 조건 완료
 		ElectrocuteAssignedDelegate.Broadcast(SelectedAbility.Ability);
+		ElectrocuteAssignedDelegate.Clear();
 	}
 }
 
@@ -345,11 +331,14 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
 
-	FAuraAbilityInfo LastSlotInfo;
-	LastSlotInfo.StatusTag = GameplayTags.Abilities_Status_Unlocked;
-	LastSlotInfo.InputTag = PrevSlot;
-	LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
-	AbilityInfoDelegate.Broadcast(LastSlotInfo);
+	if (PrevSlot.IsValid() && !PrevSlot.MatchesTagExact(GameplayTags.Abilities_None))
+	{
+		FAuraAbilityInfo LastSlotInfo;
+		LastSlotInfo.StatusTag = GameplayTags.Abilities_Status_Unlocked;
+		LastSlotInfo.InputTag = PrevSlot;
+		LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
+		AbilityInfoDelegate.Broadcast(LastSlotInfo);
+	}
 
 	if (!AbilityTag.IsValid())
 		return;

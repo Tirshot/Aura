@@ -10,6 +10,8 @@ class USettingsMenuWidgetController;
 class ULoadScreenWidget;
 class UMVVM_LoadScreen;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSessionFound);
+
 UCLASS()
 class AURA_API ALoadScreenHUD : public AHUD
 {
@@ -38,6 +40,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<USettingsMenuWidgetController> SettingsMenuWidgetControllerClass;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnSessionFound OnSessionFound;
 	
 protected:
 	virtual void BeginPlay() override;

@@ -4,6 +4,7 @@
 #include "UI/HUD/AuraHUD.h"
 
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
@@ -219,6 +220,27 @@ void AAuraHUD::ResetWidgetControllerAndViewModels()
     // SettingsMenuWidgetController = nullptr;
 }
 
+void AAuraHUD::CreateBossHealthBarWidget(AAuraBossMonster* BossMonster)
+{
+    if (!BossHealthBarWidget)
+    {
+        if (IsValid(BossHealthBarWidgetClass))
+        {
+            BossHealthBarWidget = CreateWidget<UAuraUserWidget>(GetOwningPlayerController(), BossHealthBarWidgetClass, FName(TEXT("BossHealthBar")));
+            BossHealthBarWidget->SetWidgetController(BossMonster);
+            BossHealthBarWidget->AddToViewport();
+        }
+    }
+}
+
+void AAuraHUD::DestroyBossHealthBarWidget()
+{
+    if (BossHealthBarWidget)
+    {
+        BossHealthBarWidget->RemoveFromParent();
+    }
+}
+
 void AAuraHUD::BeginPlay()
 {
     Super::BeginPlay();
@@ -339,9 +361,13 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
 void AAuraHUD::ShowOverlay()
 {
     OverlayWidgetController->ShowOverlayWidget(true);
+    if (BossHealthBarWidget)
+        BossHealthBarWidget->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AAuraHUD::HideOverlay()
 {
     OverlayWidgetController->ShowOverlayWidget(false);
+    if (BossHealthBarWidget)
+        BossHealthBarWidget->SetVisibility(ESlateVisibility::Hidden);
 }

@@ -330,7 +330,7 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 			FGameplayEffectContextHandle HealHPHandleContext = AuraASC->MakeEffectContext();
 			HealHPHandleContext.AddInstigator(GetOwner(), GetOwner());
 
-			auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, Context);
+			auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, HealHPHandleContext);
 			if (HealHPHandle.IsValid())
 			{
 				HealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta);
@@ -340,7 +340,7 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 			FGameplayEffectContextHandle HealMPHandleContext = AuraASC->MakeEffectContext();
 			HealMPHandleContext.AddInstigator(GetOwner(), GetOwner());
 
-			auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, Context);
+			auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, HealMPHandleContext);
 			if (HealMPHandle.IsValid())
 			{
 				HealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta);

@@ -261,9 +261,9 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(const 
 	UAbilitySystemComponent* ASC, float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana)
 {
 	UE_LOG(LogTemp, Warning, TEXT("InitializeAttributes: Called on Server for %s"), *ASC->GetAvatarActor()->GetName());
-	UE_LOG(LogTemp, Warning, TEXT("Passed Data - Strength: %f, Health: %f"), Strength, Health);
+	UE_LOG(LogTemp, Warning, TEXT("Passed Data - Strength: %f, Health: %f, Mana: %f"), Strength, Health, Mana);
 	
-		// 액터의 클래스 정보 가져오기
+	// 액터의 클래스 정보 가져오기
 	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
 	if (CharacterClassInfo == nullptr)
 		return;

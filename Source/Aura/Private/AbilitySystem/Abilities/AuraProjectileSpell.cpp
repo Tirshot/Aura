@@ -45,6 +45,5 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 
 	// 타겟을 설정하지 않고 파라미터 생성
 	Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
-
 	Projectile->FinishSpawning(SpawnTransform);
 }

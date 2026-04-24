@@ -132,10 +132,12 @@ void AAuraCharacter::PossessedBy(AController* NewController)
             }
         }
         
-        if (NewController->IsLocalController())
-        {
-            LoadProgressFromSaveGame(NewController);
-        }
+        LoadProgressFromSaveGame(NewController);
+        
+        // if (NewController->IsLocalController())
+        // {
+        //     
+        // }
         
         if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
         {
@@ -159,13 +161,9 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 
 void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
 {
-    if (!HasAuthority())
-        return;
-    
     // 게임 인스턴스에 접근
     if (UAuraGameInstance* AuraGI = PC->GetGameInstance<UAuraGameInstance>())
     {
-
         // 저장 슬롯 찾기
         const FString InGameLoadSlotName = AuraGI->LoadSlotName;
         const int32 InGameLoadSlotIndex = AuraGI->LoadSlotIndex;
@@ -196,32 +194,7 @@ void AAuraCharacter::LoadProgressFromSaveGame(AController* PC)
         }
         else
         {
-            // 저장된 세이브에서 어빌리티 불러오기
-            // AuraASC->AddCharacterAbilitiesFromSaveData(SaveData);
             Client_LoadProgressFromSaveGame();
-            
-            // 저장된 데이터 불러오기
-            // if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
-            // {
-            //     AuraPlayerState->SetLevel(SaveData->PlayerLevel);
-            //     AuraPlayerState->SetXP(SaveData->XP);
-            //     AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
-            //     AuraPlayerState->SetSpellPoints(SaveData->SpellPoints);
-            //     AuraPlayerState->SetAbilityUpgradeTagContainer(SaveData->SavedAbilityUpgradeList);
-            //     
-            //     // 인벤토리 불러오기
-            //     UAuraAbilitySystemLibrary::GetInventoryComponentByPlayerState(AuraPlayerState)->SetInventorySlots(SaveData->SavedInventorySlots);
-            //     UAuraAbilitySystemLibrary::GetEquipmentComponentByPlayerState(AuraPlayerState)->SetEquipmentSlots(SaveData->SavedEquipmentSlots);
-            // }
-            //
-            // // 기존에 적용된 이펙트 제거 후 재적용
-            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultPrimaryAttributes, AbilitySystemComponent);
-            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(DefaultSecondaryAttributes, AbilitySystemComponent);
-            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeVitalAttributes, AbilitySystemComponent);
-            // AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(InitializeRegenAttributes, AbilitySystemComponent);
-            //
-            // // 1차 속성, 2차 속성 적용
-            // UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, AbilitySystemComponent, SaveData);
         }
     }
 }
@@ -328,9 +301,9 @@ void AAuraCharacter::Client_LoadProgressFromSaveGame_Implementation()
         
         // 기존 세이브 로딩
         Server_ApplyClientStat(SaveData->PlayerLevel, SaveData->XP, SaveData->SpellPoints, SaveData->AttributePoints);
-        Server_ApplyClientAttributes(SaveData->Strength, SaveData->Intelligence, SaveData->Vigor, SaveData->Resilience, SaveData->Health, SaveData->Mana);
         Server_ApplyClientSavedAbilities(SaveData->SavedAbilities, SaveData->SavedAbilityUpgradeList);
         Server_ApplyClientInventory(SaveData->SavedInventorySlots, SaveData->SavedEquipmentSlots);
+        Server_ApplyClientAttributes(SaveData->Strength, SaveData->Intelligence, SaveData->Vigor, SaveData->Resilience, SaveData->Health, SaveData->Mana);
     }
 }
 
@@ -341,10 +314,10 @@ void AAuraCharacter::OnRep_PlayerState()
     InitAbilityActorInfo();
     
     //어빌리티 액터 정보 초기화
-    if (IsLocallyControlled())
-    {
-        Client_LoadProgressFromSaveGame();
-    }
+    // if (IsLocallyControlled())
+    // {
+    //     Client_LoadProgressFromSaveGame();
+    // }
 }
 
 void AAuraCharacter::InitializeMiniMap()
@@ -594,12 +567,15 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         // 바이탈 속성, 비율로 저장
         
         float MaxHealth = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth));
-        float Health = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetHealthAttribute());
+        float Health = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health));
         float MaxMana = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana));
-        float Mana = AuraASC->GetNumericAttributeBase(UAuraAttributeSet::GetManaAttribute());
+        float Mana = FMath::Max(1.0f, UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana));
         
         SaveData->Health = Health / MaxHealth;
         SaveData->Mana = Mana / MaxMana;
+        
+        UE_LOG(LogTemp, Warning, TEXT("MaxMana : %f, Mana : %f, ratio : %f"), MaxMana,Mana,Mana/MaxMana);
+        UE_LOG(LogTemp, Warning, TEXT("MaxHealth : %f, Health : %f, ratio : %f"), MaxHealth,Health,Mana/MaxMana);
         
         SaveData->bFirstTimeLoading = false;
         

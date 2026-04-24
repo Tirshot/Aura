@@ -137,6 +137,12 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RemoveCardSelection(AActor* InteractedActor);
 	
+	UFUNCTION(Server, Reliable)
+	void Server_SetAutoRunDestination(const FVector& Destination, const TArray<FVector>& PathPoints);
+
+	UFUNCTION(Server, Reliable)
+	void Server_StopAutoRun();
+	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
 	void Server_SelectUpgrade(FGameplayTag SelectedUpgradeTag);
@@ -195,7 +201,7 @@ public:
 	void Client_OnBossDead(AActor* BossActor);
 	
 	UFUNCTION(Client, Reliable)
-	void Client_RemovePendingPickUpItem(AAuraDropItem* DropItem);
+	void Client_OnPickUpFinished();
 	
 protected: // 입력, 이동 함수
 	void Move(const struct FInputActionValue& InputActionValue);
@@ -259,6 +265,9 @@ protected: // 클릭, 이동 관련 변수 들
 	// 드랍 아이템 자동 이동 후 습득하기
 	UPROPERTY()
 	AActor* TargetItem = nullptr;
+	
+	UPROPERTY()
+	bool bIsPickingUpItem = false;
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -356,8 +365,4 @@ private:
 	
 	UPROPERTY()
 	TObjectPtr<AAbilityRangeIndicator> RangeIndicator;
-	
-	// 이제 줍기 시작한 아이템 저장(클라이언트 Only)
-	UPROPERTY()
-	TSet<AAuraDropItem*> PendingPickupItems;
 };

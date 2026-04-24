@@ -7,6 +7,7 @@
 #include "UI/ViewModel/MVVM_AbilityCard.h"
 #include "LoadScreenWidget.generated.h"
 
+class UMenuAnchor;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewModelBound, UMVVMViewModelBase*, BoundViewModel);
 
 UCLASS()

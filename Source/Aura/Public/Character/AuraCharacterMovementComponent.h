@@ -16,6 +16,7 @@ class AURA_API UAuraCharacterMovementComponent : public UCharacterMovementCompon
 	
 public:
 	virtual void BeginPlay() override;
+	virtual void SmoothClientPosition(float DeltaSeconds) override;
 	virtual void ServerAutonomousProxyTick(float DeltaSeconds) override;
 	virtual float GetMaxSpeed() const override;
 };

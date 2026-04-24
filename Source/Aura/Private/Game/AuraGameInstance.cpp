@@ -14,7 +14,10 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "SocketSubsystem.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "Components/MenuAnchor.h"
 #include "Online/OnlineSessionNames.h"
+#include "UI/Widget/LoadScreenWidget.h"
 #include "UI/WidgetController/SettingsMenuWidgetController.h"
 
 void UAuraGameInstance::Init()
@@ -31,7 +34,7 @@ void UAuraGameInstance::Init()
 			for (const auto& Address : AdapterAddresses)
 			{
 				FString CurrentIP = Address->ToString(false);
-                
+				
 				// 라드민 IP 검색
 				if (CurrentIP.StartsWith(TEXT("26.")))
 				{
@@ -54,7 +57,7 @@ void UAuraGameInstance::Init()
 		}
 	}
 	Super::Init();
-
+	
 	UGameUserSettings* Settings = GEngine->GetGameUserSettings();
 	if (Settings)
 	{
@@ -139,13 +142,13 @@ void UAuraGameInstance::HostSession(FString MapName)
 		if (SessionInterface.IsValid())
 		{
 			// 기존 세션 제거
-			SessionInterface->DestroySession(FName(LoadSlotName));
+			SessionInterface->DestroySession(NAME_GameSession);
 	
 			FOnlineSessionSettings SessionSettings;
 			SessionSettings.bIsLANMatch = true;
 			SessionSettings.NumPublicConnections = 4;
 			SessionSettings.bShouldAdvertise = true;
-			SessionSettings.bUsesPresence = true;
+			SessionSettings.bUsesPresence = false;
 			SessionSettings.bAllowJoinInProgress = true;
 			
 			LoadMapName = MapName;
@@ -153,7 +156,7 @@ void UAuraGameInstance::HostSession(FString MapName)
 			// 델리게이트 바인딩
 			CreateSessionCompleteDelegateHandle = SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UAuraGameInstance::OnCreateSessionComplete);
 
-			if (!SessionInterface->CreateSession(0, FName(LoadSlotName), SessionSettings))
+			if (!SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings))
 			{
 				// 실패 시 핸들 제거
 				SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
@@ -171,8 +174,8 @@ void UAuraGameInstance::FindSession()
 		{
 			SessionSearch = MakeShareable(new FOnlineSessionSearch());
 			SessionSearch->bIsLanQuery = true;
-			SessionSearch->MaxSearchResults = 10;
-			SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+			SessionSearch->MaxSearchResults = 100;
+			//SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
 
 			// 검색 완료 델리게이트 바인딩
 			FindSessionsCompleteDelegateHandle = SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UAuraGameInstance::OnFindSessionsComplete);
@@ -191,7 +194,7 @@ void UAuraGameInstance::DestroySession()
 		if (SessionInterface.IsValid())
 		{
 			// 기존 세션 제거
-			SessionInterface->DestroySession(FName(LoadSlotName));
+			SessionInterface->DestroySession(NAME_GameSession);
 		}
 	}
 }
@@ -200,22 +203,37 @@ void UAuraGameInstance::CancelFindSession()
 {
 	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
 	{
-		// IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
-		// if (SessionInterface.IsValid())
-		// {
-		// 	SessionInterface->CancelFindSessions();
-		// }
-	
 		IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
 		if (SessionInterface.IsValid())
 		{
-			FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-			if (ExistingSession)
-			{
-				SessionInterface->DestroySession(NAME_GameSession);
-			}
+			SessionInterface->CancelFindSessions();
 		}
+	
+		// IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
+		// if (SessionInterface.IsValid())
+		// {
+		// 	FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+		// 	if (ExistingSession)
+		// 	{
+		// 		SessionInterface->DestroySession(NAME_GameSession);
+		// 	}
+		// }
 	}
+}
+
+void UAuraGameInstance::JoinSelectedSession(int32 Index)
+{
+	IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
+	if (!Subsystem || !LastSearchSession.IsValid())
+		return;
+
+	IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
+	if (!SessionInterface.IsValid() || !LastSearchSession->SearchResults.IsValidIndex(Index))
+		return;
+
+	JoinSessionCompleteDelegateHandle = SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UAuraGameInstance::OnJoinSessionComplete);
+
+	SessionInterface->JoinSession(0, NAME_GameSession, LastSearchSession->SearchResults[Index]);
 }
 
 void UAuraGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -245,54 +263,45 @@ void UAuraGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSucc
 
 void UAuraGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
 	{
-		IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
-		if (SessionInterface.IsValid())
-			SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
-
-		if (bWasSuccessful && SessionSearch.IsValid() && SessionSearch->SearchResults.Num() > 0)
+		// AreYouSure UI 제거
+		if (auto LoadHUD = PC->GetHUD<ALoadScreenHUD>())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Session Found!"));
-
-			// 접속 완료 델리게이트 바인딩
-			JoinSessionCompleteDelegateHandle = SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UAuraGameInstance::OnJoinSessionComplete);
-
-			if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-			{
-				if (ALoadScreenHUD* LoadHUD = PC->GetHUD<ALoadScreenHUD>())
-				{
-					LoadHUD->LoadScreenViewModel->NetworkMessageReceived.Broadcast(TEXT("세션을 찾았습니다.\n접속 시도 중..."));
-				}
-			}
-			
-			// 내 세션에 조인
-			for (const auto& SearchResult : SessionSearch->SearchResults)
-			{
-				//TSharedPtr<const FUniqueNetId> LocalPlayerId = GetFirstGamePlayer()->GetPreferredUniqueNetId().GetUniqueNetId();
-				if (SearchResult.Session.OwningUserId.IsValid()) //&& LocalPlayerId.IsValid())
-				{
-					// if (*SearchResult.Session.OwningUserId == *LocalPlayerId)
-					// {
-					// 	UE_LOG(LogTemp, Warning, TEXT("Found my own session, skipping..."));
-					// 	continue; 
-					// }
-					// 조인 시도
-					SessionInterface->JoinSession(0, NAME_GameSession, SearchResult);
-					return;
-				}
-			}
+			LoadHUD->OnSessionFound.Broadcast();
 		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("No sessions found!!!"));
 		
-			if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+		// 세션 목록 UI
+		if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
+		{
+			IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
+			if (SessionInterface.IsValid())
+				SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+
+			if (bWasSuccessful && SessionSearch.IsValid())
 			{
-				if (ALoadScreenHUD* LoadHUD = PC->GetHUD<ALoadScreenHUD>())
+				LastSearchSession = SessionSearch; // 나중을 위해 저장
+        
+				TArray<FAuraSessionInfo> FoundSessions;
+				for (int32 i = 0; i < SessionSearch->SearchResults.Num(); ++i)
 				{
-					LoadHUD->LoadScreenViewModel->NetworkErrorReceived.Broadcast(TEXT("세션을 찾을 수 없습니다."));
+					const FOnlineSessionSearchResult& Result = SessionSearch->SearchResults[i];
+					FAuraSessionInfo Info;
+            
+					Info.ServerName = Result.Session.OwningUserName;
+					Info.CurrentPlayers = Result.Session.SessionSettings.NumPublicConnections - Result.Session.NumOpenPublicConnections;
+					Info.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
+					Info.Ping = Result.PingInMs;
+					Info.SearchResultIndex = i;
+
+					FoundSessions.Add(Info);
+				
+					if (ALoadScreenHUD* LoadHUD = PC->GetHUD<ALoadScreenHUD>())
+					{
+						LoadHUD->LoadScreenViewModel->OnSessionsFound.Broadcast(Info, i);
+					}
 				}
+				UE_LOG(LogTemp, Warning, TEXT(" Found Session Num : %d "), FoundSessions.Num())
 			}
 		}
 	}
@@ -311,19 +320,39 @@ void UAuraGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionC
 			FString Address;
 			if (SessionInterface->GetResolvedConnectString(SessionName, Address))
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Raw ConnectString: %s"), *Address);
+
 				if (APlayerController* PlayerController = GetFirstLocalPlayerController())
 				{
 					bIsOnline = true;
 					
-					// 만약 포트가 없거나 0이라면 강제로 7777을 붙임
-					if (!Address.Contains(TEXT(":")) || Address.EndsWith(TEXT(":0")))
+					// Address에 맵 경로가 붙음???
+					if (Address.Contains(TEXT("/")))
 					{
-						Address.RemoveFromEnd(TEXT(":0"));
-						Address.Append(TEXT(":7777")); 
+						// 슬래시 이후 제거
+						int32 SlashIndex;
+						Address.FindChar('/', SlashIndex);
+						Address = Address.Left(SlashIndex);
 					}
 					
-					// 서버로 이동
-					PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
+					// IP만 추출
+					FString IPOnly;
+					FString PortStr;
+					Address.Split(TEXT(":"), &IPOnly, &PortStr);
+
+					// 포트 0이면 6112로
+					int32 Port = FCString::Atoi(*PortStr);
+					if (Port <= 0)
+						Port = 6112;
+
+					FString TravelURL = FString::Printf(TEXT("%s:%d"), *IPOnly, Port);
+            
+					UE_LOG(LogTemp, Warning, TEXT("Final Travel URL: %s"), *TravelURL);
+
+					PlayerController->ClientTravel(
+						FString::Printf(TEXT("%s"), *TravelURL),
+						ETravelType::TRAVEL_Absolute,
+						false);
 				}
 			}
 		}

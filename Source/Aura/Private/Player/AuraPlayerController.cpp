@@ -24,6 +24,7 @@
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
 #include "Components/BoxComponent.h"
+#include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/AuraGameStateBase.h"
@@ -188,31 +189,37 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
     //
     UpdateRangeIndicatorRotation();
     
-    // 아이템 클릭 후 근접하면 획득
-    if (TargetItem)
+    // 아이템 클릭 후 근접하면 획득, 아이템 획득중이 아닐때만 진입
+    if (TargetItem && !bIsPickingUpItem)
     {
         if (AAuraDropItem* DropItem = Cast<AAuraDropItem>(TargetItem))
         {
-            // 이미 줍기 시도 중이라면 무시
-            if (PendingPickupItems.Contains(DropItem) || DropItem->IsPendingKillPending()) 
-            {
-                TargetItem = nullptr;
-                return;
-            }
-            
             FVector AuraLocation = GetPawn()->GetActorLocation();
             FVector ItemLocation = DropItem->GetActorLocation();
+            
+            // 이미 줍기 시도 중이라면 무시
+            if (DropItem->IsPendingKillPending()) 
+            {
+                TargetItem = nullptr;
+                ThisActor = nullptr;
+                TargetingStatus = ETargetingStatus::None;
+                CachedDestination = ItemLocation;
+                return;
+            }
             
             float Distance = FVector::Dist(AuraLocation, ItemLocation);
             if (Distance <= 150.f)
             {
-                PendingPickupItems.Add(DropItem);
                 DropItem->SetActorHiddenInGame(true);
                 DropItem->SetActorEnableCollision(false);
                 
                 AAuraDropItem* PickUpItem = DropItem;
+                bIsPickingUpItem = true;
                 TargetItem = nullptr;
                 Server_TryPickUpItem(PickUpItem, this);
+                ThisActor = nullptr;
+                TargetingStatus = ETargetingStatus::None;
+                CachedDestination = ItemLocation;
             }
         }
     }
@@ -292,9 +299,6 @@ void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, 
 
 void AAuraPlayerController::AutoRun()
 {
-    if (!bAllowMoveToMouse)
-        return;
-    
     if (!bAutoRunning)
         return;
 
@@ -315,6 +319,7 @@ void AAuraPlayerController::AutoRun()
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
+            Server_StopAutoRun();
         }
     }
 }
@@ -377,7 +382,14 @@ void AAuraPlayerController::AutoRunToActor(AActor* Actor)
 void AAuraPlayerController::StopAutoRun()
 {
     bAutoRunning = false;
-    CachedDestination = FVector::ZeroVector;
+    
+    if (!IsValid(GetPawn()) || GetPawn()->IsPendingKillPending())
+        return;
+    
+    CachedDestination = GetPawn()->GetActorLocation();
+    
+    // 서버에게 자동이동 중단 전달
+    Server_StopAutoRun();
 }
 
 void AAuraPlayerController::BossMonsterBind()
@@ -410,7 +422,11 @@ void AAuraPlayerController::Client_OnBossEventStart_Implementation(AActor* BossA
     // 오버레이 감추기, 카메라 전환
     if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
     {
-        AuraHUD->HideOverlay();
+        if (auto BossCharacter = Cast<AAuraBossMonster>(BossActor))
+        {
+            AuraHUD->CreateBossHealthBarWidget(BossCharacter);
+            AuraHUD->HideOverlay();
+        }
     }
 
     // 플레이어 입력 방지
@@ -464,7 +480,14 @@ void AAuraPlayerController::Client_OnBossDead_Implementation(AActor* BossActor)
     // 오버레이 감추기, 카메라 전환
     if (AAuraHUD* AuraHUD = GetHUD<AAuraHUD>())
     {
+        AuraHUD->DestroyBossHealthBarWidget();
         AuraHUD->HideOverlay();
+    }
+    
+    // 음악 재생
+    if (auto* AudioSS = GetWorld()->GetSubsystem<UAuraAudioSubsystem>())
+    {
+        AudioSS->PlayMusicByTag_NoVariable(FGameplayTag::RequestGameplayTag("Sound.Background.Boss.Shaman.Defeated"));
     }
     
     FTimerHandle GlobalTimeDelayHandle;
@@ -908,6 +931,26 @@ void AAuraPlayerController::HandleInventoryUIInit()
     }
 }
 
+void AAuraPlayerController::Server_SetAutoRunDestination_Implementation(const FVector& Destination, const TArray<FVector>& PathPoints)
+{
+    CachedDestination = Destination;
+    bAutoRunning = true;
+    
+    Spline->ClearSplinePoints();
+    for (const FVector& Point : PathPoints)
+    {
+        Spline->AddSplinePoint(Point, ESplineCoordinateSpace::World);
+    }
+}
+
+void AAuraPlayerController::Server_StopAutoRun_Implementation()
+{
+    bAutoRunning = false;
+    if (GetPawn())
+        CachedDestination = GetPawn()->GetActorLocation();
+}
+
+
 void AAuraPlayerController::Client_RemoveCardSelection_Implementation()
 {
     if (auto AuraHUD = GetHUD<AAuraHUD>())
@@ -996,7 +1039,7 @@ void AAuraPlayerController::Server_TryRemoveItem_Implementation(int32 SlotIndex)
 
 void AAuraPlayerController::Server_TryPickUpItem_Implementation(AAuraDropItem* DropItem, AAuraPlayerController* OwnerPC)
 {
-    if (!OwnerPC || !DropItem)
+    if (!DropItem || DropItem->IsPendingKillPending())
         return;
     
     if (DropItem->bIsPickedUp)
@@ -1026,7 +1069,6 @@ void AAuraPlayerController::Server_TryPickUpItem_Implementation(AAuraDropItem* D
                     DropItem->bIsPickedUp = false;
                     DropItem->SetActorHiddenInGame(false);
                     DropItem->SetActorEnableCollision(true);
-                    Client_RemovePendingPickUpItem(DropItem);
                     UAuraAbilitySystemLibrary::AddMessageToActor(AuraCharacter, FGameplayTag::RequestGameplayTag("Message.InventoryFull"), FText());
                 }
             }
@@ -1036,6 +1078,7 @@ void AAuraPlayerController::Server_TryPickUpItem_Implementation(AAuraDropItem* D
     {
         DropItem->bIsPickedUp = false;
     }
+    OwnerPC->Client_OnPickUpFinished();
 }
 
 void AAuraPlayerController::Server_StartSpectating_Implementation()
@@ -1239,11 +1282,6 @@ void AAuraPlayerController::Client_CreateMessageWidget_Implementation(const FGam
     }
 }
 
-void AAuraPlayerController::Client_RemovePendingPickUpItem_Implementation(AAuraDropItem* DropItem)
-{
-    PendingPickupItems.Remove(DropItem);
-}
-
 void AAuraPlayerController::Server_ApplyWaitForExecuteTag_Implementation()
 {
     if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
@@ -1253,6 +1291,11 @@ void AAuraPlayerController::Server_ApplyWaitForExecuteTag_Implementation()
             
         GetASC()->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
     }
+}
+
+void AAuraPlayerController::Client_OnPickUpFinished_Implementation()
+{
+    bIsPickingUpItem = false;
 }
 
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
@@ -1503,6 +1546,7 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
             {
                 TargetingStatus = ETargetingStatus::TargetingNonEnemy;
                 TargetItem = nullptr;
+                return;
             }
         }
         else
@@ -1515,6 +1559,7 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
     if (TargetingStatus == ETargetingStatus::TargetingItem)
     {
         TargetItem = ThisActor;
+        return;
     }
 
     if (ASC)
@@ -1550,9 +1595,6 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
         return;
     }
 
-    if (ASC)
-        ASC->AbilityInputTagReleased(InputTag);
-
     // 타겟이 없고 쉬프트키가 눌리지 않았다면 + 마우스로 이동일 때
     if (bAllowMoveToMouse)
     {
@@ -1584,12 +1626,55 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                     {
                         CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
                         bAutoRunning = true;
+                        
+                        // 서버로 이동 경로 전달
+                        Server_SetAutoRunDestination(CachedDestination, NavPath->PathPoints);
                     }
                 }
             }
         }
+        else
+        {
+            if (ASC)
+                ASC->AbilityInputTagReleased(InputTag);
+        }
     }
-        
+    else
+    {
+        if (TargetingStatus != ETargetingStatus::TargetingEnemy && !bShiftKeyDown)
+        {
+            // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
+            const APawn* ControlledPawn = GetPawn();
+            if (FollowTime <= ShortPressThreshold && ControlledPawn)
+            {
+                if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
+                {
+                    IHighlightInterface::Execute_SetMoveToLocation(ThisActor, CachedDestination);    
+                }
+                
+                if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
+                {
+                    // 각 경로 점을 스플라인에 추가
+                    Spline->ClearSplinePoints();
+                    for (const FVector& PointLoc : NavPath->PathPoints)
+                    {
+                        Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+                    }
+
+                    if (NavPath->PathPoints.Num() > 0)
+                    {
+                        CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
+                        bAutoRunning = true;
+                    }
+                }
+            }
+        }
+        else
+        {  
+            if (ASC)
+                ASC->AbilityInputTagReleased(InputTag);
+        }
+    }
     FollowTime = 0.f;
     TargetingStatus = ETargetingStatus::None;
 }
@@ -1648,12 +1733,6 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
                 const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
                 ControlledPawn->AddMovementInput(WorldDirection);
             }
-        }
-        else
-        {
-            // 마우스 이동이 아닐때 누르고 있는 경우
-            if (ASC)
-                ASC->AbilityInputTagHeld(InputTag);
         }
     }
 }

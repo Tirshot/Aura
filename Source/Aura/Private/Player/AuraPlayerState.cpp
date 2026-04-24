@@ -59,6 +59,7 @@ AAuraPlayerState::AAuraPlayerState()
     // 서버 업데이트 빈도
     // GAS에 적용하기 위해 빈도를 더 빠르게 조정
     SetNetUpdateFrequency(100.f);
+    SetMinNetUpdateFrequency(50.f);
 
     AbilitySystemComponent = CreateDefaultSubobject<UAuraAbilitySystemComponent>("AbilitySystemComponent");
 

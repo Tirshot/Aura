@@ -14,6 +14,26 @@ class USettingsMenuWidgetController;
 class USaveGame;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameInstanceInitialized);
 
+USTRUCT(BlueprintType)
+struct FAuraSessionInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	FString ServerName;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 MaxPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Ping = 0;
+
+	int32 SearchResultIndex = -1;
+};
+
 UCLASS()
 class AURA_API UAuraGameInstance : public UGameInstance
 {
@@ -51,6 +71,10 @@ public:
 	void DestroySession();
 	
 	void CancelFindSession();
+	
+	// UI가 호출할 함수
+	UFUNCTION(BlueprintCallable)
+	void JoinSelectedSession(int32 Index);
 	
 protected:
 	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
@@ -142,7 +166,11 @@ protected:
 	
 	UPROPERTY()
 	bool bAuraInfiniteMana = false;
-
+	
+public:
+	// 네트워크 관련
+	TSharedPtr<FOnlineSessionSearch> LastSearchSession;
+	
 public:
 	// 사운드 믹스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sound")
