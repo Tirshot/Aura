@@ -37,6 +37,7 @@ void UCharmComponent::TryToBindItemGetAndRemove()
 				Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
 		}
 	}
+	AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
 }
 
 void UCharmComponent::ApplyCharmEffectFromSavedInventory()
@@ -66,6 +67,11 @@ void UCharmComponent::ApplyCharmEffectFromSavedInventory()
 			}
 		}
 	}
+	
+	// 플래그와 저장 비율 초기화
+	bHasSavedRatio = false;
+	SavedHPRatio = 1.f;
+	SavedMPRatio = 1.f;
 }
 
 void UCharmComponent::BeginPlay()
@@ -102,7 +108,7 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 	if (!ASC)
 		return;
 
-	auto AuraASC = Cast<UAuraAbilitySystemComponent>(ASC);
+	AuraASC = Cast<UAuraAbilitySystemComponent>(ASC);
 	if (!AuraASC)
 		return;
 	
@@ -110,8 +116,8 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 	float OldHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health);
 	float OldMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
 	float OldMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana);
-	float HPRatio = OldHP / OldMaxHP;
-	float MPRatio = OldMP / OldMaxMP;
+	float HPRatio = (OldMaxHP > 0.f) ? (OldHP / OldMaxHP) : 1.f;
+	float MPRatio = (OldMaxMP > 0.f) ? (OldMP / OldMaxMP) : 1.f;
 	
 	// 스텟 이펙트와 기타 부여된 게임플레이 이펙트 제거
 	if (FCharmActiveEffects* ActiveEffects = AppliedCharms.Find(CharmItem.UniqueID))
@@ -121,36 +127,27 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 			AuraASC->RemoveActiveGameplayEffect(ActiveEffectHandle, 1);
 		}
 	}
-	
-	// 비율에 따라 HP 감소시키기
+	// 이펙트 제거 후 새 MaxHP 기준으로 계산
 	float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+
 	float TargetHP = HPRatio * NewMaxHP;
-	float HPDelta = TargetHP - OldHP;
-	
-	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
 	float TargetMP = MPRatio * NewMaxMP;
-	float MPDelta = TargetMP - OldMP;
 	
-	if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	if (GetOwnerRole() == ROLE_Authority)
 	{
-		FGameplayEffectContextHandle DeHealHPContext = AuraASC->MakeEffectContext();
-		DeHealHPContext.AddInstigator(GetOwner(), GetOwner());
+		Client_SetHealthMana(TargetHP, TargetMP);
 
-		auto DEHealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealHPContext);
-		if (DEHealHPHandle.IsValid())
+		// 리슨 서버 호스트 직접 적용
+		if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
 		{
-			DEHealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta); 
-			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealHPHandle.Data);
-		}
-		
-		FGameplayEffectContextHandle DeHealMPContext = AuraASC->MakeEffectContext();
-		DeHealMPContext.AddInstigator(GetOwner(), GetOwner());
-
-		auto DEHealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealMPContext);
-		if (DEHealMPHandle.IsValid())
-		{
-			DEHealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta); 
-			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealMPHandle.Data);
+			if (APlayerController* PC = AuraPS->GetPlayerController())
+			{
+				if (PC->IsLocalController())
+				{
+					ApplyHealthManaOverride(TargetHP, TargetMP);
+				}
+			}
 		}
 	}
 	
@@ -169,11 +166,14 @@ void UCharmComponent::RemoveCharmItemEffect(const FItemData& CharmItem)
 
 void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 {
+	if (GetOwnerRole() != ROLE_Authority)
+		return;
+	
 	auto ASC = UAuraAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
 	if (!ASC)
 		return;
 
-	auto AuraASC = Cast<UAuraAbilitySystemComponent>(ASC);
+	AuraASC = Cast<UAuraAbilitySystemComponent>(ASC);
 	if (!AuraASC)
 		return;
 	
@@ -226,6 +226,11 @@ void UCharmComponent::ApplyCharmItemEffect(const FItemData& CharmItem)
 	}
 }
 
+void UCharmComponent::Client_SetHealthMana_Implementation(float TargetHealth, float TargetMana)
+{
+	ApplyHealthManaOverride(TargetHealth, TargetMana);
+}
+
 void UCharmComponent::AddToCharmSlot(int SlotIndex, bool bIsItemMoved)
 {
 	// 아이템 추가가 인벤토리 내의 단순 이동이라면 리턴
@@ -263,10 +268,54 @@ void UCharmComponent::RemoveFromCharmSlot(const FItemData& ItemData)
 	}
 }
 
+void UCharmComponent::ApplyHealthManaOverride(float TargetHealth, float TargetMana)
+{
+	if (!AuraASC)
+	{
+		AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
+	}
+
+	// 그래도 null이면 적용 보류
+	if (!AuraASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyHPMPRatio: AuraASC is null, skipping"));
+		return;
+	}
+	
+	if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	{
+		// HP 설정
+		if (!FMath::IsNearlyZero(TargetHealth))
+		{
+			FGameplayEffectContextHandle HPContext = AuraASC->MakeEffectContext();
+			HPContext.AddInstigator(GetOwner(), GetOwner());
+			auto HPSpec = AuraASC->MakeOutgoingSpec(AuraGI->ItemSetHealthEffect, 1.f, HPContext);
+			if (HPSpec.IsValid())
+			{
+				HPSpec.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, TargetHealth);
+				AuraASC->ApplyGameplayEffectSpecToSelf(*HPSpec.Data);
+			}
+		}
+
+		// MP 설정
+		if (!FMath::IsNearlyZero(TargetMana))
+		{
+			FGameplayEffectContextHandle MPContext = AuraASC->MakeEffectContext();
+			MPContext.AddInstigator(GetOwner(), GetOwner());
+			auto MPSpec = AuraASC->MakeOutgoingSpec(AuraGI->ItemSetManaEffect, 1.f, MPContext);
+			if (MPSpec.IsValid())
+			{
+				MPSpec.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, TargetMana);
+				AuraASC->ApplyGameplayEffectSpecToSelf(*MPSpec.Data);
+			}
+		}
+	}
+}
+
 void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 {
 	FItemStat ItemStat = ItemData.ItemStat;
-	UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
+	AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
 	if (!AuraASC)
 		return;
 	
@@ -317,34 +366,29 @@ void UCharmComponent::ApplyItemStat(const FItemData& ItemData)
 		FCharmActiveEffects& ActiveEffects = AppliedCharms.FindOrAdd(ItemData.UniqueID);
 		ActiveEffects.EffectHandles.Add(ActiveHandle);
 		
+		// 이펙트 적용 후 새 MaxHP 기준으로 계산
 		float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
-		float TargetHP = HPRatio * NewMaxHP;
-		float HPDelta = TargetHP - OldHP;
-			
 		float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
-		float TargetMP = MPRatio * NewMaxMP;
-		float MPDelta = TargetMP - OldMP;
-			
-		if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+
+		float FinalHPRatio = bHasSavedRatio ? SavedHPRatio : HPRatio;
+		float FinalMPRatio = bHasSavedRatio ? SavedMPRatio : MPRatio;
+
+		float TargetHP = FinalHPRatio * NewMaxHP;
+		float TargetMP = FinalMPRatio * NewMaxMP;
+
+		if (GetOwnerRole() == ROLE_Authority)
 		{
-			FGameplayEffectContextHandle HealHPHandleContext = AuraASC->MakeEffectContext();
-			HealHPHandleContext.AddInstigator(GetOwner(), GetOwner());
+			Client_SetHealthMana(TargetHP, TargetMP);
 
-			auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, HealHPHandleContext);
-			if (HealHPHandle.IsValid())
+			if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
 			{
-				HealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta);
-				AuraASC->ApplyGameplayEffectSpecToSelf(*HealHPHandle.Data);
-			}
-				
-			FGameplayEffectContextHandle HealMPHandleContext = AuraASC->MakeEffectContext();
-			HealMPHandleContext.AddInstigator(GetOwner(), GetOwner());
-
-			auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, HealMPHandleContext);
-			if (HealMPHandle.IsValid())
-			{
-				HealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta);
-				AuraASC->ApplyGameplayEffectSpecToSelf(*HealMPHandle.Data);
+				if (APlayerController* PC = AuraPS->GetPlayerController())
+				{
+					if (PC->IsLocalController())
+					{
+						ApplyHealthManaOverride(TargetHP, TargetMP);
+					}
+				}
 			}
 		}
 	}
@@ -357,17 +401,20 @@ void UCharmComponent::OnPawnSet(APlayerState* PlayerState, APawn* NewPawn, APawn
 	
 	if (UInventoryComponent* Inventory = IPlayerInterface::Execute_GetInventoryComponent(NewPawn))
 	{
-		if (!Inventory->OnItemGet.IsAlreadyBound(this, &UCharmComponent::AddToCharmSlot))
-			Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
-		
-		if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
-			Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
-		
-		Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
+		if (!Inventory->SlotsReplicated.IsBoundToObject(this))
+		{
+			Inventory->SlotsReplicated.AddUObject(this, &UCharmComponent::ApplyCharmEffectFromSavedInventory);
+		}
 		
 		if (!Inventory->GetSlots().IsEmpty()) 
 		{
 			ApplyCharmEffectFromSavedInventory();
 		}
+		
+		if (!Inventory->OnItemGet.IsAlreadyBound(this, &UCharmComponent::AddToCharmSlot))
+			Inventory->OnItemGet.AddDynamic(this, &UCharmComponent::AddToCharmSlot);
+		
+		if (!Inventory->OnItemRemoved.IsAlreadyBound(this, &UCharmComponent::RemoveFromCharmSlot))
+			Inventory->OnItemRemoved.AddDynamic(this, &UCharmComponent::RemoveFromCharmSlot);
 	}
 }

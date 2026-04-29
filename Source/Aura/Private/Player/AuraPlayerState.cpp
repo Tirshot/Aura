@@ -9,6 +9,7 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
+#include "Character/AuraCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/CharmComponent.h"
 #include "Player/EquipmentComponent.h"
@@ -68,7 +69,7 @@ AAuraPlayerState::AAuraPlayerState()
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
     AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
-
+    
     // 인벤토리
     Inventory = CreateDefaultSubobject<UInventoryComponent>("Inventory");
     Inventory->SetIsReplicated(true);
@@ -86,6 +87,10 @@ void AAuraPlayerState::BeginPlay()
     
     // 초기화 완료
     OnPlayerStateInitialized.Broadcast(this);
+    if (auto AuraCharacter = GetPawn<AAuraCharacter>())
+    {
+        AuraCharacter->OnASCRegistered.AddUObject(this, &AAuraPlayerState::OnASCRegistered);
+    }
 }
 
 void AAuraPlayerState::CopyProperties(APlayerState* PlayerState)
@@ -101,7 +106,6 @@ void AAuraPlayerState::CopyProperties(APlayerState* PlayerState)
         NewPlayerState->SetAttributePoints(AttributePoints);
         NewPlayerState->SetSpellPoints(SpellPoints);
         NewPlayerState->SetAbilityUpgradeTagContainer(OwnedAbilityUpgradeList);
-    
         NewPlayerState->bIsDataLoaded = true;
     }
 }
@@ -278,6 +282,14 @@ void AAuraPlayerState::InitializeDefaultAttributesFromAttributeSet(UAbilitySyste
 	NewASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
 }
 
+void AAuraPlayerState::UpdateAbilityStatus()
+{
+    if (auto AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
+    {
+        AuraASC->UpdateAbilityStatus(Level);
+    }
+}
+
 void AAuraPlayerState::AddUpgradeTag(const FGameplayTag& Tag)
 {
     int32 UpgradeStack = 0;
@@ -345,6 +357,11 @@ bool AAuraPlayerState::HasUpgradeTag(FGameplayTag UpgradeTag)
 void AAuraPlayerState::HandleAbilitiesSet()
 {
     // 어빌리티 부여 종료 후 호출되는 콜백 함수
+    
+}
+
+void AAuraPlayerState::OnASCRegistered(UAbilitySystemComponent* ASC)
+{
     
 }
 

@@ -40,6 +40,10 @@ public:
 	void ApplyCharmEffectFromSavedInventory();
 	void RemoveCharmItemEffect(const FItemData& CharmItem);
 	void ApplyCharmItemEffect(const FItemData& CharmItem);
+	
+public:
+	UFUNCTION(Client, Reliable)
+	void Client_SetHealthMana(float TargetHealth, float TargetMana);
 
 public:
 	UFUNCTION()
@@ -47,7 +51,8 @@ public:
 	
 	UFUNCTION()
 	void RemoveFromCharmSlot(const FItemData& ItemData);
-	
+	void ApplyHealthManaOverride(float TargetHealth, float TargetMana);
+
 	void ApplyItemStat(const FItemData& ItemData);
 	
 public:
@@ -58,4 +63,17 @@ protected:
 	// 아이템의 스텟, 기타 게임플레이 이펙트도 동시에 관리
 	UPROPERTY()
 	TMap<FGuid, FCharmActiveEffects> AppliedCharms;
+	
+	UPROPERTY()
+	UAuraAbilitySystemComponent* AuraASC;
+	
+public:
+	UPROPERTY()
+	float SavedHPRatio = 1.f;
+
+	UPROPERTY()
+	float SavedMPRatio = 1.f;
+
+	UPROPERTY()
+	bool bHasSavedRatio = false;
 };

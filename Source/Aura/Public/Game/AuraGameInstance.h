@@ -57,6 +57,9 @@ public:
 	// Handle Network Error 함수는 블루프린트로 오버라이드 가능
 	
 public:
+	void OnPreLoadMap(const FString& MapName);
+	
+public:
 	ULoadScreenSaveGame* GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const;
 	class UCharacterClassInfo* GetCharacterClassInfo() {return CharacterClassInfo;}
 	class UAbilityInfo* GetAbilityInfo() {return AbilityInfo;}
@@ -235,6 +238,12 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> ItemApplyMPHealEffect;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> ItemSetHealthEffect;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> ItemSetManaEffect;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> WaitForExecute;

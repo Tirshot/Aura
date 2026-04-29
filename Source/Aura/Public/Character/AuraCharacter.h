@@ -92,6 +92,9 @@ protected:
 	void Server_ApplyClientStat(float Level, float XP, int32 SpellPoints, int32 AttributePoints);
 	
 	UFUNCTION(Server, Reliable)
+	void Server_ApplyClientVitalAttributes(float Health, float Mana);
+	
+	UFUNCTION(Server, Reliable)
 	void Server_ApplyClientAttributes(float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana);
 	
 	UFUNCTION(Server, Reliable)

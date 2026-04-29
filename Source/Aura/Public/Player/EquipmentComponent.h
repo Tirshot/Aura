@@ -108,6 +108,10 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_ClearSlot(EItemSubGroup Slot);
 	
+	// Instant Effect는 Mixed 모드에서 복제되지 않음!!
+	UFUNCTION(Client, Reliable)
+	void Client_ApplyHPMPRatio(float NewHP, float NewMP);
+	
 public:
 	void InitializeEquipmentSlots();
 	void ForceReplication();
@@ -145,6 +149,8 @@ protected:
 	
 	// 내부 장착 해제
 	void UnEquipItem_Internal(FEquipmentSlot* Slot);
+	
+	void ApplyHPMPRatio(float NewHP, float NewMP);
 	
 public:
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly)

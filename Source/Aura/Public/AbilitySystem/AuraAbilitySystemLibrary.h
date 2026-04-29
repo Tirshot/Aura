@@ -87,6 +87,9 @@ public:
 	static void InitializeDefaultAttributesFromAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, float Strength, float Intelligence, float Vigor, float Resilience, float Health, float Mana);
 
 	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
+	static void InitializeVitalAttributesFromAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, float Health, float Mana);
+
+	UFUNCTION(BlueprintCallable, category="AuraAbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
 	// 몬스터 - 초기 어빌리티 부여

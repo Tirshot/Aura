@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Game/LoadScreenSaveGame.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Player/CharmComponent.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
 AAuraCharacter::AAuraCharacter()
@@ -132,12 +133,18 @@ void AAuraCharacter::PossessedBy(AController* NewController)
             }
         }
         
+        // 세이브에서 불러오기
         LoadProgressFromSaveGame(NewController);
         
-        // if (NewController->IsLocalController())
-        // {
-        //     
-        // }
+        // 심리스 트래블로 인한 생성인지 확인
+        if (AuraPS->bIsDataLoaded)
+        {
+            // 참 효과 재적용
+            if (auto CharmComp = IPlayerInterface::Execute_GetCharmComponent(this))
+            {
+                CharmComp->ApplyCharmEffectFromSavedInventory();
+            }
+        }
         
         if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
         {
@@ -227,8 +234,7 @@ void AAuraCharacter::LoadAbilitiesFromSaveGame()
     }
 }
 
-void AAuraCharacter::Server_ApplyClientStat_Implementation(float Level, float XP, int32 SpellPoints,
-    int32 AttributePoints)
+void AAuraCharacter::Server_ApplyClientStat_Implementation(float Level, float XP, int32 SpellPoints, int32 AttributePoints)
 {
     if (AAuraPlayerState* AuraPS = GetPlayerState<AAuraPlayerState>())
     {
@@ -237,6 +243,12 @@ void AAuraCharacter::Server_ApplyClientStat_Implementation(float Level, float XP
         AuraPS->SetSpellPoints(SpellPoints);
         AuraPS->SetAttributePoints(AttributePoints);
     }
+}
+
+
+void AAuraCharacter::Server_ApplyClientVitalAttributes_Implementation(float Health, float Mana)
+{
+    UAuraAbilitySystemLibrary::InitializeVitalAttributesFromAttributes(this, GetAbilitySystemComponent(), Health, Mana);
 }
 
 void AAuraCharacter::Server_ApplyClientAttributes_Implementation(float Strength, float Intelligence, float Vigor,
@@ -261,6 +273,7 @@ void AAuraCharacter::Server_ApplyClientSavedAbilities_Implementation(const TArra
     
     // 어빌리티 업그레이드 적용
     AuraPS->SetAbilityUpgradeTagContainer(SavedAbilityUpgrades);
+    AuraPS->UpdateAbilityStatus();
 }
 
 void AAuraCharacter::Server_ApplyClientInventory_Implementation(const TArray<FInventorySlot>& InventorySlots,
@@ -574,8 +587,8 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
         SaveData->Health = Health / MaxHealth;
         SaveData->Mana = Mana / MaxMana;
         
-        UE_LOG(LogTemp, Warning, TEXT("MaxMana : %f, Mana : %f, ratio : %f"), MaxMana,Mana,Mana/MaxMana);
-        UE_LOG(LogTemp, Warning, TEXT("MaxHealth : %f, Health : %f, ratio : %f"), MaxHealth,Health,Mana/MaxMana);
+        UE_LOG(LogTemp, Warning, TEXT("Save MaxMana : %f, Mana : %f, ratio : %f"), MaxMana,Mana,Mana/MaxMana);
+        UE_LOG(LogTemp, Warning, TEXT("Save MaxHealth : %f, Health : %f, ratio : %f"), MaxHealth,Health,Mana/MaxMana);
         
         SaveData->bFirstTimeLoading = false;
         

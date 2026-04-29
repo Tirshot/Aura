@@ -289,13 +289,6 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(const 
 	// 게임플레이 이펙트 적용
 	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
-	// 2차 속성 적용
-	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
-	SecondaryAttributesContextHandle.AddSourceObject(SourceActor);
-	
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
-	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
-
 	// 세이브 데이터의 바이탈 속성 적용
 	FGameplayEffectContextHandle VitalAttributesContextHandle = ASC->MakeEffectContext();
 	VitalAttributesContextHandle.AddSourceObject(SourceActor);
@@ -310,14 +303,35 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributes(const 
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, MaxMana * Mana);
 
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+}
 
-	// 세이브 데이터의 리젠 속성 적용
-	FGameplayEffectContextHandle RegenAttributesContextHandle = ASC->MakeEffectContext();
-	RegenAttributesContextHandle.AddSourceObject(SourceActor);
+void UAuraAbilitySystemLibrary::InitializeVitalAttributesFromAttributes(const UObject* WorldContextObject,
+                                                                        UAbilitySystemComponent* ASC, float Health,
+                                                                        float Mana)
+{
+	// 액터의 클래스 정보 가져오기
+	UCharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+	if (CharacterClassInfo == nullptr)
+		return;
+
+	// Set by Caller 가져오기
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	const AActor* SourceActor = ASC->GetAvatarActor();
 	
-	const FGameplayEffectSpecHandle RegenAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->RegenAttributes, 1.f, RegenAttributesContextHandle);
+	// 세이브 데이터의 바이탈 속성 적용
+	FGameplayEffectContextHandle VitalAttributesContextHandle = ASC->MakeEffectContext();
+	VitalAttributesContextHandle.AddSourceObject(SourceActor);
+	
+	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes_SetByCaller, 1.f, VitalAttributesContextHandle);
+	
+	// 바이탈 속성, 비율로 저장
+	float MaxHealth = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float MaxMana = GetAttributeValue(WorldContextObject, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+	
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Health, MaxHealth * Health);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(VitalAttributesSpecHandle, GameplayTags.Attributes_Vital_Mana, MaxMana * Mana);
 
-	ASC->ApplyGameplayEffectSpecToSelf(*RegenAttributesSpecHandle.Data.Get());
+	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 }
 
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromAttributeSet(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, 

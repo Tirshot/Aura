@@ -964,6 +964,9 @@ void AAuraPlayerController::Client_RemoveCardSelection_Implementation()
 
 void AAuraPlayerController::SaveCharacterProgress_Implementation()
 {
+    if (!GetPawn() || GetPawn()->IsPendingKillPending())
+        return;
+    
     if (GetPawn()->Implements<UPlayerInterface>())
     {
         IPlayerInterface::Execute_SaveProgress( GetPawn(), "");
@@ -1406,9 +1409,6 @@ void AAuraPlayerController::ShowSpellMenu()
 
 void AAuraPlayerController::ShowESCMenu()
 {
-    // 일시정지(0.1배속) 요청
-    Server_RequestPauseGame(this);
-    
     UAuraAbilitySystemLibrary::GetOverlayWidgetController(this)->OnESCMenuKeyPressed.Broadcast();
 }
 

@@ -6,7 +6,7 @@
 FItemData UItemInfo::GetItemDataByID_Copy(const FName& ItemID) const
 {
 	// 블루프린트 용 
-	if (const FItemData* Found = ItemTable->FindRow<FItemData>(ItemID, TEXT("FoundRow")))
+	if (const FItemData* Found = ItemTable->FindRow<FItemData>(ItemID, TEXT("FoundRow"), false))
 	{
 		return *Found;
 	}
@@ -15,7 +15,7 @@ FItemData UItemInfo::GetItemDataByID_Copy(const FName& ItemID) const
 
 const FItemData* UItemInfo::GetItemDataByID(const FName& ItemID) const
 {
-	return ItemTable->FindRow<FItemData>(ItemID, TEXT("FoundRow"));
+	return ItemTable->FindRow<FItemData>(ItemID, TEXT("FoundRow"), false);
 }
 
 const FDropItemGroupArray* UItemInfo::GetDropItemGroup(ECharacterClass EnemyClass)

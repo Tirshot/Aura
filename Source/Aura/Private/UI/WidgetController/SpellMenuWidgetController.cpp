@@ -16,6 +16,7 @@ void USpellMenuWidgetController::BroadcastInitialValues()
 	BroadcastAbilityInfo();
 
 	OnSpellPointsChanged.Broadcast(GetAuraPS()->GetSpellPoints());
+	CurrentSpellPoints = GetAuraPS()->GetSpellPoints();
 	
 	// 창을 껐다 키면 지금의 장착 상태를 다시 가져옴
 	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
@@ -146,6 +147,13 @@ void USpellMenuWidgetController::OnAbilityStatusChanged(const FGameplayTag& Abil
 
 void USpellMenuWidgetController::SpellGlobeSelected(const FGameplayTag& AbilityTag)
 {
+	if (!GetAuraPS()->OnSpellPointChangedDelegate.IsAlreadyBound(this, &USpellMenuWidgetController::OnSpellPointChanged))
+	{
+		// 바인드가 더 늦었다면 다시 바인드
+		GetAuraPS()->OnSpellPointChangedDelegate.AddDynamic(this, &USpellMenuWidgetController::OnSpellPointChanged);
+		CurrentSpellPoints = GetAuraPS()->GetSpellPoints();
+	}
+	
 	if (bWaitForEquipSelection)
 	{
 		const FGameplayTag SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;

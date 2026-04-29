@@ -83,7 +83,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void CopyProperties(APlayerState* PlayerState) override;
-
+	
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -102,7 +102,7 @@ public:
 
 	UPROPERTY()
 	FOnPlayerStateInitialized OnPlayerStateInitialized;
-	
+
 	// 값 변화 델리게이트
 	FOnPlayerStatChanged OnXPChangedDelegate;
 	FOnLevelChanged OnLevelChangedDelegate;
@@ -157,6 +157,9 @@ public:
 	void ResetAttributesToBaseValue();
 	
 	void InitializeDefaultAttributesFromAttributeSet(UAbilitySystemComponent* NewASC, UAttributeSet* AS);
+	
+	void UpdateAbilityStatus();
+	
 public:
 	// 어빌리티 업그레이드
 	UPROPERTY(Replicated)
@@ -194,6 +197,9 @@ public:
 
 	UFUNCTION()
 	void HandleAbilitiesSet();
+	
+	UFUNCTION()
+	void OnASCRegistered(UAbilitySystemComponent* ASC);
 	
 protected:
 	// GAS
@@ -248,6 +254,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
 	TObjectPtr<class UEquipmentComponent> Equipment;
 	
+public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Inventory", meta=(AllowPrivateAccess = true))
 	TObjectPtr<class UCharmComponent> Charm;
 };

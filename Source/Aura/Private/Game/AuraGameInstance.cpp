@@ -15,8 +15,10 @@
 #include "OnlineSessionSettings.h"
 #include "SocketSubsystem.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/AuraAttributeSet.h"
 #include "Components/MenuAnchor.h"
 #include "Online/OnlineSessionNames.h"
+#include "Player/CharmComponent.h"
 #include "UI/Widget/LoadScreenWidget.h"
 #include "UI/WidgetController/SettingsMenuWidgetController.h"
 
@@ -78,6 +80,8 @@ void UAuraGameInstance::Init()
 		GEngine->OnNetworkFailure().AddUObject(this, &UAuraGameInstance::HandleNetworkFailure);
 		GEngine->OnTravelFailure().AddUObject(this, &UAuraGameInstance::HandleTravelFailure);
 	}
+	
+	FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UAuraGameInstance::OnPreLoadMap);
 }
 
 void UAuraGameInstance::Shutdown()
@@ -101,6 +105,43 @@ void UAuraGameInstance::Shutdown()
 	}
 	
 	Super::Shutdown();
+}
+
+void UAuraGameInstance::OnPreLoadMap(const FString& MapName)
+{
+	// 서버에서 모든 플레이어의 비율 저장
+	if (!GetWorld())
+		return;
+	
+	if (GetWorld()->GetNetMode() == NM_Client)
+		return;
+	
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
+			continue;
+
+		AAuraPlayerState* AuraPS = PC->GetPlayerState<AAuraPlayerState>();
+		if (!AuraPS || !AuraPS->Charm) 
+			continue;
+
+		UAuraAttributeSet* AS = Cast<UAuraAttributeSet>(AuraPS->GetAttributeSet());
+		if (!AS)
+			continue;
+
+		float MaxHP = AS->GetMaxHealth();
+		float HP = AS->GetHealth();
+		float MaxMP = AS->GetMaxMana();
+		float MP = AS->GetMana();
+
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PreLoadMap - HP: %.1f/%.1f MP: %.1f/%.1f"),
+			*AuraPS->GetPlayerName(), HP, MaxHP, MP, MaxMP);
+
+		AuraPS->Charm->SavedHPRatio = (MaxHP > 0.f) ? (HP / MaxHP) : 1.f;
+		AuraPS->Charm->SavedMPRatio = (MaxMP > 0.f) ? (MP / MaxMP) : 1.f;
+		AuraPS->Charm->bHasSavedRatio = true;
+	}
 }
 
 ULoadScreenSaveGame* UAuraGameInstance::GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const

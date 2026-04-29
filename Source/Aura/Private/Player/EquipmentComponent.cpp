@@ -53,6 +53,11 @@ UEquipmentComponent::UEquipmentComponent()
 }
 
 
+void UEquipmentComponent::Client_ApplyHPMPRatio_Implementation(float NewHP, float NewMP)
+{	
+	ApplyHPMPRatio(NewHP, NewMP);
+}
+
 void UEquipmentComponent::InitializeEquipmentSlots()
 {
 	// 맵의 값을 빈 슬롯 데이터로 채우기
@@ -166,30 +171,19 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlot* Slot)
 	float TargetHP = HPRatio * NewMaxHP;
 	float HPDelta = TargetHP - OldHP;
 	
-	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
 	float TargetMP = MPRatio * NewMaxMP;
 	float MPDelta = TargetMP - OldMP;
 	
-	if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	if (HPDelta != 0.f || MPDelta != 0.f)
 	{
-		FGameplayEffectContextHandle DeHealHPContext = AuraASC->MakeEffectContext();
-		DeHealHPContext.AddInstigator(GetOwner(), GetOwner());
-
-		auto DEHealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealHPContext);
-		if (DEHealHPHandle.IsValid())
+		// 클라이언트 RPC
+		Client_ApplyHPMPRatio(HPDelta, MPDelta);
+				
+		if (GetOwnerRole() == ROLE_Authority)
 		{
-			DEHealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta); 
-			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealHPHandle.Data);
-		}
-		
-		FGameplayEffectContextHandle DeHealMPContext = AuraASC->MakeEffectContext();
-		DeHealMPContext.AddInstigator(GetOwner(), GetOwner());
-
-		auto DEHealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, DeHealMPContext);
-		if (DEHealMPHandle.IsValid())
-		{
-			DEHealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta); 
-			AuraASC->ApplyGameplayEffectSpecToSelf(*DEHealMPHandle.Data);
+			// 리슨 서버일 때 적용
+			ApplyHPMPRatio(HPDelta, MPDelta);
 		}
 	}
 	
@@ -410,40 +404,28 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_HealthRegeneration, HealthRegen);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_ManaRegeneration, ManaRegen);
 			SpecHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Secondary_CriticalHitChance, CriticalChance);
-		
+			
 			AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data);
 			
 			float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
 			float TargetHP = HPRatio * NewMaxHP;
-			float HPDelta = TargetHP - OldHP;
+			float DeltaHP = TargetHP - OldHP;
 			
 			float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
 			float TargetMP = MPRatio * NewMaxMP;
-			float MPDelta = TargetMP - OldMP;
+			float DeltaMP = TargetMP - OldMP;
 			
-			if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+			if (DeltaHP != 0.f || DeltaMP != 0.f)
 			{
-				FGameplayEffectContextHandle HealHPHandleContext = AuraASC->MakeEffectContext();
-				HealHPHandleContext.AddInstigator(GetOwner(), GetOwner());
-
-				auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, HealHPHandleContext);
-				if (HealHPHandle.IsValid())
-				{
-					HealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, HPDelta);
-					AuraASC->ApplyGameplayEffectSpecToSelf(*HealHPHandle.Data);
-				}
+				// 클라이언트 RPC
+				Client_ApplyHPMPRatio(DeltaHP, DeltaMP);
 				
-				FGameplayEffectContextHandle HealMPHandleContext = AuraASC->MakeEffectContext();
-				HealMPHandleContext.AddInstigator(GetOwner(), GetOwner());
-
-				auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, HealMPHandleContext);
-				if (HealMPHandle.IsValid())
+				if (GetOwnerRole() == ROLE_Authority)
 				{
-					HealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, MPDelta);
-					AuraASC->ApplyGameplayEffectSpecToSelf(*HealMPHandle.Data);
+					// 리슨 서버일 때 적용
+					ApplyHPMPRatio(DeltaHP, DeltaMP);
 				}
 			}
-			
 			Slot->bIsSlotEquipped = true;
 		}
 	}
@@ -677,6 +659,45 @@ void UEquipmentComponent::UnEquipItem_Internal(FEquipmentSlot* Slot)
 	// 이미 장착 중인 아이템 효과 해제
 	EquipmentSlots.EquipmentSlotChanged(*Slot);
 	EquipmentSlots.MarkItemDirty(*Slot);
+}
+
+void UEquipmentComponent::ApplyHPMPRatio(float NewHP, float NewMP)
+{
+	// AuraASC null 체크
+	if (!AuraASC)
+	{
+		AuraASC = Cast<UAuraAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()));
+	}
+
+	// 그래도 null이면 적용 보류
+	if (!AuraASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyHPMPRatio: AuraASC is null, skipping"));
+		return;
+	}
+	
+	if (auto AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>())
+	{
+		FGameplayEffectContextHandle HealHPHandleContext = AuraASC->MakeEffectContext();
+		HealHPHandleContext.AddInstigator(GetOwner(), GetOwner());
+
+		auto HealHPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyHPHealEffect, 1.f, HealHPHandleContext);
+		if (HealHPHandle.IsValid())
+		{
+			HealHPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Health, NewHP);
+			AuraASC->ApplyGameplayEffectSpecToSelf(*HealHPHandle.Data);
+		}
+				
+		FGameplayEffectContextHandle HealMPHandleContext = AuraASC->MakeEffectContext();
+		HealMPHandleContext.AddInstigator(GetOwner(), GetOwner());
+
+		auto HealMPHandle = AuraASC->MakeOutgoingSpec(AuraGI->ItemApplyMPHealEffect, 1.f, HealMPHandleContext);
+		if (HealMPHandle.IsValid())
+		{
+			HealMPHandle.Data->SetSetByCallerMagnitude(FAuraGameplayTags::Get().Attributes_Vital_Mana, NewMP);
+			AuraASC->ApplyGameplayEffectSpecToSelf(*HealMPHandle.Data);
+		}
+	}
 }
 
 void UEquipmentComponent::HUDInitialized()

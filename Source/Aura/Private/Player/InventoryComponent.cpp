@@ -433,7 +433,7 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 {
 	// 서버가 아니면 리턴
 	if (GetOwnerRole() != ROLE_Authority)
-		return;
+	 	return;
 	
 	SlotList.Slots.Empty();
 	SlotList.Inventory = this;
@@ -445,9 +445,6 @@ void UInventoryComponent::SetInventorySlots(const TArray<FInventorySlot>& InSlot
 		AddedSlot.Inventory = this;
 		OnItemGet.Broadcast(NewSlot.SlotID, false);
 		SlotList.MarkItemDirty(AddedSlot); 
-		
-		// if (AddedSlot.ItemData.)
-		// LoadedCharm.Add();
 	}
 	
 	if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(GetOwner()))
