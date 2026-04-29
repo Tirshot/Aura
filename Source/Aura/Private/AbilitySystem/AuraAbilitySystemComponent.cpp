@@ -432,20 +432,8 @@ void UAuraAbilitySystemComponent::AddCharacterAbilityByTag(const FGameplayTag& A
     
     AbilitiesGivenDelegate.Broadcast();
     
-    if (AbilityActorInfo.IsValid())
-    {
-        if (APlayerState* PS = AbilityActorInfo->PlayerController->PlayerState)
-        {
-            if (AAuraPlayerState* AuraPS = Cast<AAuraPlayerState>(PS))
-            {
-                UpdateAbilityStatus(AuraPS->GetCharacterLevel());
-            }
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("AuraASC::AddCharacterAbilityByTag, UpdateAbilityStatus FAILED!!!"));
-    }
+    if (GetAvatarActor()->Implements<UCombatInterface>())
+        UpdateAbilityStatus(ICombatInterface::Execute_GetCharacterLevel(GetAvatarActor()));
 }
 
 void UAuraAbilitySystemComponent::RemoveCharacterAbilityByTag(const FGameplayTag& AbilityTag, const int32 RemoveCount)

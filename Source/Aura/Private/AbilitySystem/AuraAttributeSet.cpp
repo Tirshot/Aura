@@ -311,18 +311,17 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
                 
                 // 몬스터 클래스 디폴트의 XP 오버라이드 검증
                 bIsXPOverridden = CombatInterface->Execute_IsXPOverridden(Props.TargetAvatarActor);
-            }
-            
-            if (CombatInterface && bIsXPOverridden)
-            {
-                // 유닛의 디폴트에서 XP 오버라이드 여부 선택
-                const float XPOverriddenValue = CombatInterface->Execute_GetXPOverriddenValue(Props.TargetAvatarActor);
-                SendOverriddenXPEvent(Props, XPOverriddenValue);
-            }
-            else
-            {
-                // XP 오버라이드 상태가 아닌 일반적인 상태
-                SendXPEvent(Props);
+                if (bIsXPOverridden)
+                {
+                    // 유닛의 디폴트에서 XP 오버라이드 여부 선택
+                    const float XPOverriddenValue = CombatInterface->Execute_GetXPOverriddenValue(Props.TargetAvatarActor);
+                    SendOverriddenXPEvent(Props, XPOverriddenValue);
+                }
+                else
+                {
+                    // XP 오버라이드 상태가 아닌 일반적인 상태
+                    SendXPEvent(Props);
+                }
             }
         }
         else

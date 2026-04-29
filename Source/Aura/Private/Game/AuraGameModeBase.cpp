@@ -699,6 +699,10 @@ void AAuraGameModeBase::SendXPToAllPlayers(AActor* KilledActor, AActor* KillerAc
 {
 	if (!KilledActor->Implements<UCombatInterface>())
 		return;
+	
+	// 사망한 캐릭터가 플레이어 캐릭터라면 XP를 제공하지 않음
+	if (Cast<AAuraCharacter>(KilledActor))
+		return;
 
 	const int32 TargetLevel = ICombatInterface::Execute_GetCharacterLevel(KilledActor);
 	const ECharacterClass TargetClass = ICombatInterface::Execute_GetCharacterClass(KilledActor);

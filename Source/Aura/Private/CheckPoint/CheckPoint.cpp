@@ -13,6 +13,7 @@
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/AuraPlayerController.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 ACheckPoint::ACheckPoint(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -120,15 +121,21 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 		// 체력 회복
 		if (bHealing)
 		{
-			if (AAuraCharacter* AvatarActor = Cast<AAuraCharacter>(OtherActor))
+			for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 			{
-				if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AvatarActor->GetAbilitySystemComponent()))
+				if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(It->Get()))
 				{
-					FGameplayEffectContextHandle ContextHandle = AuraASC->MakeEffectContext();
-					ContextHandle.AddSourceObject(AvatarActor);
+					if (AAuraCharacter* AvatarActor = Cast<AAuraCharacter>(AuraPC->GetPawn()))
+					{
+						if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AvatarActor->GetAbilitySystemComponent()))
+						{
+							FGameplayEffectContextHandle ContextHandle = AuraASC->MakeEffectContext();
+							ContextHandle.AddSourceObject(AvatarActor);
 				
-					FGameplayEffectSpecHandle SpecHandle = AuraASC->MakeOutgoingSpec(AuraHeal, 1.f, ContextHandle);
-					AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+							FGameplayEffectSpecHandle SpecHandle = AuraASC->MakeOutgoingSpec(AuraHeal, 1.f, ContextHandle);
+							AuraASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+						}
+					}
 				}
 			}
 		}
