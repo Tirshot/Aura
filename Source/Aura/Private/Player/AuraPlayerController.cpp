@@ -1266,7 +1266,7 @@ void AAuraPlayerController::Client_CreateMessageWidget_Implementation(const FGam
 {
     if (auto* GI = Cast<UAuraGameInstance>(this->GetGameInstance()))
     {
-        if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message"))
+        if (FUIWidgetRow* FoundRow = GI->MessageTable->FindRow<FUIWidgetRow>(MessageTag.GetTagName(), "Found Message", false))
         {
             TSubclassOf<UAuraUserWidget> MessageWidgetClass = FoundRow->MessageWidget;
             FText FoundMessage = FoundRow->Message;

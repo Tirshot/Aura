@@ -7,9 +7,6 @@
 #include "Interaction/ItemInterface.h"
 #include "AbilityUpgradeChest.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class AURA_API AAbilityUpgradeChest : public ACheckPoint, public IItemInterface
 {
@@ -17,7 +14,7 @@ class AURA_API AAbilityUpgradeChest : public ACheckPoint, public IItemInterface
 
 public:
 	AAbilityUpgradeChest(const FObjectInitializer& ObjectInitializer);
-	
+	virtual void PostNetInit() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
@@ -38,11 +35,13 @@ protected:
 public:
 	void UpdateChestState();
 	
+	UFUNCTION(BlueprintCallable)
+	void OnTimelineAnimationFinished(AActor* InteractedActor);
+	
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	
 	
 protected:
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,

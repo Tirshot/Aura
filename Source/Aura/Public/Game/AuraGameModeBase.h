@@ -80,6 +80,9 @@ public:
 	UFUNCTION()
 	void SaveOneTimeUseActor(FGuid Guid, bool bUsed);
 	
+	UFUNCTION(BlueprintCallable)
+	bool IsOneTimeUseActorUsed(FGuid Guid);
+	
 	UFUNCTION()
 	void LoadWorldState(UWorld* World);
 	

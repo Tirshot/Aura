@@ -330,6 +330,27 @@ void AAuraGameModeBase::SaveOneTimeUseActor(FGuid Guid, bool bUsed)
 	}
 }
 
+bool AAuraGameModeBase::IsOneTimeUseActorUsed(FGuid Guid)
+{
+	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (!PC)
+		return false;
+	
+	if (UAuraGameInstance* AuraGI = PC->GetGameInstance<UAuraGameInstance>())
+	{
+		ULoadScreenSaveGame* SaveGame = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex);
+		if (SaveGame)
+		{
+			if (bool* bUsed = SaveGame->OneTimeUseActors.Find(Guid))
+			{
+				return *bUsed;
+			}
+		}
+	}
+	
+	return false;
+}
+
 void AAuraGameModeBase::TravelToMap(UMVVM_LoadSlot* Slot)
 {
 	UGameplayStatics::OpenLevelBySoftObjectPtr(Slot, Maps.FindChecked(Slot->GetMapName()), true, TEXT("?listen"));

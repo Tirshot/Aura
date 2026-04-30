@@ -17,6 +17,18 @@ AAbilityUpgradeChest::AAbilityUpgradeChest(const FObjectInitializer& ObjectIniti
 	bReplicates = true;
 }
 
+void AAbilityUpgradeChest::PostNetInit()
+{
+	Super::PostNetInit();
+	
+	UE_LOG(LogTemp, Warning, TEXT("[클라] PostNetInit - bReached: %s / Time: %f"),
+	bReached ? TEXT("true") : TEXT("false"),
+	GetWorld()->GetTimeSeconds());
+	
+	if (bReached)
+		OnRep_Reached();
+}
+
 void AAbilityUpgradeChest::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -24,6 +36,9 @@ void AAbilityUpgradeChest::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void AAbilityUpgradeChest::LoadActor_Implementation()
 {
+	if (!HasAuthority())
+		return;
+	
 	if (UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance()))
 	{
 		if (auto* SaveObject = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))
@@ -54,7 +69,15 @@ void AAbilityUpgradeChest::LoadActor_Implementation()
 				Archive.ArIsSaveGame = true;
 
 				this->Serialize(Archive); 
+				// bReached 상태
+				UE_LOG(LogTemp, Warning, TEXT("[서버] LoadActor - bReached: %s"),
+					bReached ? TEXT("true") : TEXT("false"));
+
 				ForceNetUpdate();
+        
+				// 서버도 직접 처리
+				if (bReached)
+					OnRep_Reached();
 			}
 		}
 	}
@@ -76,16 +99,19 @@ void AAbilityUpgradeChest::BeginPlay()
 
 	if (HasAuthority())
 	{
-		auto* AuraGI = Cast<UAuraGameInstance>(GetGameInstance());
-		if (AuraGI)
+		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
 		{
-			if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+			AuraGM->SaveOneTimeUseActor(Guid, bReached);
+				
+			if (AuraGM->IsOneTimeUseActorUsed(Guid))
 			{
-				AuraGM->SaveOneTimeUseActor(Guid, bReached);
+				bReached = true;
+				ForceNetUpdate();
+				
 			}
 		}
 	}
-		
+	
 	if (bReached)
 		OnRep_Reached();
 }
@@ -104,7 +130,9 @@ void AAbilityUpgradeChest::OnRep_Reached()
 	Super::OnRep_Reached();
 	
 	if (bReached)
-		UpdateChestState();
+	{
+		CheckPointReached(DynamicMI, nullptr);
+	}
 }
 
 void AAbilityUpgradeChest::UpdateChestState()
@@ -115,6 +143,26 @@ void AAbilityUpgradeChest::UpdateChestState()
 		SetActorEnableCollision(false);
 		SetActorTickEnabled(false);
 	}
+}
+
+void AAbilityUpgradeChest::OnTimelineAnimationFinished(AActor* InteractedActor)
+{
+	if (HasAuthority())
+	{
+		// 서버 - 맵 상태 저장
+		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+		{
+			if (AAuraCharacter* Aura = Cast<AAuraCharacter>(InteractedActor))
+			{
+				if  (AAuraPlayerController* AuraPC = Aura->GetController<AAuraPlayerController>())
+				{
+					AuraPC->Server_CreateCardSelection(InteractedActor);
+					AuraGM->SaveOneTimeUseActor(Guid, true);
+				}
+			}
+		}
+	}
+	UpdateChestState();
 }
 
 #if WITH_EDITOR
@@ -132,7 +180,7 @@ void AAbilityUpgradeChest::PostEditChangeProperty(struct FPropertyChangedEvent& 
 void AAbilityUpgradeChest::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                            UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!OtherActor->HasAuthority())
+	if (!HasAuthority())
 		return;
 	
 	if (OtherActor->Implements<UPlayerInterface>())
@@ -140,19 +188,5 @@ void AAbilityUpgradeChest::OnSphereOverlap(UPrimitiveComponent* OverlappedCompon
 		bReached = true;
 		
 		CheckPointReached(DynamicMI, OtherActor);
-		
-		// 서버 - 맵 상태 저장
-		if (AAuraGameModeBase* AuraGM = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
-		{
-			if (AAuraCharacter* Aura = Cast<AAuraCharacter>(OtherActor))
-			{
-				if  (AAuraPlayerController* AuraPC = Aura->GetController<AAuraPlayerController>())
-				{
-					AuraPC->Server_CreateCardSelection(OtherActor);
-					AuraGM->SaveOneTimeUseActor(Guid, true);
-					UpdateChestState();
-				}
-			}
-		}
 	}
 }

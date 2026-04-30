@@ -56,6 +56,9 @@ void ACheckPoint::SetMoveToLocation_Implementation(FVector& OutDestination)
 
 void ACheckPoint::LoadActor_Implementation()
 {
+	if (!HasAuthority())
+		return;
+	
 	if (UAuraGameInstance* AuraGI = Cast<UAuraGameInstance>(GetGameInstance()))
 	{
 		if (auto* SaveObject = AuraGI->GetSaveSlotData(AuraGI->LoadSlotName, AuraGI->LoadSlotIndex))

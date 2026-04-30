@@ -12,7 +12,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpellPointsChangedSignature, int3
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FSpellGlobeSelectedSignature, bool, bSpendPointButtonEnabled, bool, bEquipButtonEnabled, FString, DescriptionString, FString, NextLevelDescriptionString);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWaitForEquipSelectionSignature, const FGameplayTag&, AbilityType);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSpellGlobeReassignedSignature, const FGameplayTag&, AbilityTag);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTutorialAssignedSignature, const FGameplayTag&, AbilityTag);
 
 struct FSelectedAbility
 {
@@ -53,8 +52,6 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FSpellGlobeReassignedSignature SpellGlobeReassignedDelegate;
 
-	UPROPERTY(BlueprintAssignable)
-	FTutorialAssignedSignature ElectrocuteAssignedDelegate;
 	UFUNCTION(BlueprintCallable)
 	void SpellGlobeSelected(const FGameplayTag& AbilityTag);
 

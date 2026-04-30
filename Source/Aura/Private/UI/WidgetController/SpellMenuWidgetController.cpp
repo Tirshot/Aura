@@ -223,8 +223,13 @@ void USpellMenuWidgetController::SpendPointButtonPressed()
 	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
 	{
 		// 튜토리얼 조건 : 감전사에 포인트 투자
-		if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability != FAuraGameplayTags::Get().Abilities_Lightning_Electrocute)
-			return;
+		if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this))
+		{
+			if (SelectedAbility.Ability != FAuraGameplayTags::Get().Abilities_Lightning_Electrocute)
+			{
+				return;
+			}
+		}
 		
 		// 요구 조건과 맞지 않으면 스펠 포인트 투자 불가
 		for (FAuraAbilityInfo& Info : AbilityInfo->AbilityInformation)
@@ -323,14 +328,6 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 		return;
 
 	GetAuraASC()->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
-	
-	// 튜토리얼 조건 : 감전사 장착
-	if (UAuraAbilitySystemLibrary::IsThisMapTutorial(this) && SelectedAbility.Ability.MatchesTag(FAuraGameplayTags::Get().Abilities_Lightning_Electrocute))
-	{
-		// 튜토리얼 조건 완료
-		ElectrocuteAssignedDelegate.Broadcast(SelectedAbility.Ability);
-		ElectrocuteAssignedDelegate.Clear();
-	}
 }
 
 void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)

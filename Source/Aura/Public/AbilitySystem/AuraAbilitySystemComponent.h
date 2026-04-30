@@ -35,10 +35,10 @@ public:
 	UPROPERTY()
 	FAbilitiesGiven AbilitiesGivenDelegate;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintAssignable)
 	FAbilityStatusChanged AbilityStatusChanged;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintAssignable)
 	FAbilityEquipped AbilityEquipped;
 	
 	UPROPERTY()
