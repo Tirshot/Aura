@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "AuraGameplayTags.h"
+#include "Actor/MissionActor.h"
 #include "Aura/Aura.h"
 #include "AI/AuraAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -16,6 +17,7 @@
 #include "Character/AuraBossMonster.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/AuraGameStateBase.h"
+#include "Net/UnrealNetwork.h"
 
 
 AAuraEnemy::AAuraEnemy()
@@ -37,6 +39,9 @@ AAuraEnemy::AAuraEnemy()
 
     HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
     HealthBar->SetupAttachment(GetRootComponent());
+    
+    TotalReceivedDamageWidget = CreateDefaultSubobject<UWidgetComponent>("TotalReceivedDamageWidget");
+    TotalReceivedDamageWidget->SetupAttachment(GetRootComponent());
     
     GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
     GetMesh()->MarkRenderStateDirty();
@@ -80,6 +85,13 @@ void AAuraEnemy::PossessedBy(AController* NewController)
     AuraGS->AddMonsterToArray(this);
 }
 
+void AAuraEnemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    
+    DOREPLIFETIME(AAuraEnemy, TotalReceivedDamage);
+}
+
 void AAuraEnemy::HighlightActor_Implementation()
 {
     GetMesh()->SetRenderCustomDepth(true);
@@ -112,6 +124,14 @@ void AAuraEnemy::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
     if (AAuraGameStateBase* AuraGS = GetWorld()->GetGameState<AAuraGameStateBase>())
     {
         AuraGS->RemoveMonsterFromArray(this);
+    }
+    
+    if (!MissionActors.IsEmpty())
+    {
+        for (const auto& MissionActor : MissionActors)
+        {
+            MissionActor->ReportValue(FGameplayTag::RequestGameplayTag(FName("Mission.Objective.Kill")), 1.0f);
+        }
     }
 
     // 수명 설정
@@ -170,6 +190,31 @@ float AAuraEnemy::GetXPOverriddenValue_Implementation() const
     return XPOverrideValue;
 }
 
+bool AAuraEnemy::GetIgnoreKnockback_Implementation()
+{
+    return bIgnoreKnockback;
+}
+
+float AAuraEnemy::GetTotalReceivedDamage_Implementation()
+{
+    return TotalReceivedDamage;
+}
+
+void AAuraEnemy::AddTotalReceivedDamage_Implementation(float IncomingDamage)
+{
+    TotalReceivedDamage += IncomingDamage;
+    
+    OnTotalReceivedDamageChanged.Broadcast(TotalReceivedDamage);
+    
+    if (!MissionActors.IsEmpty())
+    {
+        for (const auto& MissionActor : MissionActors)
+        {
+            MissionActor->ReportValue(FGameplayTag::RequestGameplayTag(FName("Mission.Objective.Damage")), IncomingDamage);
+        }
+    }
+}
+
 void AAuraEnemy::BeginPlay()
 {
     Super::BeginPlay();
@@ -193,6 +238,11 @@ void AAuraEnemy::BeginPlay()
     }
     
     if (UAuraUserWidget* AuraUserWidget = Cast<UAuraUserWidget>(HealthBar->GetUserWidgetObject()))
+    {
+        AuraUserWidget->SetWidgetController(this);
+    }
+
+    if (UAuraUserWidget* AuraUserWidget = Cast<UAuraUserWidget>(TotalReceivedDamageWidget->GetUserWidgetObject()))
     {
         AuraUserWidget->SetWidgetController(this);
     }
@@ -291,10 +341,27 @@ void AAuraEnemy::MulticastHandleDeath(const FVector& DeathImpulse)
     Super::MulticastHandleDeath(DeathImpulse);
     
     // 체력바 위젯 제거
-    HealthBar->SetVisibility(false);
-    HealthBar->SetHiddenInGame(true);
-    HealthBar->Deactivate();
-    HealthBar->DestroyComponent();
+    if (HealthBar)
+    {
+        HealthBar->SetVisibility(false);
+        HealthBar->SetHiddenInGame(true);
+        HealthBar->Deactivate();
+        HealthBar->DestroyComponent();
+    }
+    
+    // 누적 데미지
+    if (TotalReceivedDamageWidget)
+    {
+        TotalReceivedDamageWidget->SetVisibility(false);
+        TotalReceivedDamageWidget->SetHiddenInGame(true);
+        TotalReceivedDamageWidget->Deactivate();
+        TotalReceivedDamageWidget->DestroyComponent();
+    }
+}
+
+void AAuraEnemy::OnRep_TotalReceivedDamage()
+{
+    UpdateTotalReceivedDamageWidget(TotalReceivedDamage);
 }
 
 void AAuraEnemy::AddAbilityUpgrade(TSubclassOf<UGameplayEffect> AbilityUpgradeClass)

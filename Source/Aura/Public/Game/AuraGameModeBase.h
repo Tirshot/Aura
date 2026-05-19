@@ -75,7 +75,7 @@ public:
 	
 	// 모든 클라이언트 대상으로 캐릭터 상태 저장
 	UFUNCTION()
-	void SaveAllCharacters();
+	void SaveAllCharacters(FName PlayerStartTag = FName());
 	
 	UFUNCTION()
 	void SaveOneTimeUseActor(FGuid Guid, bool bUsed);

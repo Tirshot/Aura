@@ -58,6 +58,13 @@ public:
 
 	void OnRoarStart(const FGameplayEventData* EventData);
 	void OnRoarEnd(const FGameplayEventData* EventData);
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnRoarStart_BlueprintEvent();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnRoarEnd_BlueprintEvent();
+	
 	void AddAbilityUpgradeOnBerserkMode();
 	
 public:
@@ -73,14 +80,17 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_IsRoaring)
 	bool bIsRoaring = false;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_Berserk)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Berserk)
 	bool bBerserk = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category="Combat")
+	bool bNotCreateHealthBar = false;
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float BeginBerserkRatio = 0.5f;
 	
-	UPROPERTY(VisibleAnywhere, Category="Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Camera")

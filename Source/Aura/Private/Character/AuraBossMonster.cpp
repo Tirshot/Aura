@@ -6,6 +6,8 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/AuraAttributeSet.h"
+#include "Actor/MissionActor.h"
 #include "AI/AuraAIController.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -14,6 +16,7 @@
 #include "Components/SphereComponent.h"
 #include "Game/AuraAudioSubsystem.h"
 #include "Game/AuraGameModeBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -56,6 +59,8 @@ void AAuraBossMonster::BossMontageBind()
 void AAuraBossMonster::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	bIgnoreKnockback = true;
 	
 	if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
 	{
@@ -102,6 +107,14 @@ void AAuraBossMonster::MultiCast_AttachDeathCam_Implementation()
 
 void AAuraBossMonster::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
 {
+	if (!MissionActors.IsEmpty())
+	{
+		for (const auto& MissionActor : MissionActors)
+		{
+			MissionActor->ReportValue(FGameplayTag::RequestGameplayTag(FName("Mission.Objective.Kill.Boss")), 1.0f);
+		}
+	}
+	
 	// 랙돌 효과와 무기 드랍
 	Super::Die(DeathImpulse, KilledBy);
 	
@@ -121,6 +134,21 @@ void AAuraBossMonster::ChangeGlobalTimeDilationToDefault()
 
 void AAuraBossMonster::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
+	if (bIgnoreReactTag)
+		return;
+	
+	if (const UAuraAttributeSet* AuraAS = CastChecked<UAuraAttributeSet>(AttributeSet))
+	{
+		// 태그가 있을 때만 작동
+		bHitReacting = NewCount > 0;
+		GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : AuraAS->GetMovementSpeed();
+    
+		if (AuraAIController && AuraAIController->GetBlackboardComponent())
+		{
+			// 블랙보드 키 설정
+			AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
+		}
+	}
 }
 
 void AAuraBossMonster::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
@@ -134,6 +162,7 @@ void AAuraBossMonster::BeingShockedTagChanged()
 void AAuraBossMonster::OnRoarStart(const FGameplayEventData* EventData)
 {
 	OnBossEventStart.Broadcast(this);
+	OnRoarStart_BlueprintEvent();
 
 	if (HasAuthority())
 	{
@@ -164,6 +193,7 @@ void AAuraBossMonster::OnRoarStart(const FGameplayEventData* EventData)
 void AAuraBossMonster::OnRoarEnd(const FGameplayEventData* EventData)
 {
 	OnBossEventEnd.Broadcast(this);
+	OnRoarEnd_BlueprintEvent();
 
 	if (HasAuthority())
 	{

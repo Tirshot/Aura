@@ -59,4 +59,8 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly)
 	float LifeSpan = 15.f;
+	
+public:
+	UPROPERTY()
+	bool bCheckValidOverlap = true;
 };

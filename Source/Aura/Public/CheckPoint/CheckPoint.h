@@ -85,4 +85,10 @@ public:
 	
 	UPROPERTY()
 	UMaterialInstanceDynamic* DynamicMI;
+	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly)
+	TArray<AActor*> ActorsToRemove;
+	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly)
+	TArray<AActor*> ActorsToReveal;
 };

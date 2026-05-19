@@ -16,10 +16,13 @@ enum class ECharacterClass : uint8
 	Elementalist,
 	Warrior,
 	Ranger,
+	Ranger_KnockBack,
 	Shroom,
 	Warrior_Tutorial,
 	Ranger_Tutorial,
-	Ghoul
+	Ghoul,
+	Scarecrow,
+	Boss_Shaman
 };
 
 USTRUCT(BlueprintType)

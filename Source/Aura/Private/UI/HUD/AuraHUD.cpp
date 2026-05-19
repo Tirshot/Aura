@@ -3,6 +3,7 @@
 
 #include "UI/HUD/AuraHUD.h"
 
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Character/AuraBossMonster.h"
 #include "Character/AuraCharacter.h"
@@ -17,6 +18,7 @@
 #include "UI/Widget/AuraOverlayWidget.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "UI/Widget/LoadScreenWidget.h"
+#include "UI/Widget/MissionCinematicWidget.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 #include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "UI/WidgetController/SpellMenuWidgetController.h"
@@ -106,6 +108,19 @@ UItemToolTipWidgetController* AAuraHUD::GetItemToolTipWidgetController(const FWi
     }
 
     return ItemToolTipWidgetController;
+}
+
+UMissionWidgetController* AAuraHUD::GetMissionWidgetController(const FWidgetControllerParams& WCParams)
+{
+    if (MissionWidgetController == nullptr)
+    {   // 없으면 생성
+        MissionWidgetController = NewObject<UMissionWidgetController>(this, MissionWidgetControllerClass);
+        MissionWidgetController->SetWidgetControllerParams(WCParams);
+        MissionWidgetController->BindCallbacksToDependencies();
+        MissionWidgetController->BroadcastInitialValues();
+    }
+
+    return MissionWidgetController;
 }
 
 UMVVM_CardSelection* AAuraHUD::GetCardSelectionViewModel()
@@ -208,6 +223,11 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     }
 
     InventoryMenuViewModel = GetInventoryViewModel(WidgetControllerParams);
+    
+    // 미션 위젯 생성
+    MissionWidgetController = GetMissionWidgetController(WidgetControllerParams);
+    if (MissionWidgetController && !MissionWidgetController->OnMissionWidgetRequired.IsAlreadyBound(this, &AAuraHUD::CreateMissionWidget))
+        MissionWidgetController->OnMissionWidgetRequired.AddDynamic(this, &AAuraHUD::CreateMissionWidget);
 }
 
 void AAuraHUD::ResetWidgetControllerAndViewModels()
@@ -305,6 +325,53 @@ void AAuraHUD::CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetCla
     }
 }
 
+void AAuraHUD::CreateMissionWidget(const FMissionDataArray& CurrentMissions)
+{
+    // 미션 스택 위젯 만들기
+    if (!MissionStackWidget)
+    {
+        MissionStackWidget = CreateWidget<UAuraUserWidget>(GetOwningPlayerController(), MissionStackWidgetClass);
+        
+        FWidgetControllerParams WCParams;
+        AAuraHUD* OwnerHUD;
+        UAuraAbilitySystemLibrary::MakeWidgetControllerParams(this, WCParams, OwnerHUD);
+        
+        MissionStackWidget->SetWidgetController(GetMissionWidgetController(WCParams));
+        MissionStackWidget->AddToViewport();
+    }
+    
+    // 미션에 따라 미션 스택에 미션 위젯 집어넣기
+    for (int i = 0; i < CurrentMissions.Missions.Num(); i++)
+    {
+        const auto& Mission = CurrentMissions.Missions[i];
+
+        if (!MissionStackWidget)
+            return;
+            
+        if (MissionWidgetController)
+        {
+            MissionWidgetController->OnAddMissionToWidget.Broadcast(Mission);
+        }
+    }
+}
+
+void AAuraHUD::CreateMissionCinematicWidget(const FText& TitleText, const FText& DescriptionText)
+{
+    if (!MissionCinematicWidget)
+    {
+        MissionCinematicWidget = CreateWidget<UMissionCinematicWidget>(GetOwningPlayerController(), MissionCinematicWidgetClass);
+        
+        FWidgetControllerParams WCParams;
+        AAuraHUD* OwnerHUD;
+        UAuraAbilitySystemLibrary::MakeWidgetControllerParams(this, WCParams, OwnerHUD);
+        
+        MissionCinematicWidget->MissionTitle = TitleText;
+        MissionCinematicWidget->MissionDescription = DescriptionText;
+        
+        MissionCinematicWidget->AddToViewport();
+    }
+}
+
 void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos)
 {
     // 뷰 생성
@@ -362,7 +429,10 @@ void AAuraHUD::ShowOverlay()
 {
     OverlayWidgetController->ShowOverlayWidget(true);
     if (BossHealthBarWidget)
-        BossHealthBarWidget->SetVisibility(ESlateVisibility::Visible);
+        BossHealthBarWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+    
+    if (MissionStackWidget)
+        MissionStackWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void AAuraHUD::HideOverlay()
@@ -370,4 +440,7 @@ void AAuraHUD::HideOverlay()
     OverlayWidgetController->ShowOverlayWidget(false);
     if (BossHealthBarWidget)
         BossHealthBarWidget->SetVisibility(ESlateVisibility::Hidden);
+    
+    if (MissionStackWidget)
+        MissionStackWidget->SetVisibility(ESlateVisibility::Hidden);
 }

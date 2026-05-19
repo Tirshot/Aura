@@ -9,11 +9,13 @@
 #include "UI/WidgetController/OverlayWidgetController.h"
 #include "AuraEnemy.generated.h"
 
+class AMissionActor;
 class UWidgetComponent;
 class UBehaviorTree;
 class AAuraAIController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAttributeChanged, float, NewValue, AActor*, InstigatorActor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTotalReceivedDamageChanged, float, NewValue);
 
 UCLASS()
 class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface, public IHighlightInterface
@@ -26,6 +28,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void InitAbilityActorInfo() override;
 	virtual void InitializeDefaultAttributes() const override;
 	virtual void MulticastHandleDeath(const FVector& DeathImpulse) override;
@@ -46,6 +49,9 @@ public:
 	virtual void SetIsBeingShocked_Implementation(bool bInShock) override;
 	virtual bool IsXPOverridden_Implementation() const override;
     virtual float GetXPOverriddenValue_Implementation() const override;
+	virtual bool GetIgnoreKnockback_Implementation() override;
+	virtual float GetTotalReceivedDamage_Implementation() override;
+	virtual void AddTotalReceivedDamage_Implementation(float IncomingDamage) override;
 	// 전투 인터페이스 끝
 	
 public:
@@ -62,7 +68,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnMaxHealthChanged;
-
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnTotalReceivedDamageChanged OnTotalReceivedDamageChanged;
+	
 	// 콜백 함수
 	virtual void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
@@ -73,13 +82,24 @@ public:
 	void SetLevel(int32 InLevel) {Level = InLevel;}
 	void SetXPOverride(bool bOverride) {bIsXPOverride = bOverride;}
 	void SetXPOverrideValue(float InXP) {XPOverrideValue = InXP;}
-	
+	void SetMissionActor(const TArray<AMissionActor*>& Actors) {MissionActors = Actors;}
+	void AddMissionActor(AMissionActor* Actor) {MissionActors.Add(Actor);}
+
 public:
 	UPROPERTY(BlueprintReadOnly, category="Combat")
 	bool bHitReacting = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="Combat")
 	bool bIsRangedAttacker = false;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="Combat")
+	bool bIgnoreReactTag = false;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category="Combat")
+	bool bIgnoreKnockback = false;
+	
+	UPROPERTY(ReplicatedUsing="OnRep_TotalReceivedDamage", VisibleAnywhere, BlueprintReadOnly, category="Combat")
+	float TotalReceivedDamage = 0.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Combat")
 	float LifeSpan = 5.f;
@@ -100,8 +120,14 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category="Combat")
 	TObjectPtr<AActor> CombatTarget;
 	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Mission")
+	TArray<TObjectPtr<AMissionActor>> MissionActors;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UWidgetComponent> TotalReceivedDamageWidget;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UTexture> PictureFrameImage;
@@ -116,6 +142,13 @@ public:
 	// 아이템 드랍
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpawnLoot();
+	
+public:
+	UFUNCTION()
+	void OnRep_TotalReceivedDamage();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Mission")
+	void UpdateTotalReceivedDamageWidget(float TotalDamage);
 
 public:
 	/*

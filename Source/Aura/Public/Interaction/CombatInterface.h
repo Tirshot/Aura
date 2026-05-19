@@ -110,6 +110,15 @@ public:
 	USkeletalMeshComponent* GetWeapon();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	float GetTotalReceivedDamage();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void AddTotalReceivedDamage(float IncomingDamage);
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	bool GetIgnoreKnockback();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool IsBeingShocked();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)

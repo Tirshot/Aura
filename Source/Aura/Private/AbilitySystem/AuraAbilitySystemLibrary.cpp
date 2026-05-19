@@ -188,14 +188,23 @@ void UAuraAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* World
 	VitalAttributesContextHandle.AddSourceObject(AvatarActor);
 
 	// 이펙트 적용을 위한 이펙트 스펙 생성 후 적용 - ClassClassInfo가 아닌 클래스 디폴트를 참조하도록 수정됨
-	const FGameplayEffectSpecHandle PrimaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultPrimaryAttributes, Level, PrimaryAttributesContextHandle);
-	ASC->ApplyGameplayEffectSpecToSelf(*PrimaryAttributesSpecHandle.Data.Get());
+	if (AvatarCharacter->DefaultPrimaryAttributes)
+	{
+		const FGameplayEffectSpecHandle PrimaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultPrimaryAttributes, Level, PrimaryAttributesContextHandle);
+		ASC->ApplyGameplayEffectSpecToSelf(*PrimaryAttributesSpecHandle.Data.Get());
+	}
 
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultSecondaryAttributes, Level, SecondaryAttributesContextHandle);
-	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+	if (AvatarCharacter->DefaultSecondaryAttributes)
+	{
+		const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(AvatarCharacter->DefaultSecondaryAttributes, Level, SecondaryAttributesContextHandle);
+		ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+	}
 
-	const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes, Level, VitalAttributesContextHandle);
-	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+	if (CharacterClassInfo->VitalAttributes)
+	{
+		const FGameplayEffectSpecHandle VitalAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->VitalAttributes, Level, VitalAttributesContextHandle);
+		ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
+	}
 }
 
 void UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(const UObject* WorldContextObject,
@@ -478,13 +487,12 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 		return FGameplayEffectContextHandle();
 
 	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
-
+	
 	AActor* SourceActor = SourceASC->GetAvatarActor();
-
+	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	TSubclassOf<UGameplayEffect> EffectClass = Params.DamageGameplayEffectClass;
 
 	// 이펙트 컨텍스트 핸들 생성
-	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	EffectContextHandle.AddSourceObject(SourceActor);
 
 	// 충격파 및 넉백 힘 설정

@@ -21,10 +21,6 @@ void AAbilityUpgradeChest::PostNetInit()
 {
 	Super::PostNetInit();
 	
-	UE_LOG(LogTemp, Warning, TEXT("[클라] PostNetInit - bReached: %s / Time: %f"),
-	bReached ? TEXT("true") : TEXT("false"),
-	GetWorld()->GetTimeSeconds());
-	
 	if (bReached)
 		OnRep_Reached();
 }
@@ -69,9 +65,6 @@ void AAbilityUpgradeChest::LoadActor_Implementation()
 				Archive.ArIsSaveGame = true;
 
 				this->Serialize(Archive); 
-				// bReached 상태
-				UE_LOG(LogTemp, Warning, TEXT("[서버] LoadActor - bReached: %s"),
-					bReached ? TEXT("true") : TEXT("false"));
 
 				ForceNetUpdate();
         

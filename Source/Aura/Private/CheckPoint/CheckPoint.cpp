@@ -154,7 +154,7 @@ void ACheckPoint::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 				MapName.RemoveFromStart(World->StreamingLevelsPrefix);
 			
 				AuraGM->SaveWorldState(GetWorld(), MapName);
-				AuraGM->SaveAllCharacters();
+				AuraGM->SaveAllCharacters(this->PlayerStartTag);
 			}
 		}
 

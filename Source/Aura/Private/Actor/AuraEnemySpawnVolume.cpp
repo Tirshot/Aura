@@ -100,7 +100,7 @@ void AAuraEnemySpawnVolume::OnSphereOverlap(UPrimitiveComponent* OverlappedCompo
 	// 오토 런
 	if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(OtherActor))
 	{
-		AuraPC->SetCachedDestination(GetActorLocation());
+		AuraPC->StopAutoRun();
 	}
 	
 	Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);

@@ -35,6 +35,15 @@ void AAuraGameModeBase::BeginPlay()
 
 	OnAllActorsInvincible.AddDynamic(this, &AAuraGameModeBase::SetAllActorsInvincible);
 	OnSetActorInvincible.AddDynamic(this, &AAuraGameModeBase::SetActorInvincible);
+	
+	// 리슨 서버를 플레이어 배열에 추가
+	if (AAuraPlayerController* HostPC = Cast<AAuraPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		if (AAuraGameStateBase* AuraGS = GetGameState<AAuraGameStateBase>())
+		{
+			AuraGS->AddPlayerToArray(HostPC);
+		}
+	}
 }
 
 void AAuraGameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -68,6 +77,19 @@ AActor* AAuraGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
 
 	if (Actors.Num() > 0)
 	{
+		Actors.Sort([](const AActor& A, const AActor& B) 
+		{
+			const APlayerStart* StartA = Cast<APlayerStart>(&A);
+			const APlayerStart* StartB = Cast<APlayerStart>(&B);
+				
+			// 태그를 비교
+			if (StartA && StartB)
+			{
+				return StartA->PlayerStartTag.ToString() < StartB->PlayerStartTag.ToString();
+			}
+				return false;
+		});
+		
 		// 첫 플레이어 스타트를 선택하고, 지정한 플레이어 스타트가 있다면 해당 스타트에서 시작
 		AActor* SelectedActor = Actors[0];
 		for (AActor* Actor : Actors)
@@ -161,13 +183,13 @@ void AAuraGameModeBase::SaveInGameProgressData(ULoadScreenSaveGame* SaveObject)
 	// UGameplayStatics::SaveGameToSlot(SaveObject, InGameLoadSlotName, InGameLoadSlotIndex);
 }
 
-void AAuraGameModeBase::SaveAllCharacters()
+void AAuraGameModeBase::SaveAllCharacters(FName PlayerStartTag)
 {
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(It->Get()))
 		{
-			AuraPC->SaveCharacterProgress();
+			AuraPC->SaveCharacterProgress(PlayerStartTag);
 		}
 	}
 }
@@ -906,7 +928,6 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 		// 아이템 그룹 선택
 		for (const FDropItemGroup& ItemGroup : ItemGroups)
 		{
-			// usable->Equipment->Charm->ETC->None 순으로 계산
 			SumGroupProbability += ItemGroup.GroupProbability;
 				
 			// 당첨
@@ -955,6 +976,9 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 			case EItemGroup::ETC :
 				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'ETC'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
 				continue;
+			case EItemGroup::SpellUpgrade :
+				UE_LOG(LogTemp, Warning, TEXT("%s 몬스터의 드롭 아이템 그룹 'SpellUpgrade'에 아이템이 존재하지 않습니다."), *DeadEnemy->GetName());
+				continue;
 			case EItemGroup::None :
 				continue;
 			}
@@ -964,16 +988,39 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 		float SumItemProbability = 0.f;
 		FItemData DropItemData;
 		bool bFound = false;
+		
+		// 아이템 개별마다 지정된 드랍 갯수
+		int32 ItemDropCounts = 1;
 			
 		// 아이템 후보 내에서 확률 계산
 		for (const auto* Item : SelectedItems)
 		{
 			// 바구니 내의 아이템들의 종합 확률
 			SumItemProbability += Item->DropProbability;
+			ItemDropCounts = Item->DropCount;
 			
 			// 목록 중 최상단부터 계산하기
 			if (RandItemValue <= SumItemProbability)
 			{
+				// 선택된 그룹이 스펠 업그레이드라면 업그레이드 카드를 생성하도록 요청하고 종료
+				if (SelectedGroup == EItemGroup::SpellUpgrade)
+				{
+					for (int j = 0; j < ItemDropCounts; j++)
+					{
+						for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+						{
+							if (APlayerController* PC = It->Get())
+							{
+								if (auto AuraPC = Cast<AAuraPlayerController>(PC))
+								{
+									AuraPC->Server_CreateCardSelection(AuraPC->GetPawn());
+								}
+							}
+						}
+					}
+					return;
+				}
+				
 				if (FItemData* RowData = Item->ItemHandle.GetRow<FItemData>("ItemInfo"))
 				{
 					DropItemData = *RowData;
@@ -988,9 +1035,13 @@ void AAuraGameModeBase::DropItemOnMonsterDied(AAuraEnemy* DeadEnemy, AAuraCharac
 		{
 			// 아이템에 Guid 설정
 			DropItemData.UniqueID = FGuid::NewGuid();
-					
-			// 월드에 아이템 드랍
-			SpawnDropItemActor(KilledBy, DropItemData, DeadEnemy->GetActorLocation());
+			
+			// 아이템 개별마다 지정된 드랍 갯수만큼 반복 드랍
+			for (int j = 0; j < ItemDropCounts; j++)
+			{
+				// 월드에 아이템 드랍
+				SpawnDropItemActor(KilledBy, DropItemData, DeadEnemy->GetActorLocation());
+			}
 		}
 	}
 }

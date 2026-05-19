@@ -7,6 +7,7 @@
 #include "Input/AuraInputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemGlobals.h"
+#include "AIController.h"
 #include "Components/SplineComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
@@ -319,7 +320,7 @@ void AAuraPlayerController::AutoRun()
         if (DistanceToDestination <= AutoRunAcceptanceRadius)
         {
             bAutoRunning = false;
-            Server_StopAutoRun();
+            StopAutoRun();
         }
     }
 }
@@ -383,13 +384,30 @@ void AAuraPlayerController::StopAutoRun()
 {
     bAutoRunning = false;
     
-    if (!IsValid(GetPawn()) || GetPawn()->IsPendingKillPending())
+    APawn* ControlledPawn = GetPawn();
+    if (!IsValid(ControlledPawn))
         return;
+
+    // 눌려 있던 모든 키의 상태를 강제 리셋
+    FlushPressedKeys();
+        
+    // 속도와 가속도 강제 초기화
+    if (ACharacter* ControlledCharacter = Cast<ACharacter>(ControlledPawn))
+    {
+        if (UCharacterMovementComponent* MoveComp = ControlledCharacter->GetCharacterMovement())
+        {
+            MoveComp->StopMovementImmediately(); 
+        }
+    }
+    else
+    {
+        StopMovement(); 
+    }
     
-    CachedDestination = GetPawn()->GetActorLocation();
-    
-    // 서버에게 자동이동 중단 전달
-    Server_StopAutoRun();
+    CachedDestination = ControlledPawn->GetActorLocation();
+    ControlledPawn->AddMovementInput(FVector::ZeroVector);
+
+    // Server_StopAutoRun();
 }
 
 void AAuraPlayerController::BossMonsterBind()
@@ -424,9 +442,12 @@ void AAuraPlayerController::Client_OnBossEventStart_Implementation(AActor* BossA
     {
         if (auto BossCharacter = Cast<AAuraBossMonster>(BossActor))
         {
-            AuraHUD->CreateBossHealthBarWidget(BossCharacter);
-            AuraHUD->HideOverlay();
+            if (!BossCharacter->bNotCreateHealthBar)
+            {
+                AuraHUD->CreateBossHealthBarWidget(BossCharacter);
+            }
         }
+        AuraHUD->HideOverlay();
     }
 
     // 플레이어 입력 방지
@@ -931,7 +952,7 @@ void AAuraPlayerController::HandleInventoryUIInit()
     }
 }
 
-void AAuraPlayerController::Server_SetAutoRunDestination_Implementation(const FVector& Destination, const TArray<FVector>& PathPoints)
+void AAuraPlayerController::SetAutoRunDestination(const FVector& Destination, const TArray<FVector>& PathPoints)
 {
     CachedDestination = Destination;
     bAutoRunning = true;
@@ -943,12 +964,12 @@ void AAuraPlayerController::Server_SetAutoRunDestination_Implementation(const FV
     }
 }
 
-void AAuraPlayerController::Server_StopAutoRun_Implementation()
-{
-    bAutoRunning = false;
-    if (GetPawn())
-        CachedDestination = GetPawn()->GetActorLocation();
-}
+// void AAuraPlayerController::Server_StopAutoRun_Implementation()
+// {
+//     bAutoRunning = false;
+//     if (GetPawn())
+//         CachedDestination = GetPawn()->GetActorLocation();
+// }
 
 
 void AAuraPlayerController::Client_RemoveCardSelection_Implementation()
@@ -962,14 +983,14 @@ void AAuraPlayerController::Client_RemoveCardSelection_Implementation()
     }
 }
 
-void AAuraPlayerController::SaveCharacterProgress_Implementation()
+void AAuraPlayerController::SaveCharacterProgress_Implementation(FName PlayerStartTag)
 {
     if (!GetPawn() || GetPawn()->IsPendingKillPending())
         return;
     
     if (GetPawn()->Implements<UPlayerInterface>())
     {
-        IPlayerInterface::Execute_SaveProgress( GetPawn(), "");
+        IPlayerInterface::Execute_SaveProgress( GetPawn(), PlayerStartTag);
     }
 }
 
@@ -1564,8 +1585,6 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
     if (ASC)
         ASC->AbilityInputTagPressed(InputTag);
-    
-    StopAutoRun();
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
@@ -1628,7 +1647,7 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                         bAutoRunning = true;
                         
                         // 서버로 이동 경로 전달
-                        Server_SetAutoRunDestination(CachedDestination, NavPath->PathPoints);
+                        SetAutoRunDestination(CachedDestination, NavPath->PathPoints);
                     }
                 }
             }

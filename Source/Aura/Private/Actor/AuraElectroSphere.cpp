@@ -50,11 +50,21 @@ void AAuraElectroSphere::OnHit()
 
 void AAuraElectroSphere::Destroyed()
 {
-	// if (LoopingSoundComponent)
-	// {
-	// 	LoopingSoundComponent->Stop();
-	// 	LoopingSoundComponent->DestroyComponent();
-	// }
+	// 범위를 벗어난 적에게서 게임플레이 큐 제거
+	FGameplayTag GameplayCueTag = FGameplayTag::RequestGameplayTag("GameplayCue.ElectroSphere");
+	
+	for (AActor* Enemy : AdditionalOverlappingActors)
+	{
+		if (UAbilitySystemComponent* EnemyASC = Cast<AAuraEnemy>(Enemy)->GetAbilitySystemComponent())
+		{
+			EnemyASC->RemoveGameplayCue(GameplayCueTag);
+
+			if (Enemy->Implements<UCombatInterface>())
+			{
+				ICombatInterface::Execute_SetIsBeingShocked(Enemy, false);
+			}
+		}
+	}
 	
 	Super::Destroyed();
 }

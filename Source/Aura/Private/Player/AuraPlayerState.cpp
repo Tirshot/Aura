@@ -161,6 +161,9 @@ void AAuraPlayerState::AddToAttributePoints(int32 InAP)
 {
     AttributePoints += InAP;
     OnAttributePointChangedDelegate.Broadcast(AttributePoints);
+    
+    if (InAP > 0)
+        UAuraAbilitySystemLibrary::AddMessageToActor(GetPlayerController()->GetPawn(), FGameplayTag::RequestGameplayTag(FName("Message.GetAttributePoints"), false), FText::AsNumber(InAP));
 }
 
 void AAuraPlayerState::SetSpellPoints(int32 InSP)
@@ -173,6 +176,9 @@ void AAuraPlayerState::AddToSpellPoints(int32 InSP)
 {
     SpellPoints += InSP;
     OnSpellPointChangedDelegate.Broadcast(SpellPoints);
+    
+    if (InSP > 0)
+        UAuraAbilitySystemLibrary::AddMessageToActor(GetPlayerController()->GetPawn(), FGameplayTag::RequestGameplayTag(FName("Message.GetSpellPoints"), false), FText::AsNumber(InSP));
 }
 
 void AAuraPlayerState::SetHealth(const float InHealth)

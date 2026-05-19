@@ -91,7 +91,7 @@ public:
 	
 public:
 	// 저장 슬롯
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FName PlayerStartTag = FName();
 	
 	UPROPERTY(BlueprintReadOnly)

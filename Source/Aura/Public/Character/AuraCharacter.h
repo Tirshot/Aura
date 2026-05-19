@@ -103,7 +103,7 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_ApplyClientInventory(const TArray<FInventorySlot>& InventorySlots, const FEquipmentSlotList& EquipmentSlots);
 
-private:
+public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLevelUpParticles() const;
 

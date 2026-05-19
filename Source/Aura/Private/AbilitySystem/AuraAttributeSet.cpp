@@ -338,10 +338,19 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
             }
 
             // 넉백 적용
-            const FVector& KnockbackForce = UAuraAbilitySystemLibrary::GetKnockbackForce(Props.EffectContextHandle);
-            if (KnockbackForce.IsNearlyZero(10.f) == false)
+            if (Props.TargetCharacter->Implements<UCombatInterface>())
             {
-                Props.TargetCharacter->LaunchCharacter(KnockbackForce, true, true);
+                if (!ICombatInterface::Execute_GetIgnoreKnockback(Props.TargetCharacter))
+                {
+                    const FVector& KnockbackForce = UAuraAbilitySystemLibrary::GetKnockbackForce(Props.EffectContextHandle);
+                    if (KnockbackForce.IsNearlyZero(10.f) == false)
+                    {
+                        Props.TargetCharacter->LaunchCharacter(KnockbackForce, true, true);
+                    }
+                }
+                
+                // 데미지 누적량
+                ICombatInterface::Execute_AddTotalReceivedDamage(Props.TargetCharacter, LocalIncomingDamage);
             }
         }
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MissionActor.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "Engine/TargetPoint.h"
 #include "AuraEnemySpawnPoint.generated.h"
@@ -27,6 +28,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Class")
 	ECharacterClass CharacterClass = ECharacterClass::Warrior;
+	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Mission")
+	TArray<TObjectPtr<AMissionActor>> MissionActors;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Class")
 	bool bXPOverride = false;

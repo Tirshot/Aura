@@ -4,6 +4,7 @@
 #include "CheckPoint/MapEntrance.h"
 
 #include "Components/SphereComponent.h"
+#include "Game/AuraGameInstance.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/PlayerInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -46,7 +47,7 @@ void AMapEntrance::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AAc
 			FString MapName = AuraGM->GetMapNameFromMapAssetName(DestinationMap.ToSoftObjectPath().GetAssetName());
 			
 			// 캐릭터 저장
-			AuraGM->SaveAllCharacters();
+			AuraGM->SaveAllCharacters(DestinationPlayerStartTag);
 			
 			// 서버 이동 및 저장
 			AuraGM->SaveWorldStateAndTravel(GetWorld(), MapName);

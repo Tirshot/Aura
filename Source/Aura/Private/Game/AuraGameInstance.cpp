@@ -135,9 +135,6 @@ void UAuraGameInstance::OnPreLoadMap(const FString& MapName)
 		float MaxMP = AS->GetMaxMana();
 		float MP = AS->GetMana();
 
-		UE_LOG(LogTemp, Warning, TEXT("[%s] PreLoadMap - HP: %.1f/%.1f MP: %.1f/%.1f"),
-			*AuraPS->GetPlayerName(), HP, MaxHP, MP, MaxMP);
-
 		AuraPS->Charm->SavedHPRatio = (MaxHP > 0.f) ? (HP / MaxHP) : 1.f;
 		AuraPS->Charm->SavedMPRatio = (MaxMP > 0.f) ? (MP / MaxMP) : 1.f;
 		AuraPS->Charm->bHasSavedRatio = true;
@@ -234,10 +231,17 @@ void UAuraGameInstance::DestroySession()
 		IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
 		if (SessionInterface.IsValid())
 		{
+			// 세션 제거 델리게이트
+			DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+				FOnDestroySessionCompleteDelegate::CreateUObject(this, &UAuraGameInstance::OnDestroySessionComplete)
+			);
+			
 			// 기존 세션 제거
 			SessionInterface->DestroySession(NAME_GameSession);
 		}
 	}
+	// 세션이 없으면 즉시 맵 전환
+	OnDestroySessionComplete(NAME_GameSession, false);
 }
 
 void UAuraGameInstance::CancelFindSession()
@@ -421,7 +425,14 @@ void UAuraGameInstance::OnDestroySessionComplete(FName SessionName, bool bWasSuc
 		{
 			SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
 		}
-
+		
+		APlayerController* PC = GetFirstLocalPlayerController();
+		if (PC)
+		{
+			// 메인 메뉴 레벨로 안전하게 이동시키기 (기존 접속 끊기)
+			PC->ClientTravel("/Game/Maps/MainMenu", ETravelType::TRAVEL_Absolute);
+		}
+		
 		if (bWasSuccessful)
 		{
 			UE_LOG(LogTemp, Log, TEXT("Session %s Destroyed by Shutdown"), *SessionName.ToString());

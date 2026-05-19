@@ -75,9 +75,5 @@ void UAuraSpinningBeam::SpawnBeam()
 		Beam->FinishSpawning(SpawnTransform);
 		Beam->SetLifeSpan(BeamLifeSpan);
 		Beam->SetOwner(GetAvatarActorFromActorInfo());
-		
-		FGameplayCueParameters CueParams;
-		CueParams.SourceObject = Beam;
-		CueParams.TargetAttachComponent = AvatarActor->GetRootComponent();
 	}
 }

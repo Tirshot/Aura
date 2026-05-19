@@ -137,11 +137,11 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RemoveCardSelection(AActor* InteractedActor);
 	
-	UFUNCTION(Server, Reliable)
-	void Server_SetAutoRunDestination(const FVector& Destination, const TArray<FVector>& PathPoints);
+	UFUNCTION()
+	void SetAutoRunDestination(const FVector& Destination, const TArray<FVector>& PathPoints);
 
-	UFUNCTION(Server, Reliable)
-	void Server_StopAutoRun();
+	// UFUNCTION(Server, Reliable)
+	// void Server_StopAutoRun();
 	
 	// 선택된 업그레이드를 저장하도록 PlayerState로 보냄
 	UFUNCTION(Server, Reliable)
@@ -163,7 +163,7 @@ public:
 	void Server_CharacterInfiniteMana(bool bInfiniteMana);
 	
 	UFUNCTION(Client, Reliable)
-	void SaveCharacterProgress();
+	void SaveCharacterProgress(FName PlayerStartTag = FName());
 	
 	UFUNCTION(Server, Reliable)
 	void Server_ReviveFromPlayerStart();

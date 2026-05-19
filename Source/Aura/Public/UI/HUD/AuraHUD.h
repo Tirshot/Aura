@@ -6,8 +6,10 @@
 #include "GameFramework/HUD.h"
 #include "UI/ViewModel/MVVM_Inventory.h"
 #include "UI/Widget/AuraOverlayWidget.h"
+#include "UI/WidgetController/MissionWidgetController.h"
 #include "AuraHUD.generated.h"
 
+class UMissionCinematicWidget;
 class AAuraBossMonster;
 class UItemToolTipWidgetController;
 class USettingsMenuWidgetController;
@@ -40,6 +42,7 @@ public:
 	UGameOverWidgetController* GetGameOverWidgetController(const FWidgetControllerParams& WCParams);
 	USaveProgressWidgetController* GetSaveProgressWidgetController(const FWidgetControllerParams& WCParams);
 	UItemToolTipWidgetController* GetItemToolTipWidgetController(const FWidgetControllerParams& WCParams);
+	UMissionWidgetController* GetMissionWidgetController(const FWidgetControllerParams& WCParams);
 	UMVVM_CardSelection* GetCardSelectionViewModel();
 	UMVVM_DebugMenu* GetDebugMenuViewModel(const FWidgetControllerParams& WCParams);
 	UMVVM_Inventory* GetInventoryViewModel(const FWidgetControllerParams& WCParams);
@@ -64,12 +67,18 @@ public:
 	void CreateMessageWidget(TSubclassOf<UAuraUserWidget> MessageWidgetClass, FText Message, UTexture2D* Icon);
 	
 	UFUNCTION()
-	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
-
-	UFUNCTION()
-	void ShowOverlay();
+	void CreateMissionWidget(const FMissionDataArray& CurrentMissions);
 	
 	UFUNCTION()
+	void CreateMissionCinematicWidget(const FText& TitleText, const FText& DescriptionText);
+	
+	UFUNCTION()
+	void HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& UpgradeInfos);
+
+	UFUNCTION(BlueprintCallable)
+	void ShowOverlay();
+	
+	UFUNCTION(BlueprintCallable)
 	void HideOverlay();
 	
 	UFUNCTION()
@@ -132,6 +141,24 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UItemToolTipWidgetController> ItemToolTipWidgetControllerClass;
+	
+	UPROPERTY(EditAnywhere, Category = "Missions")
+	TSubclassOf<UAuraUserWidget> MissionStackWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UAuraUserWidget> MissionStackWidget;
+	
+	UPROPERTY(EditAnywhere, Category = "Missions")
+	TSubclassOf<UAuraUserWidget> MissionCinematicWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UMissionCinematicWidget> MissionCinematicWidget;
+	
+	UPROPERTY()
+	TObjectPtr<UMissionWidgetController> MissionWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UMissionWidgetController> MissionWidgetControllerClass;
 
 	UPROPERTY()
 	TObjectPtr<UAuraUserWidget> BossHealthBarWidget;

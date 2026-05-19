@@ -25,7 +25,7 @@ public:
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	int32 NumProjectiles = 0;
+	int32 NumProjectiles = 1;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Firebolt")
 	float ProjectileSpread = 90.f;

@@ -19,7 +19,8 @@ enum class EItemGroup : uint8
 	Equipment = 1,
 	Charm = 2,
 	ETC = 3,
-	None = 4 // 아이템 미등장 확률 계산 용
+	SpellUpgrade = 4,
+	None = 5 // 아이템 미등장 확률 계산 용
 };
 
 UENUM(BlueprintType)
@@ -206,6 +207,10 @@ struct FDropItemProbability: public FTableRowBase
 	// 드롭 확률 (0~100)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float DropProbability = 10.f;
+	
+	// 드롭 갯수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 DropCount = 1;
 };
 
 USTRUCT(BlueprintType)

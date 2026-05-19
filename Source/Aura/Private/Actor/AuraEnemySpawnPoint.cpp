@@ -16,6 +16,7 @@ void AAuraEnemySpawnPoint::SpawnEnemy()
 	Enemy->SetCharacterClass(CharacterClass);
 	Enemy->SetXPOverride(bXPOverride);
 	Enemy->SetXPOverrideValue(XPOverrideValue);
+	Enemy->SetMissionActor(MissionActors);
 	Enemy->FinishSpawning(GetActorTransform());
 	Enemy->SpawnDefaultController();
 }

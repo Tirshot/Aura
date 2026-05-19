@@ -95,7 +95,7 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 
 	if (!bNumProjectileOverride)
 	{
-		EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectiles + AbilityLevel);
+		EffectiveNumProjectiles = FMath::Min(MaxNumProjectiles, NumProjectiles + FMath::DivideAndRoundDown(AbilityLevel, 2));
 	}
 	else
 	{
