@@ -9,6 +9,7 @@
 #include "Player/AuraPlayerController.h"
 #include "MissionActor.generated.h"
 
+class ULevelSequence;
 class ALevelSequenceActor;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndMission);
 
@@ -77,9 +78,9 @@ protected:
 	
 	UPROPERTY(EditInstanceOnly, Category = "Mission")
 	TObjectPtr<AActor> TargetBoss;
-
-	UPROPERTY(EditInstanceOnly, Category = "Mission")
-	TObjectPtr<ALevelSequenceActor> LevelSequenceActor;
+	
+	UPROPERTY(EditAnywhere, Category = "Mission")
+	TObjectPtr<ULevelSequence> MissionSequenceAsset;
 
 	UPROPERTY(EditInstanceOnly, Category = "Mission")
 	bool bEndMissionEarly = false;

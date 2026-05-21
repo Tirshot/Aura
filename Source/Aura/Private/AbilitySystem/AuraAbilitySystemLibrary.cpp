@@ -478,7 +478,7 @@ int32 UAuraAbilitySystemLibrary::GetXPRewardForClassAndLevel(const UObject* Worl
 	return static_cast<int32>(XP);
 }
 
-FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const FDamageEffectParams& Params)
+FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const FDamageEffectParams& Params, const FHitResult& HitResult)
 {
 	UAuraAbilitySystemComponent* SourceASC = Cast<UAuraAbilitySystemComponent>(Params.SourceAbilitySystemComponent);
 	UAuraAbilitySystemComponent* TargetASC = Cast<UAuraAbilitySystemComponent>(Params.TargetAbilitySystemComponent);
@@ -492,6 +492,10 @@ FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(const 
 	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
 	TSubclassOf<UGameplayEffect> EffectClass = Params.DamageGameplayEffectClass;
 
+	// 투사체 적중 이펙트 정렬을 위한 HitResult 정보 추가
+	if (HitResult.bBlockingHit || HitResult.GetActor() || HitResult.ImpactPoint != FVector::ZeroVector)
+		EffectContextHandle.AddHitResult(HitResult);
+	
 	// 이펙트 컨텍스트 핸들 생성
 	EffectContextHandle.AddSourceObject(SourceActor);
 

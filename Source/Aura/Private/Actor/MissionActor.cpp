@@ -3,19 +3,20 @@
 
 #include "Actor/MissionActor.h"
 
+#include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
 #include "Character/AuraCharacter.h"
 #include "Game/AuraGameModeBase.h"
 #include "Game/AuraGameStateBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
-#include "Runtime/LevelSequence/Public/LevelSequenceActor.h"
 #include "UI/HUD/AuraHUD.h"
 
 AMissionActor::AMissionActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
+	bReplicates = true;
 }
 
 void AMissionActor::BeginPlay()
@@ -39,7 +40,7 @@ void AMissionActor::Tick(float DeltaTime)
 
 void AMissionActor::StartMission()
 {
-	Multicast_PlayCinematic_Implementation();
+	Multicast_PlayCinematic();
 	
 	if (!HasAuthority())
 		return;
@@ -170,9 +171,16 @@ void AMissionActor::EndMission(bool bSucceed)
 
 void AMissionActor::Multicast_PlayCinematic_Implementation()
 {
-	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	if (PC && PC->IsLocalController())
 	{
+		// 입력 방지
+		if (auto* AuraPC = Cast<AAuraPlayerController>(PC))
+		{
+			AuraPC->StopAutoRun();
+			AuraPC->SetPlayerInputEnable(false);
+		}
+		
 		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
 		{
 			AuraHUD->HideOverlay();
@@ -180,19 +188,39 @@ void AMissionActor::Multicast_PlayCinematic_Implementation()
 		}
 	}
 	
-	if (IsValid(LevelSequenceActor))
+	// 시퀀스 에셋을 직접 가져와 생성
+	if (MissionSequenceAsset)
 	{
-		// 시퀀스 종료 바인딩
-		LevelSequenceActor->GetSequencePlayer()->OnFinished.AddDynamic(this, &AMissionActor::OnCinematicFinished);
-		LevelSequenceActor->GetSequencePlayer()->Play();
+		ALevelSequenceActor* MissionSequenceActor = nullptr;
+		ULevelSequencePlayer* LocalPlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(
+			GetWorld(), 
+			MissionSequenceAsset, 
+			FMovieSceneSequencePlaybackSettings(), 
+			MissionSequenceActor
+		);
+
+		if (LocalPlayer && MissionSequenceActor)
+		{
+			// 로컬 전용 재생
+			MissionSequenceActor->SetReplicates(false);
+
+			LocalPlayer->OnFinished.AddDynamic(this, &AMissionActor::OnCinematicFinished);
+			LocalPlayer->Play();
+		}
 	}
 }
 
 void AMissionActor::OnCinematicFinished()
 {
-	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	if (PC && PC->IsLocalController())
 	{
+		// 입력 방지 해제
+		if (auto* AuraPC = Cast<AAuraPlayerController>(PC))
+		{
+			AuraPC->SetPlayerInputEnable(true);
+		}
+		
 		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
 		{
 			AuraHUD->ShowOverlay();
@@ -244,6 +272,9 @@ void AMissionActor::ApplyMissionEffectToPC(AAuraPlayerController* JoinedPC)
 
 void AMissionActor::ReportValue(const FGameplayTag& ObjectiveTag, float Value)
 {
+	if (!IsValid(this))
+		return;
+	
 	if (!HasAuthority() || !DynamicMissionData.bIsActive)
 		return;
 	

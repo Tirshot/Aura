@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "GameplayCueManager.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Aura/Aura.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -69,34 +70,53 @@ void AAuraProjectile::Destroyed()
 void AAuraProjectile::OnHit()
 {
 	bHit = true;
+	
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ImpactEffect, GetActorLocation());
 }
 
 void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!HasAuthority())
+		return;
+		
 	if (bCheckValidOverlap && IsValidOverlap(OtherActor) == false)
 		return;
 
 	if (bHit == false)
 		OnHit();
 
-	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor))
 	{
-		FGameplayCueParameters CueParams;
-		CueParams.Location = GetActorLocation();
-		CueParams.Instigator = GetOwner();
-		CueParams.EffectCauser = this;
-		CueParams.SourceObject = this;
-		ASC->ExecuteGameplayCue(ImpactGameplayCue, CueParams);
+		// ASC를 가진 액터 데미지 판정
+		ApplyDamage(OtherActor, SweepResult);
 	}
-	
-	// 데미지 판정
-	ApplyDamage(OtherActor);
+	else
+	{
+		// 일반 벽, 바닥 등, 로컬에서 이펙트 호출
+		// if (UGameplayCueManager* CueManager = UAbilitySystemGlobals::Get().GetGameplayCueManager())
+		// {
+		// 	FGameplayCueParameters CueParams;
+		// 	if (SweepResult.bBlockingHit)
+		// 	{
+		// 		CueParams.Location = SweepResult.ImpactPoint;
+		// 	}
+		// 	else
+		// 	{
+		// 		CueParams.Location = GetActorLocation();
+		// 	}
+		// 	CueParams.Instigator = GetOwner();
+		// 	CueParams.EffectCauser = this;
+		// 	CueParams.SourceObject = this;
+		// 	
+		// 	CueManager->HandleGameplayCue(OtherActor, ImpactGameplayCue, EGameplayCueEvent::Executed, CueParams);
+		// }
+	}
 	
 	// 파괴
 	Destroy();
 }
 
-void AAuraProjectile::ApplyDamage(AActor* OtherActor)
+void AAuraProjectile::ApplyDamage(AActor* OtherActor, const FHitResult& HitResult)
 {
 	if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 	{
@@ -115,7 +135,7 @@ void AAuraProjectile::ApplyDamage(AActor* OtherActor)
 		}
 
 		DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
-		UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
+		UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams, HitResult);
 	}
 	else
 		bHit = true;

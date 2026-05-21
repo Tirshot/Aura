@@ -248,6 +248,9 @@ void UAuraDamageGameplayAbility::HideMagicCircleAndRangeIndicator()
 
 AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(FVector Location, bool bAttachToActor, ERangeShape RangeShape, float Radius, float Width, float Height, FVector RGB, float LifeSpan)
 {
+	if (!HasAuthority(&CurrentActivationInfo)) 
+		return nullptr;
+	
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (!AvatarActor)
 		return nullptr;
@@ -262,7 +265,7 @@ AAbilityRangeIndicator* UAuraDamageGameplayAbility::SpawnRangeIndicator(FVector 
 	if (RGB == FVector::ZeroVector)
 		RGB = FVector(5.f, 0.f, 0.f);
 	
-	RangeIndicator->IndicatorInitialized.Broadcast(AvatarActor, bAttachToActor, RangeShape, Location, Radius, Width, Height/2, 0.f, RGB);
+	RangeIndicator->InitializeIndicatorParams(AvatarActor, bAttachToActor, RangeShape, Location, Radius, Width, Height / 2, 0.f, RGB);
 
 	return RangeIndicator;
 }

@@ -23,7 +23,7 @@ protected:
 	
 public:
 	UFUNCTION(BlueprintCallable)
-	void SpawnBeam();
+	void SpawnBeam(float StartAngle);
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void BeamDestroyed();

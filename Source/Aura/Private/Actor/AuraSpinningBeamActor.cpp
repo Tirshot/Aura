@@ -154,17 +154,18 @@ void AAuraSpinningBeamActor::ApplyTickDamage()
 		if (!IsValid(TargetActor) || !UAuraAbilitySystemLibrary::IsNotFriend(GetOwner(), TargetActor))
 			continue;
 		
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			GetWorld(), 
-			BeamImpactNiagara,
-			HitResult.ImpactPoint,
-			FRotator::ZeroRotator
-		);
-		
 		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(HitResult.GetActor());
 		if (!TargetASC)
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(), 
+				BeamImpactNiagara,
+				HitResult.ImpactPoint,
+				FRotator::ZeroRotator
+			);
+			
 			continue;
-		
+		}
 		DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
 		DamageEffectParams.SourceAbilitySystemComponent = SourceASC;
 		DamageEffectParams.WorldContextObject = this;
@@ -187,6 +188,6 @@ void AAuraSpinningBeamActor::ApplyTickDamage()
 		}
 		
 		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, TangentVector, TargetActor->GetActorRotation(), 1.f);
-		UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
+		UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams, HitResult);
 	}
 }

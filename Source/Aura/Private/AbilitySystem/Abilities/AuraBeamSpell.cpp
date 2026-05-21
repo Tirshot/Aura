@@ -49,21 +49,31 @@ void UAuraBeamSpell::EndAbility(const FGameplayAbilitySpecHandle Handle, const F
 	
 	DamageCostTimerHandle.Invalidate();
 	
-	OwnerPlayerController->bShowMouseCursor = true;
-	ICombatInterface::Execute_SetInShockLoop(OwnerCharacter, false);
-	OwnerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	if (OwnerPlayerController)
+	{
+		OwnerPlayerController->bShowMouseCursor = true;
+	}
+	
+	if (OwnerCharacter)
+	{
+		ICombatInterface::Execute_SetInShockLoop(OwnerCharacter, false);
+		OwnerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
 	
 	if (bFirstTargetHasCombatInterface)
 	{
-		ICombatInterface::Execute_SetIsBeingShocked(MouseHitActor, false);
-		if (auto* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MouseHitActor))
+		if (MouseHitActor)
 		{
-			ASC->RemoveGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ShockLoop"));
+			ICombatInterface::Execute_SetIsBeingShocked(MouseHitActor, false);
+			if (auto* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MouseHitActor))
+			{
+				ASC->RemoveGameplayCue(FGameplayTag::RequestGameplayTag("GameplayCue.ShockLoop"));
 			
-			// 마지막 한 틱 데미지 적용
-			FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults(MouseHitActor);
-			Params.TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MouseHitActor);
-			UAuraAbilitySystemLibrary::ApplyDamageEffect(Params);
+				// 마지막 한 틱 데미지 적용
+				FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults(MouseHitActor);
+				Params.TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MouseHitActor);
+				UAuraAbilitySystemLibrary::ApplyDamageEffect(Params, HitResult);
+			}
 		}
 	}
 	else
@@ -86,7 +96,10 @@ void UAuraBeamSpell::EndAbility(const FGameplayAbilitySpecHandle Handle, const F
 		// 마지막 한 틱 데미지 적용
 		FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults(Target);
 		Params.TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-		UAuraAbilitySystemLibrary::ApplyDamageEffect(Params);
+		
+		FHitResult AdditionalHitResult;
+		AdditionalHitResult.ImpactPoint = Target->GetActorLocation();
+		UAuraAbilitySystemLibrary::ApplyDamageEffect(Params, AdditionalHitResult);
 	}
 	
 	// 쿨다운 적용
@@ -100,7 +113,7 @@ void UAuraBeamSpell::EndAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 void UAuraBeamSpell::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& DataHandle)
 {
-	FHitResult HitResult = *DataHandle.Data[0]->GetHitResult();
+	HitResult = *DataHandle.Data[0]->GetHitResult();
 	StoreMouseDataInfo(HitResult);
 	
 	if (!HitResult.bBlockingHit)
@@ -277,7 +290,7 @@ void UAuraBeamSpell::ApplyDamage()
 		{
 			FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults();
 			Params.TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MouseHitActor);
-			UAuraAbilitySystemLibrary::ApplyDamageEffect(Params);
+			UAuraAbilitySystemLibrary::ApplyDamageEffect(Params, HitResult);
 		}
 	
 		for (const auto& Target : AdditionalTargetActors)
@@ -286,7 +299,9 @@ void UAuraBeamSpell::ApplyDamage()
 			{
 				FDamageEffectParams Params = MakeDamageEffectParamsFromClassDefaults();
 				Params.TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-				UAuraAbilitySystemLibrary::ApplyDamageEffect(Params);
+				FHitResult AdditionalHitResult;
+				AdditionalHitResult.ImpactPoint = Target->GetActorLocation();
+				UAuraAbilitySystemLibrary::ApplyDamageEffect(Params, AdditionalHitResult);
 			}
 		}
 	}
@@ -296,8 +311,10 @@ void UAuraBeamSpell::ApplyDamage()
 	}
 }
 
-void UAuraBeamSpell::StoreMouseDataInfo(const FHitResult& HitResult)
+void UAuraBeamSpell::StoreMouseDataInfo(const FHitResult& InHitResult)
 {
+	HitResult = InHitResult;
+	
 	if (HitResult.bBlockingHit)
 	{
 		MouseHitLocation = HitResult.ImpactPoint;
@@ -339,7 +356,6 @@ void UAuraBeamSpell::TraceFirstTarget(const FVector& BeamTargetLocation)
 			TArray<AActor*> ActorsToIgnore;
 			ActorsToIgnore.Add(OwnerCharacter);
 
-			FHitResult HitResult;
 			const FVector SocketLocation = Weapon->GetSocketLocation(FName("TipSocket"));
 
 			UKismetSystemLibrary::SphereTraceSingle(

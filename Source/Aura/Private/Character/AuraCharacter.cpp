@@ -708,6 +708,12 @@ void AAuraCharacter::Die(const FVector& DeathImpulse, AAuraCharacter* KilledBy)
     // 랙돌 효과 발생
     Super::Die(DeathImpulse, KilledBy);
     
+    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+    {
+        // 모든 어빌리티 비활성화
+        ASC->CancelAllAbilities(); 
+    }
+    
     // IMC 해제
     if (auto AuraPC = GetController<AAuraPlayerController>())
     {

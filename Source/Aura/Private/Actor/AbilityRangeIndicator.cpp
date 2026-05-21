@@ -49,16 +49,15 @@ void AAbilityRangeIndicator::GetLifetimeReplicatedProps(TArray<class FLifetimePr
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AAbilityRangeIndicator, IndicatorColor);
-	DOREPLIFETIME(AAbilityRangeIndicator, RangeShape);
 	DOREPLIFETIME(AAbilityRangeIndicator, bRotate);
 	DOREPLIFETIME(AAbilityRangeIndicator, RotationSpeed);
+	DOREPLIFETIME(AAbilityRangeIndicator, RangeParams);
 }
 
 void AAbilityRangeIndicator::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	IndicatorInitialized.AddDynamic(this, &AAbilityRangeIndicator::ShowIndicator);
 	DynamicMI = DecalComponent->CreateDynamicMaterialInstance();
 }
 
@@ -101,135 +100,152 @@ void AAbilityRangeIndicator::ShowIndicatorOwnerOnly()
 	}
 }
 
-void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape,
-                                           const FVector& StartLocation, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
+void AAbilityRangeIndicator::InitializeIndicatorParams(AActor* InAvatarActor, bool bInAttachToActor,
+	ERangeShape InShape, const FVector& InStartLocation, float InRadius, float InWidth, float InHeight, float InAngle,
+	const FVector& InRGB)
 {
-	Radius = InRadius;
-	Width = InWidth;
-	Height = InHeight;
-	ConeAngle = InAngle;
-	RangeShape = Shape;
-
-	FVector Color = RGB / 100.f;
-
-	// 다이내믹 머티리얼의 값 변경
-	IndicatorColor = Color;
+	// 서버에서 데이터 넣기
+	SetOwner(InAvatarActor);
 	
-	// 데칼 모양 레플리케이션, 다이내믹 머티리얼 인스턴스 생성 후 색 변경
-	// 몬스터를 제외하고, 소유자에게만 데칼 보임
-	UpdateDecalVisual();
-	
-	FHitResult HitResult;
-	FCollisionQueryParams CollisionQueryParams;
-	CollisionQueryParams.AddIgnoredActor(AvatarActor);
-	
-	FVector HitStart = StartLocation + FVector(0.f, 0.f, -300.f);
-	FVector HitEnd = StartLocation + FVector(0.f, 0.f, 300.f);
-	
-	if (bRotate)
-	{
-		RotateStartLocation = StartLocation;
-	}
-	
-	GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
-	FVector ImpactPoint = HitResult.ImpactPoint;
+	RangeParams.bAttachToActor = bInAttachToActor;
+	RangeParams.RangeShape = InShape;
+	RangeParams.StartLocation = InStartLocation;
+	RangeParams.Radius = InRadius;
+	RangeParams.Width = InWidth;
+	RangeParams.Height = InHeight;
+	RangeParams.ConeAngle = InAngle;
+	RangeParams.IndicatorColor = InRGB / 100.f;
 
-	// Shape에 따른 데칼 모양과 크기 결정
-	switch (Shape)
-	{
-	case ERangeShape::ERS_Circle:	
-		{
-			if (IsValid(CircleMaterial))
-			{
-				DecalComponent->SetMaterial(0, CircleMaterial);
-				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
-				OnRep_IndicatorColor();
-			}
-			
-			// 액터에게 붙일 경우
-			if (bAttachToActor)
-			{
-				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
-		
-				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
-			}
-			else // 월드에 소환할 경우
-			{
-				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
-			}
-			// 반지름 값에 따라 데칼 크기 수정
-			float Scale = Radius / 200.f;
-			SetActorScale3D(FVector(1.0f, Scale, Scale));
-			break;
-		}
+	// 멤버 변수들 대입
+	IndicatorColor = RangeParams.IndicatorColor;
 
-	case ERangeShape::ERS_Rectangle:
-		{
-			if (IsValid(RectMaterial))
-			{
-				DecalComponent->SetMaterial(0, RectMaterial);
-				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
-				OnRep_IndicatorColor();
-			}
-			
-			// 액터에게 붙일 경우
-			if (bAttachToActor)
-			{
-				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
-				
-				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
-				
-				// 몬스터의 데칼만 옮김
-				if (Cast<AAuraEnemy>(AvatarActor))
-					DecalComponent->SetRelativeLocation(FVector(Height, 0.f, 0.f));
-			}
-			else // 월드에 소환할 경우
-			{
-				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
-			}
-			SetActorScale3D(FVector(1.0f, Width / DecalComponent->DecalSize.Y, Height / DecalComponent->DecalSize.Z));
-			break;
-		}
-		
-	case ERangeShape::ERS_RectangleAndCircle:
-		{
-			if (IsValid(RectMaterial))
-			{
-				DecalComponent->SetMaterial(0, RectMaterial);
-				OnRep_IndicatorColor();
-				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
-			}
-			
-			// 액터에게 붙일 경우
-			if (bAttachToActor)
-			{
-				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
-		
-				SetActorRelativeLocation(FVector(Height, 0.f, RelativeLocation.Z));
-			}
-			else // 월드에 소환할 경우
-			{
-				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
-			}
-			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
-			break;
-		}
-
-	case ERangeShape::ERS_Cone:
-		{
-
-			break;
-		}
-	}
+	// 2. 호스트(리슨 서버 플레이어)를 위해 즉시 비주얼 생성
+	InitIndicatorVisual();
 }
+
+// void AAbilityRangeIndicator::ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape,
+//                                            const FVector& StartLocation, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& RGB)
+// {
+// 	FVector Color = RGB / 100.f;
+//
+// 	// 다이내믹 머티리얼의 값 변경
+// 	IndicatorColor = Color;
+// 	
+// 	// 데칼 모양 레플리케이션, 다이내믹 머티리얼 인스턴스 생성 후 색 변경
+// 	// 몬스터를 제외하고, 소유자에게만 데칼 보임
+// 	UpdateDecalVisual();
+// 	
+// 	FHitResult HitResult;
+// 	FCollisionQueryParams CollisionQueryParams;
+// 	CollisionQueryParams.AddIgnoredActor(AvatarActor);
+// 	
+// 	FVector HitStart = StartLocation + FVector(0.f, 0.f, -300.f);
+// 	FVector HitEnd = StartLocation + FVector(0.f, 0.f, 300.f);
+// 	
+// 	if (bRotate)
+// 	{
+// 		RotateStartLocation = StartLocation;
+// 	}
+// 	
+// 	GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
+// 	FVector ImpactPoint = HitResult.ImpactPoint;
+//
+// 	// Shape에 따른 데칼 모양과 크기 결정
+// 	switch (Shape)
+// 	{
+// 	case ERangeShape::ERS_Circle:	
+// 		{
+// 			if (IsValid(CircleMaterial))
+// 			{
+// 				DecalComponent->SetMaterial(0, CircleMaterial);
+// 				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+// 				OnRep_IndicatorColor();
+// 			}
+// 			
+// 			// 액터에게 붙일 경우
+// 			if (bAttachToActor)
+// 			{
+// 				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+// 				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+// 		
+// 				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
+// 			}
+// 			else // 월드에 소환할 경우
+// 			{
+// 				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
+// 			}
+// 			// 반지름 값에 따라 데칼 크기 수정
+// 			float Scale = Radius / 200.f;
+// 			SetActorScale3D(FVector(1.0f, Scale, Scale));
+// 			break;
+// 		}
+//
+// 	case ERangeShape::ERS_Rectangle:
+// 		{
+// 			if (IsValid(RectMaterial))
+// 			{
+// 				DecalComponent->SetMaterial(0, RectMaterial);
+// 				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+// 				OnRep_IndicatorColor();
+// 			}
+// 			
+// 			// 액터에게 붙일 경우
+// 			if (bAttachToActor)
+// 			{
+// 				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+// 				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+// 				
+// 				SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
+// 				
+// 				// 몬스터의 데칼만 옮김
+// 				if (Cast<AAuraEnemy>(AvatarActor))
+// 					DecalComponent->SetRelativeLocation(FVector(Height, 0.f, 0.f));
+// 			}
+// 			else // 월드에 소환할 경우
+// 			{
+// 				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
+// 			}
+// 			SetActorScale3D(FVector(1.0f, Width / DecalComponent->DecalSize.Y, Height / DecalComponent->DecalSize.Z));
+// 			break;
+// 		}
+// 		
+// 	case ERangeShape::ERS_RectangleAndCircle:
+// 		{
+// 			if (IsValid(RectMaterial))
+// 			{
+// 				DecalComponent->SetMaterial(0, RectMaterial);
+// 				OnRep_IndicatorColor();
+// 				DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+// 			}
+// 			
+// 			// 액터에게 붙일 경우
+// 			if (bAttachToActor)
+// 			{
+// 				AttachToComponent(AvatarActor->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+// 				FVector RelativeLocation = AvatarActor->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+// 		
+// 				SetActorRelativeLocation(FVector(Height, 0.f, RelativeLocation.Z));
+// 			}
+// 			else // 월드에 소환할 경우
+// 			{
+// 				SetActorLocation(FVector(StartLocation.X, StartLocation.Y, ImpactPoint.Z));
+// 			}
+// 			SetActorScale3D(FVector(1.0f, Width / 200.f, Height / 200.f));
+// 			break;
+// 		}
+//
+// 	case ERangeShape::ERS_Cone:
+// 		{
+//
+// 			break;
+// 		}
+// 	}
+// }
 
 void AAbilityRangeIndicator::UpdateDecalVisual()
 {
 	UMaterialInterface* Target = nullptr;
-	switch (RangeShape)
+	switch (RangeParams.RangeShape)
 	{
 	case ERangeShape::ERS_Circle:
 		Target = CircleMaterial;
@@ -254,6 +270,118 @@ void AAbilityRangeIndicator::UpdateDecalVisual()
 	}
 	
 	ShowIndicatorOwnerOnly();
+}
+
+void AAbilityRangeIndicator::OnRep_RangeParams()
+{
+	InitIndicatorVisual();
+}
+
+void AAbilityRangeIndicator::InitIndicatorVisual()
+{
+	UpdateDecalVisual();
+	
+	if (!IsValid(GetOwner()))
+		return;
+
+    FHitResult HitResult;
+    FCollisionQueryParams CollisionQueryParams;
+    CollisionQueryParams.AddIgnoredActor(GetOwner());
+    
+    FVector HitStart = RangeParams.StartLocation + FVector(0.f, 0.f, -300.f);
+    FVector HitEnd = RangeParams.StartLocation + FVector(0.f, 0.f, 300.f);
+    
+    if (bRotate)
+    {
+       RotateStartLocation = RangeParams.StartLocation;
+    }
+    
+    GetWorld()->LineTraceSingleByChannel(HitResult, HitStart, HitEnd, ECC_Visibility, CollisionQueryParams);
+    FVector ImpactPoint = HitResult.ImpactPoint;
+
+    // Shape에 따른 데칼 모양과 크기 결정
+    switch (RangeParams.RangeShape)
+    {
+    case ERangeShape::ERS_Circle:  
+       {
+          if (IsValid(CircleMaterial))
+          {
+             DecalComponent->SetMaterial(0, CircleMaterial);
+             if (DynamicMI) DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+             OnRep_IndicatorColor();
+          }
+          
+          if (RangeParams.bAttachToActor)
+          {
+             AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+             FVector RelativeLocation = GetOwner()->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+             SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
+          }
+          else
+          {
+             SetActorLocation(FVector(RangeParams.StartLocation.X, RangeParams.StartLocation.Y, ImpactPoint.Z));
+          }
+          
+          float Scale = RangeParams.Radius / DecalComponent->DecalSize.Y;
+          SetActorScale3D(FVector(1.0f, Scale, Scale));
+          break;
+       }
+
+    case ERangeShape::ERS_Rectangle:
+       {
+          if (IsValid(RectMaterial))
+          {
+             DecalComponent->SetMaterial(0, RectMaterial);
+             if (DynamicMI) DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+             OnRep_IndicatorColor();
+          }
+          
+          if (RangeParams.bAttachToActor)
+          {
+             AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+             FVector RelativeLocation = GetOwner()->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+             SetActorRelativeLocation(FVector(0.f, 0.f, RelativeLocation.Z));
+             
+             if (Cast<AAuraEnemy>(GetOwner()))
+                DecalComponent->SetRelativeLocation(FVector(RangeParams.Height, 0.f, 0.f));
+          }
+          else
+          {
+             SetActorLocation(FVector(RangeParams.StartLocation.X, RangeParams.StartLocation.Y, ImpactPoint.Z));
+          }
+          
+          SetActorScale3D(FVector(1.0f, RangeParams.Width / DecalComponent->DecalSize.Y, RangeParams.Height / DecalComponent->DecalSize.Z));
+          break;
+       }
+       
+    case ERangeShape::ERS_RectangleAndCircle:
+       {
+          if (IsValid(RectMaterial))
+          {
+             DecalComponent->SetMaterial(0, RectMaterial);
+             OnRep_IndicatorColor();
+             if (DynamicMI) DynamicMI->SetVectorParameterValue("OutlineColor", IndicatorColor);
+          }
+          
+          if (RangeParams.bAttachToActor)
+          {
+             AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+             FVector RelativeLocation = GetOwner()->GetRootComponent()->GetComponentTransform().InverseTransformPosition(ImpactPoint);
+             SetActorRelativeLocation(FVector(RangeParams.Height, 0.f, RelativeLocation.Z));
+          }
+          else
+          {
+             SetActorLocation(FVector(RangeParams.StartLocation.X, RangeParams.StartLocation.Y, ImpactPoint.Z));
+          }
+          SetActorScale3D(FVector(1.0f, RangeParams.Width / DecalComponent->DecalSize.Y, RangeParams.Height / DecalComponent->DecalSize.Z));
+          break;
+       }
+
+    case ERangeShape::ERS_Cone:
+       {
+          break;
+       }
+    }
 }
 
 void AAbilityRangeIndicator::OnRep_IndicatorColor()

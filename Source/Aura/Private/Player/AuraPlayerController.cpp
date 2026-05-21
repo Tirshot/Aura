@@ -556,6 +556,9 @@ void AAuraPlayerController::SetPlayerInputEnable(bool bEnable)
         bShowMouseCursor = true;
         DefaultMouseCursor = EMouseCursor::Default;
 
+        // IMC 해제
+        AddAllMappingContexts();
+        
         // UI와 입력 상호작용
         FInputModeGameAndUI InputModeData;
 
@@ -568,7 +571,10 @@ void AAuraPlayerController::SetPlayerInputEnable(bool bEnable)
     {
         bShowMouseCursor = false;
         DefaultMouseCursor = EMouseCursor::Default;
-
+        
+        // IMC 해제
+        RemoveAllMappingContexts();
+        
         // UI와 입력 상호작용
         FInputModeUIOnly InputModeData;
 
@@ -629,7 +635,7 @@ void AAuraPlayerController::UpdateRangeIndicatorRotation()
     if (IsValid(RangeIndicator))
     {
         // 원형이 아닐 때
-        if (RangeIndicator->GetRangeShape() != ERangeShape::ERS_Circle)
+        if (RangeIndicator->RangeParams.RangeShape != ERangeShape::ERS_Circle)
         {
             if (!CursorHit.bBlockingHit)
                 return;
@@ -647,7 +653,7 @@ void AAuraPlayerController::UpdateRangeIndicatorRotation()
 
                 Direction.Normalize();
 
-                float Length = RangeIndicator->GetHeight();
+                float Length = RangeIndicator->RangeParams.Height;
 
                 FVector NewLocation = StartPoint + (Direction * Length);
                 RangeIndicator->SetActorLocation(NewLocation);
@@ -802,10 +808,9 @@ void AAuraPlayerController::ShowRangeIndicator(ERangeShape RangeShape, const FVe
             return;
         
         RangeIndicator = GetWorld()->SpawnActor<AAbilityRangeIndicator>(RangeIndicatorClass);
-        RangeIndicator->SetOwner(AvatarActor);
-        RangeIndicator->IndicatorInitialized.Broadcast(
+        RangeIndicator->InitializeIndicatorParams(
             AvatarActor, true, RangeShape, Location,
-            Radius, Width, Height/2, 0.f,
+            Radius, Width, Height, 0.f,
             RGB);
     }
 }
@@ -818,7 +823,6 @@ void AAuraPlayerController::HideRangeIndicator()
         if (!AvatarActor)
             return;
         
-        RangeIndicator->RemoveIndicator.Broadcast(AvatarActor);
         RangeIndicator->Destroy();
     }
 }
@@ -1469,15 +1473,15 @@ void AAuraPlayerController::CursorTrace()
     // 입력 상태 태그 확인
     if (GetASC() && GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_CursorTrace))
     {
-        UnHighlightActor(LastActor);
-        UnHighlightActor(ThisActor);
+        if (LastActor)
+            UnHighlightActor(LastActor);
         
-        if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
-        {
-            LastActor = nullptr;
-            ThisActor = nullptr;
-            return;
-        }
+        if (ThisActor)
+            UnHighlightActor(ThisActor);
+        
+        LastActor = nullptr;
+        ThisActor = nullptr;
+        return;
     }
 
     // 트레이스 채널, 단순 충돌 확인, 반환되는 FHitResult 구조체의 주소
@@ -1486,35 +1490,43 @@ void AAuraPlayerController::CursorTrace()
     // 매직 서클이 표시중이면 트레이스 채널 변경
     if (IsValid(MagicCircle))
         TraceChannel = ECC_GroundCheck;
+    
+    LastActor = ThisActor;
 
     GetHitResultUnderCursor(TraceChannel, false, CursorHit);
 
-    if (!CursorHit.bBlockingHit)
-        return;
-
-    // 데칼 표시 중 리턴
-    if (IsValid(MagicCircle))
-    {
-        LastActor = nullptr;
-        ThisActor = nullptr;
-        return;
-    }
-
-    LastActor = ThisActor;
-    // 마우스 커서와 충돌한 액터 꺼내오기
-    if (IsValid(CursorHit.GetActor()) && CursorHit.GetActor()->Implements<UHighlightInterface>())
+    // 진짜 유효한 적일때만 유지
+    if (CursorHit.bBlockingHit && IsValid(CursorHit.GetActor()) && CursorHit.GetActor()->Implements<UHighlightInterface>())
     {
         ThisActor = CursorHit.GetActor();
     }
     else
     {
-        ThisActor = nullptr;
+        ThisActor = nullptr; 
     }
-
-    if (LastActor != ThisActor)
+    
+    if (LastActor == nullptr)
     {
-        UnHighlightActor(LastActor);
-        HighlightActor(ThisActor);
+        if (ThisActor != nullptr)
+        {
+            // 허공에 있다가 처음으로 적에게 마우스를 올림
+            HighlightActor(ThisActor);
+        }
+    }
+    else // LastActor가 존재함 (이전에 적을 가리키고 있었음)
+    {
+        if (ThisActor == nullptr)
+        {
+            UnHighlightActor(LastActor);
+        }
+        else 
+        {
+            if (LastActor != ThisActor)
+            {
+                UnHighlightActor(LastActor);
+                HighlightActor(ThisActor);
+            }
+        }
     }
 }
 
@@ -1660,8 +1672,9 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     }
     else
     {
-        if (TargetingStatus != ETargetingStatus::TargetingEnemy && !bShiftKeyDown)
+        if (TargetingStatus == ETargetingStatus::TargetingItem || TargetingStatus == ETargetingStatus::TargetingNonEnemy)
         {
+            // 아이템 또는 상호작용 액터를 클릭했을 때
             // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
             const APawn* ControlledPawn = GetPawn();
             if (FollowTime <= ShortPressThreshold && ControlledPawn)
@@ -1688,7 +1701,7 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                 }
             }
         }
-        else
+        else if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
         {  
             if (ASC)
                 ASC->AbilityInputTagReleased(InputTag);

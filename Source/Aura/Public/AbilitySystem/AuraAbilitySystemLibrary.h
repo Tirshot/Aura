@@ -251,7 +251,7 @@ public:
 
 	// 데미지 구조체로 데미지 입히기
 	UFUNCTION(BlueprintCallable, category = "AuraAbilitySystemLibrary|DamageEffect")
-	static FGameplayEffectContextHandle ApplyDamageEffect(const FDamageEffectParams& Params);
+	static FGameplayEffectContextHandle ApplyDamageEffect(const FDamageEffectParams& Params, const FHitResult& HitResult = FHitResult());
 	
 	// 일정한 각도로 퍼트리기
 	UFUNCTION(BlueprintPure, category = "AuraAbilitySystemLibrary|GameplayMechanics")

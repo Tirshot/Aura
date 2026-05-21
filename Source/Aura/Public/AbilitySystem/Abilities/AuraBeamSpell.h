@@ -39,7 +39,7 @@ public:
 	void ApplyDamage();
 	
 	UFUNCTION(BlueprintCallable)
-	void StoreMouseDataInfo(const FHitResult& HitResult);
+	void StoreMouseDataInfo(const FHitResult& InHitResult);
 
 	UFUNCTION(BlueprintCallable)
 	void StoreOwnerVariables();
@@ -93,4 +93,6 @@ protected:
 	TArray<AActor*> AdditionalTargetActors;
 	
 	FTimerHandle DamageCostTimerHandle;
+	
+	FHitResult HitResult;
 };

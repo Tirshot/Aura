@@ -21,14 +21,14 @@ void UAuraSpinningBeam::EndAbility(const FGameplayAbilitySpecHandle Handle, cons
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-void UAuraSpinningBeam::SpawnBeam()
+void UAuraSpinningBeam::SpawnBeam(float StartAngle)
 {
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (!AvatarActor || AngleSpeed <= 0.f)
 		return;
 	
 	float HalfSpread = SpreadDegree / 2.f;
-	float StartAngle = AvatarActor->GetActorRotation().Yaw - HalfSpread;
+	StartAngle = StartAngle + AvatarActor->GetActorRotation().Yaw - HalfSpread;
 	float BeamLifeSpan = 0.f;
 	
 	if (FMath::IsNearlyEqual(SpreadDegree, 360.f))

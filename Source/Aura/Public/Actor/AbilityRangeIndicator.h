@@ -15,8 +15,35 @@ enum class ERangeShape : uint8
 	ERS_Cone, // 부채꼴
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_NineParams(FOnIndicatorInitialized, AActor*, AvatarActor, bool, bAttachToActor, ERangeShape, RangeShape, const FVector&, Location, float, Radius, float, Width, float, Height, float, Angle, const FVector&, RGB);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIndicatorRemoved, AActor*, AvatarActor);
+USTRUCT()
+struct FRangeIndicatorParams
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	bool bAttachToActor = false;
+
+	UPROPERTY()
+	ERangeShape RangeShape = ERangeShape::ERS_Circle;
+
+	UPROPERTY()
+	FVector StartLocation = FVector::ZeroVector;
+
+	UPROPERTY()
+	float Radius = 0.f;
+
+	UPROPERTY()
+	float Width = 0.f;
+
+	UPROPERTY()
+	float Height = 0.f;
+
+	UPROPERTY()
+	float ConeAngle = 0.f;
+
+	UPROPERTY()
+	FVector IndicatorColor = FVector::ZeroVector;
+};
 
 UCLASS()
 class AURA_API AAbilityRangeIndicator : public AActor
@@ -32,15 +59,14 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	UFUNCTION()
-	void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& StartLocation, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
+	//UFUNCTION()
+	//void ShowIndicator(AActor* AvatarActor, bool bAttachToActor, ERangeShape Shape, const FVector& StartLocation, float InRadius = 0.f, float InWidth = 0.f, float InHeight = 0.f, float InAngle = 0.f, const FVector& RGB = FVector(5,5,5));
 	void UpdateDecalVisual();
 
 	void ShowIndicatorOwnerOnly();
 	
-	ERangeShape GetRangeShape() const { return RangeShape; }
-	float GetWidth() const { return Width; }
-	float GetHeight() const { return Height; }
+	UFUNCTION()
+	void InitializeIndicatorParams(AActor* InAvatarActor, bool bInAttachToActor, ERangeShape InShape, const FVector& InStartLocation, float InRadius, float InWidth, float InHeight, float InAngle, const FVector& InRGB);
 	
 protected:
 	// 범위 표시기 모양
@@ -60,14 +86,14 @@ protected:
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMI;
 
 public:
-	UPROPERTY()
-	FOnIndicatorInitialized IndicatorInitialized;
+	UPROPERTY(ReplicatedUsing = OnRep_RangeParams)
+	FRangeIndicatorParams RangeParams;
 	
-	UPROPERTY()
-	FOnIndicatorInitialized EnemyIndicatorInitialized;
+	UFUNCTION()
+	void OnRep_RangeParams();
 
-	UPROPERTY(BlueprintAssignable)
-	FOnIndicatorRemoved RemoveIndicator;
+	// 실제 비주얼과 스케일을 업데이트하는 핵심 함수
+	void InitIndicatorVisual();
 	
 	UFUNCTION()
 	void OnRep_IndicatorColor();
@@ -75,24 +101,11 @@ public:
 	virtual void OnRep_Owner() override;
 	
 protected:
-	// 원형, 부채꼴
-	float Radius = 0.f;
-
-	// 직사각형
-	float Width = 0.f;
-	float Height = 0.f;
-
-	// 부채꼴 각도
-	float ConeAngle = 0.f;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector RotateStartLocation;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_IndicatorColor)
 	FVector IndicatorColor = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IndicatorColor, meta=(AllowPrivateAccess = true))
-	ERangeShape RangeShape;
 	
 public:
 	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite)
