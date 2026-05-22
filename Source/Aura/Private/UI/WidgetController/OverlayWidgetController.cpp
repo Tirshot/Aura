@@ -189,7 +189,7 @@ void UOverlayWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag,
     LastSlotInfo.InputTag = PrevSlot;
     LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
 
-    // 변경할 슬롯에 이미 어빌리티가 있다면 빈 어빌리티 정보를 보냄
+    // 변경할 슬롯에 빈 어빌리티 정보를 보냄
     AbilityInfoDelegate.Broadcast(LastSlotInfo);
 
     // 변경할 슬롯에 선택한 어빌리티의 정보를 채움

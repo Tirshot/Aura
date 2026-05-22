@@ -71,7 +71,9 @@ void AAuraSpinningBeamActor::Tick(float DeltaSeconds)
 	FVector InitialVector = FVector(OrbitRadius, 0.f, 0.f).RotateAngleAxis(FMath::RadiansToDegrees(InitialAngle), FVector::UpVector);
 	FVector RotatedVector = InitialVector.RotateAngleAxis(SpinningAngle, FVector::UpVector);
 	
-	SetActorLocation(GetOwner()->GetActorLocation() + RotatedVector + FVector(0,0,50.f));
+	if (IsValid(GetOwner()))
+		SetActorLocation(GetOwner()->GetActorLocation() + RotatedVector + FVector(0,0,50.f));
+	
 	SetActorRotation(FRotator(-90.f, InitialAngle, 0.f));
 
 	FVector Tangent = FVector(-FMath::Sin(SpinningAngle), FMath::Cos(SpinningAngle), 0.f);

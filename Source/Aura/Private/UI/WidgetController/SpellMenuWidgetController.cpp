@@ -323,11 +323,23 @@ void USpellMenuWidgetController::SpellRowGlobePressed(const FGameplayTag& SlotTa
 	if (bWaitForEquipSelection == false)
 		return;
 
-	const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
-	if (SelectedAbilityType.MatchesTagExact(AbilityType) == false)
-		return;
-
-	GetAuraASC()->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
+	// const FGameplayTag& SelectedAbilityType = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability)->AbilityType;
+	// if (SelectedAbilityType.MatchesTagExact(AbilityType) == false)
+	// 	return;
+	
+	if (AbilityInfo)
+	{
+		FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(SelectedAbility.Ability);
+		if (!Info)
+			return;
+		
+		Info->StatusTag = FAuraGameplayTags::Get().Abilities_Status_Equipped;
+		Info->InputTag = SlotTag;
+		
+		AbilityInfoDelegate.Broadcast(*Info);
+	}
+	
+	AuraAbilitySystemComponent->ServerEquipAbility(SelectedAbility.Ability, SlotTag);
 }
 
 void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTag, const FGameplayTag& Status, const FGameplayTag& Slot, const FGameplayTag& PrevSlot)
@@ -344,17 +356,26 @@ void USpellMenuWidgetController::OnAbilityEquipped(const FGameplayTag& AbilityTa
 		LastSlotInfo.AbilityTag = GameplayTags.Abilities_None;
 		AbilityInfoDelegate.Broadcast(LastSlotInfo);
 	}
-
-	if (!AbilityTag.IsValid())
-		return;
 	
-	if (FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
+	if (AbilityInfo)
 	{
-		Info->StatusTag = Status;
-		Info->InputTag = Slot;
-		Info->AbilityTag = AbilityTag;
-		AbilityInfoDelegate.Broadcast(*Info);
+		FAuraAbilityInfo* NewInfo = AbilityInfo->FindAbilityInfoForTag(AbilityTag);
+		if (NewInfo)
+		{
+			NewInfo->StatusTag = Status;
+			NewInfo->InputTag = Slot;
+            
+			AbilityInfoDelegate.Broadcast(*NewInfo);
+		}
 	}
+	
+	// if (FAuraAbilityInfo* Info = AbilityInfo->FindAbilityInfoForTag(AbilityTag))
+	// {
+	// 	Info->StatusTag = Status;
+	// 	Info->InputTag = Slot;
+	// 	Info->AbilityTag = AbilityTag;
+	// 	AbilityInfoDelegate.Broadcast(*Info);
+	// }
 	
 	StopWaitForEquipDelegate.Broadcast(AbilityInfo->FindAbilityInfoForTag(AbilityTag)->AbilityType);
 	

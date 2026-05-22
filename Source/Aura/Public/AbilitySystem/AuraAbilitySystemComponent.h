@@ -102,13 +102,13 @@ public:
 
 	bool GetDescriptionsByAbilityTag(const FGameplayTag& AbilityTag, FString& OutDescription, FString& OutNextLevelDescription);
 	int32 GetAbilityLevelByTag(const FGameplayTag& AbilityTag);
-	static void ClearSlot(FGameplayAbilitySpec* Spec);
+	void ClearSlot(FGameplayAbilitySpec* Spec);
 	void ClearAbilitiesOfSlot(const FGameplayTag& Slot);
-	static bool AbilityHasSlot(FGameplayAbilitySpec& Spec, const FGameplayTag& Slot);
-	static bool AbilityHasAnySlot(FGameplayAbilitySpec& Spec);
+	bool AbilityHasSlot(FGameplayAbilitySpec& Spec, const FGameplayTag& Slot);
+	bool AbilityHasAnySlot(FGameplayAbilitySpec& Spec);
 	FGameplayAbilitySpec* GetSpecWithSlot(const FGameplayTag& Slot);
 	bool IsPassiveAbility(const FGameplayAbilitySpec& Spec) const;
-	static void AssignSlotToAbility(FGameplayAbilitySpec& Spec, const FGameplayTag& Slot);
+	void AssignSlotToAbility(FGameplayAbilitySpec& Spec, const FGameplayTag& Slot);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastActivatePassiveEffect(const FGameplayTag& AbilityTag, bool bActivate);
