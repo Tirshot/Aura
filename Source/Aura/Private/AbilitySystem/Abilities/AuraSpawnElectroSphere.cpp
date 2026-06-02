@@ -99,6 +99,13 @@ void UAuraSpawnElectroSphere::CheckAbilityUpgrades()
 	{
 		ElectroSphere->SetHomingTarget(true);
 	}
+
+	// (4) 가까운 대상 유도
+	FGameplayTag StopMovement = FGameplayTag::RequestGameplayTag("Upgrades.Lightning.SpawnElectroSphere.StopMovement");
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), StopMovement))
+	{
+		ElectroSphere->SetMovementSpeed(0.f);
+	}
 }
 
 AAuraElectroSphere* UAuraSpawnElectroSphere::SpawnElectroSphere(const FVector& Location)

@@ -96,6 +96,14 @@ void UArcaneShards::CheckAbilityUpgrades()
 		// 첫번째 기둥 크기 증가
 		bIsFirstShardLarge = true;
 	}
+	
+	// 파편 동시 발생
+	FGameplayTag Simultaneous = FGameplayTag::RequestGameplayTag("Upgrades.Arcane.ArcaneShards.Multiple");
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), Simultaneous))
+	{
+		SpawnShardsDeltaTime = 0.025f;
+		ShardSpawnDelay = 0.1f;
+	}
 }
 
 void UArcaneShards::CreatePointCollection()

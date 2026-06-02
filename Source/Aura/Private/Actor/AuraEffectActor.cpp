@@ -3,6 +3,7 @@
 #include "Actor/AuraEffectActor.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Interaction/CombatInterface.h"
 #include "Kismet/KismetMathLibrary.h"
 
 
@@ -153,7 +154,24 @@ void AAuraEffectActor::OnOverlap(AActor *TargetActor)
 	// 몬스터인지 확인
 	if (TargetActor->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemy)
 		return;
-
+	
+	if (TargetActor->Implements<UCombatInterface>())
+	{
+		// 프로젝트에 구현된 사망 확인 함수를 호출 (예: IsDead())
+		if (ICombatInterface::Execute_IsDead(TargetActor))
+		{
+			return; 
+		}
+	}
+	
+	if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
+	{
+		if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+		{
+			return;
+		}
+	}
+	
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);

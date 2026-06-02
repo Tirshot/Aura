@@ -101,6 +101,7 @@ public:
 	FGameplayTag Abilities_Lightning_Electrocute;
 	FGameplayTag Abilities_Lightning_Teleport;
 	FGameplayTag Abilities_Lightning_SpawnElectroSphere;
+	FGameplayTag Abilities_Lightning_ChainedLightning;
 	FGameplayTag Abilities_Arcane_ArcaneShards;
 	FGameplayTag Abilities_Arcane_MindControl;
 	FGameplayTag Abilities_Arcane_ArcaneOrbit;
@@ -132,6 +133,7 @@ public:
 	
 	FGameplayTag Upgrades_Fire_FireBlast_Temp;
 	FGameplayTag Upgrades_Fire_FireBlast_IncreaseNum;
+	FGameplayTag Upgrades_Fire_FireBlast_ExplodeAtMaxRange;
 	
 	FGameplayTag Upgrades_Fire_FireNado_IncreaseRange;
 	

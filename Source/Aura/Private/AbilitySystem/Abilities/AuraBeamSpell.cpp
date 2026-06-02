@@ -130,8 +130,8 @@ void UAuraBeamSpell::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle
 		return;
 	}
 	
-	// 마우스 커서 숨김
-	OwnerPlayerController->bShowMouseCursor = false;
+	// // 마우스 커서 숨김
+	// OwnerPlayerController->bShowMouseCursor = false;
 	
 	FGameplayEffectContextHandle ContextHandle;
 	ContextHandle.AddSourceObject(this);
@@ -175,14 +175,15 @@ void UAuraBeamSpell::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle
 	WaitEventTask->EventReceived.AddDynamic(this, &UAuraBeamSpell::OnMontageTagReceived);
 	WaitEventTask->ReadyForActivation();
 	
-	UAbilityTask_WaitInputRelease* InputReleaseTask = UAbilityTask_WaitInputRelease::WaitInputRelease(this);
-	
-	InputReleaseTask->OnRelease.AddDynamic(this, &UAuraBeamSpell::OnInputReleased);
-	InputReleaseTask->ReadyForActivation();
+	// UAbilityTask_WaitInputRelease* InputReleaseTask = UAbilityTask_WaitInputRelease::WaitInputRelease(this);
+	//
+	// InputReleaseTask->OnRelease.AddDynamic(this, &UAuraBeamSpell::OnInputReleased);
+	// InputReleaseTask->ReadyForActivation();
 }
 
 void UAuraBeamSpell::OnMontageCompleted()
 {
+	K2_EndAbility();
 }
 
 void UAuraBeamSpell::OnMontageInterrupted()
@@ -194,9 +195,9 @@ void UAuraBeamSpell::OnMontageTagReceived(FGameplayEventData Payload)
 {
 	CheckAbilityUpgrades();
 	
-	// 사용자에게 Shock Loop 상태를 설정, 이동 금지
-	ICombatInterface::Execute_SetInShockLoop(OwnerCharacter, true);
-	OwnerCharacter->GetCharacterMovement()->DisableMovement();
+	// // 사용자에게 Shock Loop 상태를 설정, 이동 금지
+	// ICombatInterface::Execute_SetInShockLoop(OwnerCharacter, true);
+	// OwnerCharacter->GetCharacterMovement()->DisableMovement();
 	
 	// 빔 소환
 	TraceFirstTarget(MouseHitLocation);
@@ -250,23 +251,24 @@ void UAuraBeamSpell::OnMontageTagReceived(FGameplayEventData Payload)
 		}
 	}
 	
-	// 델타 타임마다 데미지 입힘
-	GetWorld()->GetTimerManager().SetTimer(
-		DamageCostTimerHandle, 
-		[this]()
-		{
-			if (!IsActive()) 
-			{
-				// 이미 종료된 상태라면 타이머 클리어
-				GetWorld()->GetTimerManager().ClearTimer(DamageCostTimerHandle);
-				return;
-			}
-        
-			this->ApplyDamage(); 
-		}, 
-		DamageDeltaTime, 
-		true
-	);
+	// // 델타 타임마다 데미지 입힘
+	// GetWorld()->GetTimerManager().SetTimer(
+	// 	DamageCostTimerHandle, 
+	// 	[this]()
+	// 	{
+	// 		if (!IsActive()) 
+	// 		{
+	// 			// 이미 종료된 상태라면 타이머 클리어
+	// 			GetWorld()->GetTimerManager().ClearTimer(DamageCostTimerHandle);
+	// 			return;
+	// 		}
+ //        
+	// 		this->ApplyDamage(); 
+	// 	}, 
+	// 	DamageDeltaTime, 
+	// 	true
+	// );
+	ApplyDamage();
 }
 
 void UAuraBeamSpell::OnInputReleased(float TimeHeld)

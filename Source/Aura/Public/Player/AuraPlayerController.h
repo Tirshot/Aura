@@ -178,8 +178,14 @@ public:
 	void Server_ApplyWaitForExecuteTag();
 	
 	// 사망 후 관전
-	UFUNCTION(Server, UnReliable)
+	UFUNCTION(Server, Reliable)
 	void Server_StartSpectating();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyInputBlockTag();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveInputBlockTag();
 	
 	// 클라이언트 RPC 함수
 	UFUNCTION(Client, Reliable)
@@ -294,6 +300,9 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> AuraContext;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputMappingContext> MoveContext;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> MenuContext;

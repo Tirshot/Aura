@@ -116,6 +116,14 @@ void UAuraArcaneAreaAbility::CheckAbilityUpgrades()
 	{
 		SlowRadius += SlowRadius * 0.25f;
 	}
+	
+	// (4) 마인드 컨트롤
+	FGameplayTag MindControl = FGameplayTag::RequestGameplayTag("Upgrades.Arcane.ArcaneArea.MindControl");
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), MindControl))
+	{
+		bMindControl = true;
+		MindControlStackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), MindControl);
+	}
 }
 
 void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
@@ -141,6 +149,11 @@ void UAuraArcaneAreaAbility::SpawnArcaneArea(const FVector& Location)
 	ArcaneArea->SetSlowSpeedRatio(SlowDownRatio);
 	ArcaneArea->SetApplyEffectPeriod(ApplyEffectPeriod);
 	ArcaneArea->SetTakeDamage(bTakeDamage);
+	if (bMindControl)
+	{
+		ArcaneArea->SetMindControl(bMindControl);
+		ArcaneArea->SetMindControlDuration(5.f + MindControlStackCount);
+	}
 
 	ArcaneArea->FinishSpawning(AreaTransform);
 	

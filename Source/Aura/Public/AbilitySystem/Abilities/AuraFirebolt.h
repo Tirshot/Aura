@@ -38,4 +38,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Firebolt")
 	bool bLaunchHomingProjectile = true;
+	
+	int32 SpeedUpCount = 0;
 };

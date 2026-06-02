@@ -59,6 +59,10 @@ void AAuraArcaneArea::ApplySlowEffect()
 	{
 		for (auto* TargetActor : OverlappedActors)
 		{
+			// 아군에게 슬로우 적용 금지
+			if (!IsValidOverlap(TargetActor))
+				continue;
+			
 			// 슬로우 이펙트 적용
 			if (auto* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor))
 			{
@@ -109,6 +113,31 @@ void AAuraArcaneArea::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 			   ApplyEffectPeriod,
 			   true
 			   );
+		}
+		
+		if (bMindControl)
+		{
+			if (MindControlledUnitCount < 1)
+			{
+				// 마인드 컨트롤
+				ChangeToActorTag(OtherActor, EActorTag::Player);
+				MindControlledActor = OtherActor;
+				MindControlledUnitCount++;
+				
+				// 마인드 컨트롤 타이머 설정
+				FTimerDelegate MindControl;
+				MindControl.BindUObject(this, &AAuraArcaneArea::ReleaseMindControl);
+		
+				if (!MindControlTimer.IsValid())
+				{
+					GetWorldTimerManager().SetTimer(
+					   MindControlTimer,
+					   MindControl,
+					   MindControlDuration,
+					   false
+					   );
+				}
+			}
 		}
 	}
 }
@@ -165,6 +194,11 @@ void AAuraArcaneArea::DamageAndKnockback()
 				OverlappedActors.RemoveAt(i);
 				continue;
 			}
+			
+			// 아군에게 데미지 적용 금지
+			if (!IsValidOverlap(OtherActor))
+				continue;
+			
 			if (auto* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 			{
 				bool bIsKnockBack = true;
@@ -200,6 +234,71 @@ void AAuraArcaneArea::DamageAndKnockback()
 					UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 				}
 			}
+		}
+	}
+}
+
+void AAuraArcaneArea::ReleaseMindControl()
+{
+	ReturnToOrignalTag();
+	MindControlledActor = nullptr;
+}
+
+bool AAuraArcaneArea::ChangeToActorTag(AActor* TargetActor, EActorTag ActorTag)
+{
+	if (!TargetActor)
+		return false;
+	
+	if (TargetActor->ActorHasTag(FName("Boss")))
+		return false;
+
+	if (TargetActor->Tags.IsEmpty())
+		return false;
+	
+	switch (ActorTag)
+	{
+	case Player:
+		TargetActor->Tags.Remove(FName("Enemy"));
+		TargetActor->Tags.AddUnique(FName("Player"));
+		TargetActor->Tags.AddUnique(FName("MindControlled"));
+		return true;
+
+	case Enemy:
+		TargetActor->Tags.Remove(FName("Player"));
+		TargetActor->Tags.AddUnique(FName("Enemy"));
+		TargetActor->Tags.AddUnique(FName("MindControlled"));
+		return true;
+	}
+	
+	return false;
+}
+
+void AAuraArcaneArea::ReturnToOrignalTag()
+{
+	if (!MindControlledActor)
+		return;
+	
+	if (MindControlledActor->ActorHasTag(FName("Boss")))
+		return;
+
+	if (MindControlledActor->Tags.IsEmpty())
+		return;
+	
+	if (MindControlledActor->ActorHasTag(FName("MindControlled")))
+	{
+		// 몬스터로 돌아오게하기
+		if (MindControlledActor->ActorHasTag(FName("Player")))
+		{
+			MindControlledActor->Tags.Remove(FName("Player"));
+			MindControlledActor->Tags.Remove(FName("MindControlled"));
+			MindControlledActor->Tags.AddUnique(FName("Enemy"));
+		}
+		// 플레이어로 돌아오게하기
+		else if (MindControlledActor->ActorHasTag(FName("Monster")))
+		{
+			MindControlledActor->Tags.Remove(FName("Monster"));
+			MindControlledActor->Tags.Remove(FName("MindControlled"));
+			MindControlledActor->Tags.AddUnique(FName("Player"));
 		}
 	}
 }

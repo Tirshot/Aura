@@ -332,6 +332,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 		FString("Spawn Electro Sphere Ability")
 	);
 
+	GameplayTags.Abilities_Lightning_ChainedLightning = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Abilities.Lightning.ChainedLightning"),
+		FString("Spawn Chained Lightning Ability")
+	);
+
 	GameplayTags.Abilities_Arcane_ArcaneShards = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Abilities.Arcane.ArcaneShards"),
 		FString("ArcaneShards Ability")
@@ -443,6 +448,11 @@ void FAuraGameplayTags::InitailizeNativeGameplayTags()
 	GameplayTags.Upgrades_Fire_FireBlast_IncreaseNum = UGameplayTagsManager::Get().AddNativeGameplayTag(
 	FName("Upgrades.Fire.FireBlast.IncreaseNum"),
 	FString("Increase Number of FireBlast Projectiles")
+	);
+	
+	GameplayTags.Upgrades_Fire_FireBlast_ExplodeAtMaxRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
+	FName("Upgrades.Fire.FireBlast.ExplodeAtMaxRange"),
+	FString("FireBalls are Explode At Max Range")
 	);
 	
 	GameplayTags.Upgrades_Fire_FireNado_IncreaseRange = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -653,6 +663,7 @@ void FAuraGameplayTags::InitializeAbilitiesTagsArray()
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Electrocute);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_Teleport);
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_SpawnElectroSphere);
+	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Lightning_ChainedLightning);
 
 	// 어빌리티 태그 - 패시브
 	GameplayTags.GameplayAbilitiesTags.Add(GameplayTags.Abilities_Passive_HaloOfProtection);

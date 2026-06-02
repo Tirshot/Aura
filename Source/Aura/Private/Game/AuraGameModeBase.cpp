@@ -35,6 +35,7 @@ void AAuraGameModeBase::BeginPlay()
 
 	OnAllActorsInvincible.AddDynamic(this, &AAuraGameModeBase::SetAllActorsInvincible);
 	OnSetActorInvincible.AddDynamic(this, &AAuraGameModeBase::SetActorInvincible);
+	OnApplyActorsBlockInputTags.AddDynamic(this, &AAuraGameModeBase::SetAllActorsBlockInput);
 	
 	// 리슨 서버를 플레이어 배열에 추가
 	if (AAuraPlayerController* HostPC = Cast<AAuraPlayerController>(GetWorld()->GetFirstPlayerController()))
@@ -478,6 +479,28 @@ void AAuraGameModeBase::SetActorInvincible(AActor* TargetActor, bool bInvincible
 	}
 }
 
+void AAuraGameModeBase::SetAllActorsBlockInput(bool bBlockInputTag)
+{
+	if (!HasAuthority())
+		return;
+
+	// 플레이어 순회
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AAuraPlayerController* AuraPC = Cast<AAuraPlayerController>(It->Get()))
+		{
+			if (bBlockInputTag)
+			{
+				AuraPC->Server_ApplyInputBlockTag();
+			}
+			else
+			{
+				AuraPC->Server_RemoveInputBlockTag();
+			}
+		}
+	}
+}
+
 void AAuraGameModeBase::RestartGameFromSaveData(ACharacter* DeadCharacter)
 {
 	// 저장 오브젝트 불러와 마지막 저장 확인
@@ -621,20 +644,20 @@ FAuraAbilityUpgradeInfo AAuraGameModeBase::GetUpgradeRecursive(EUpgradeRarity Ra
 		return GetUpgradeRecursive(LowerRarity, Buckets);
 	}
 	
-	// 뽑은 등급이 제일 마지막인데 비어 있으면 기본 데미지 업그레이드 반환
-	if (Rarity == EUpgradeRarity::Common)
-	{
-		// 일반 바구니가 비었음 -> 데미지 업그레이드 뽑아서 반환
-		TArray<FGameplayTag> DamageUpgradeTags;
-		DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Fire"));
-		DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Arcane"));
-		DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Lightning"));
-		
-		int RandInt = FMath::RandRange(0, DamageUpgradeTags.Num() - 1);
-		FGameplayTag SelectedDamageTag = DamageUpgradeTags[RandInt];
-		
-		return Info->GetUpgradesForAbility(SelectedDamageTag).UpgradeInfos[0];
-	}
+	// // 뽑은 등급이 제일 마지막인데 비어 있으면 기본 데미지 업그레이드 반환
+	// if (Rarity == EUpgradeRarity::Common)
+	// {
+	// 	// 일반 바구니가 비었음 -> 데미지 업그레이드 뽑아서 반환
+	// 	TArray<FGameplayTag> DamageUpgradeTags;
+	// 	DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Fire"));
+	// 	DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Arcane"));
+	// 	DamageUpgradeTags.Add(FGameplayTag::RequestGameplayTag("Abilities.Lightning"));
+	// 	
+	// 	int RandInt = FMath::RandRange(0, DamageUpgradeTags.Num() - 1);
+	// 	FGameplayTag SelectedDamageTag = DamageUpgradeTags[RandInt];
+	// 	
+	// 	return Info->GetUpgradesForAbility(SelectedDamageTag).UpgradeInfos[0];
+	// }
 	
 	return FAuraAbilityUpgradeInfo();
 }
@@ -643,97 +666,135 @@ TArray<FAuraAbilityUpgradeInfo> AAuraGameModeBase::GetRandomUpgradeInfosForActiv
 	AAuraPlayerState* AuraPS)
 {
 	TArray<FAuraAbilityUpgradeInfo> UpgradeCards;
-	UpgradeCards.Empty();
-	
+
 	UAuraGameInstance* AuraGI = GetWorld()->GetGameInstance<UAuraGameInstance>();
 	if (!AuraGI)
 		return UpgradeCards;
-
-	// 주어진 어빌리티 태그에 대해 랜덤한 업그레이드 태그 뽑기
+		
 	UAbilityUpgradeInfo* Info = AuraGI->GetAbilityUpgradeInfo();
 	if (!Info)
 		return UpgradeCards;
 	
-	TArray<FGameplayTag> DamageUpgradeTags =
-	{
-		FGameplayTag::RequestGameplayTag("Abilities.Fire"),
-		FGameplayTag::RequestGameplayTag("Abilities.Arcane"),
-		FGameplayTag::RequestGameplayTag("Abilities.Lightning")
-	};
+	auto& AuraTags = FAuraGameplayTags::Get();
 	
-	// 등급 바구니 생성
-	TMap<EUpgradeRarity, TArray<FAuraAbilityUpgradeInfo>> RarityBucket;
-	TArray<FGameplayTag> ActiveTags = AuraPS->GetAllActiveAbilityTags();
-	TArray<EUpgradeRarity> Rarities = {EUpgradeRarity::Common, EUpgradeRarity::Rare, EUpgradeRarity::Unique, EUpgradeRarity::Legendary};
+	int32 CommonProb = Info->UpgradeProbability[EUpgradeRarity::Common];
+	int32 RareProb = Info->UpgradeProbability[EUpgradeRarity::Rare];
+	int32 UniqueProb = Info->UpgradeProbability[EUpgradeRarity::Unique];
+	int32 LegendaryProb = Info->UpgradeProbability[EUpgradeRarity::Legendary];
 	
-	// 활성화 된 어빌리티의 업그레이드를 모아옴
-	for (const auto Rarity : Rarities)
-	{
-		TArray<FAuraAbilityUpgradeInfo> AvailableUpgrades = Info->GetAvailableUpgradeInfoForTag(ActiveTags, Rarity);
-		for (const auto& Upgrade : AvailableUpgrades)
-		{
-			// 업그레이드 배열을 찾아와 업그레이드 정보를 집어넣음
-			RarityBucket.FindOrAdd(Rarity).Add(Upgrade);
-		}
-	}
+	int32 AllProb = CommonProb + RareProb + UniqueProb + LegendaryProb;
 	
-	// 최대 스택을 넘은 업그레이드, 빈 태그 업그레이드가 있으면 바구니에서 제거
-	for (auto It = RarityBucket.CreateIterator(); It; ++It)
-	{
-		auto& Bucket = It->Value;
-		
-		for (int i = Bucket.Num() - 1; i > 0; --i)
-		{
-			// 가져온 바구니에서 빈 태그 업그레이드 제거
-			const FGameplayTag& UpgradeTag = Bucket[i].UpgradeEffectTag;
-			if (UpgradeTag == FGameplayTag::EmptyTag || UpgradeTag == FAuraGameplayTags::Get().Abilities_None)
-			{
-				Bucket.RemoveAt(i);
-				continue;
-			}
-			
-			// 가져온 바구니의 뒤에서부터 스택을 초과한 업그레이드를 제거
-			int32 StackCount = UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCountByAuraPS(AuraPS, UpgradeTag);
-			if (StackCount >= Bucket[i].MaxStack)
-			{
-				// 바구니에서 업그레이드 빼기
-				Bucket.RemoveAt(i);
-			}
-		}
-	}	
-
-	// 3장 뽑기
+	int CurrentAttempt = 0;
+	int MaxAttempt = 200;
+	
 	while (UpgradeCards.Num() < 3)
 	{
-		// 주사위 돌리기
-		int CommonProbability = Info->UpgradeProbability[EUpgradeRarity::Common];
-		int RareProbability = Info->UpgradeProbability[EUpgradeRarity::Rare];
-		int UniqueProbability = Info->UpgradeProbability[EUpgradeRarity::Unique];
-		int LegendaryProbability = Info->UpgradeProbability[EUpgradeRarity::Legendary];
-		int SumProbability = CommonProbability + RareProbability + UniqueProbability + LegendaryProbability;
-
-		int RandProbability = FMath::RandRange(0, SumProbability);
+		// 무한 루프 방지
+		CurrentAttempt++;
+		if (CurrentAttempt >= MaxAttempt)
+			break;
 		
 		EUpgradeRarity SelectedRarity = EUpgradeRarity::Common;
-		if (RandProbability <= CommonProbability)
+		
+		// 등급 뽑기
+		int32 Dice = FMath::RandRange(1, AllProb);
+		if (Dice <= CommonProb)
 		{
 			SelectedRarity = EUpgradeRarity::Common;
 		}
-		else if (RandProbability <= CommonProbability + RareProbability)
+		else if (Dice <= CommonProb + RareProb)
 		{
 			SelectedRarity = EUpgradeRarity::Rare;
 		}
-		else if (RandProbability <= SumProbability - LegendaryProbability)
+		else if (Dice <= CommonProb + RareProb + UniqueProb)
 		{
 			SelectedRarity = EUpgradeRarity::Unique;
 		}
-		else if (RandProbability <= SumProbability)
+		else if (Dice <= AllProb)
 		{
 			SelectedRarity = EUpgradeRarity::Legendary;
 		}
 		
-		auto UpgradeCard = GetUpgradeRecursive(SelectedRarity, RarityBucket);
-		UpgradeCards.AddUnique(UpgradeCard);
+		// 뽑기 풀
+		TArray<FAuraAbilityUpgradeInfo> UpgradePool;
+		
+		// 선택된 등급에 해당하는 어빌리티 업그레이드 모아옴
+		TArray<FAuraAbilityUpgradeInfo> UpgradeInfos = Info->GetUpgradeInfoArrayForProbability(SelectedRarity);
+		
+		// 이미 배운 어빌리티의 업그레이드일 때만 모아옴
+		for (auto UpgradeInfo : UpgradeInfos)
+		{
+			FGameplayTag UpgradeTag = UpgradeInfo.UpgradeEffectTag;
+			FGameplayTag AbilityTag = Info->GetAbilityTagForUpgradeTag(UpgradeTag);
+			
+			// 이미 뽑힌 카드 제외
+			bool bAlreadyPicked = UpgradeCards.ContainsByPredicate(
+				[&UpgradeTag](const FAuraAbilityUpgradeInfo& Card)
+				{
+					return Card.UpgradeEffectTag == UpgradeTag;
+				});
+			
+			if (bAlreadyPicked)
+				continue;
+
+			// 최대 스택 초과 제외
+			int32 StackCount = UAuraAbilitySystemLibrary::GetAbilityUpgradeStackCountByAuraPS(AuraPS, UpgradeTag);
+			if (StackCount >= UpgradeInfo.MaxStack)
+				continue;
+			
+			// 업그레이드 태그와 어빌리티 태그가 같으면 - 레전더리 등급의 어빌리티 획득 카드임 - 카드 풀에 추가
+			if (UpgradeTag.MatchesTagExact(AbilityTag))
+			{
+				UpgradePool.AddUnique(Info->GetUpgradeInfoForUpgradeTag(UpgradeTag));
+				continue;
+			}
+			
+			// 어빌리티의 상태가 Unlocked, Active, Equipped인 스펠 찾기
+			if (auto AuraASC = Cast<UAuraAbilitySystemComponent>(AuraPS->GetAbilitySystemComponent()))
+			{
+				FGameplayTag AbilityStatus = AuraASC->GetStatusFromAbilityTag(AbilityTag);
+				if (AbilityStatus.MatchesTagExact(AuraTags.Abilities_Status_Unlocked) ||
+					AbilityStatus.MatchesTagExact(AuraTags.Abilities_Status_Equipped) ||
+					AbilityStatus.MatchesTagExact(AuraTags.Abilities_Status_Activated))
+				{
+					UpgradePool.AddUnique(Info->GetUpgradeInfoForUpgradeTag(UpgradeTag));
+				}
+			}
+		}
+		
+		// 업그레이드 풀에서 카드 뽑기
+		if (UpgradePool.IsEmpty())
+			continue; // 풀이 비었으면 스킵
+
+		int32 CardDice = FMath::RandRange(0, UpgradePool.Num() - 1);
+		UpgradeCards.AddUnique(UpgradePool[CardDice]);		
+	}
+	// 뽑은 카드가 3개 미만이라면 기본 업그레이드 카드 제공
+	if (UpgradeCards.Num() < 3)
+	{
+		TArray<FGameplayTag> DefaultDamageTags = {
+			FGameplayTag::RequestGameplayTag("Abilities.Fire"),
+			FGameplayTag::RequestGameplayTag("Abilities.Arcane"),
+			FGameplayTag::RequestGameplayTag("Abilities.Lightning")
+		};
+
+		for (const auto& Tag : DefaultDamageTags)
+		{
+			if (UpgradeCards.Num() >= 3) break;
+
+			auto Upgrades = Info->GetUpgradesForAbility(Tag);
+			if (Upgrades.UpgradeInfos.IsEmpty()) continue;
+
+			bool bAlready = UpgradeCards.ContainsByPredicate(
+				[&](const FAuraAbilityUpgradeInfo& Card)
+				{
+					return Card.UpgradeEffectTag ==
+						Upgrades.UpgradeInfos[0].UpgradeEffectTag;
+				});
+
+			if (!bAlready)
+				UpgradeCards.Add(Upgrades.UpgradeInfos[0]);
+		}
 	}
 	return UpgradeCards;
 }

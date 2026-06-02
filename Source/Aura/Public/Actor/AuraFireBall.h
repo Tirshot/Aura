@@ -16,7 +16,9 @@ public:
 	void StartOutgoingTimeline();
 	
 	void SetShowBlastIndicator(bool bShow) {bShowBlastIndicator = bShow;}
+	void SetExplodeAtMaxRange(bool bExplode) {bExplodeAtMaxRange = bExplode;}
 	void SetTravelDistance(float Distance) {TravelDistance = Distance;}
+	void SetExplodeDistance(float Distance) {ExplodeDistance = Distance;}
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<AActor> ReturnToActor;
@@ -45,4 +47,7 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly)
 	bool bShowBlastIndicator = false;
+	
+	UPROPERTY(BlueprintReadOnly)
+	bool bExplodeAtMaxRange = false;
 };

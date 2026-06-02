@@ -175,6 +175,8 @@ void UAuraFirebolt::SpawnProjectiles(const FVector& ProjectileTargetLocation, co
 		}
 		// 유도 가속력
 		Projectile->ProjectileMovement->HomingAccelerationMagnitude = FMath::FRandRange(HomingAccMin, HomingAccMax);
+		Projectile->ProjectileMovement->InitialSpeed += SpeedUpCount * 100.f; 
+		Projectile->ProjectileMovement->MaxSpeed += SpeedUpCount * 100.f; 
 		Projectile->ProjectileMovement->bIsHomingProjectile = bLaunchHomingProjectile;
 
 		Projectile->FinishSpawning(SpawnTransform);  
@@ -191,5 +193,11 @@ void UAuraFirebolt::CheckAbilityUpgrades()
 		// 투사체 갯수 증가
 		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), Tags.Upgrades_Fire_FireBolt_IncreaseNum);
 		NumProjectiles += StackCount;
+	}
+	
+	// 투사체 속도 증가
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), FGameplayTag::RequestGameplayTag("Upgrades.Fire.FireBolt.SpeedUp")))
+	{
+		SpeedUpCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), FGameplayTag::RequestGameplayTag("Upgrades.Fire.FireBolt.SpeedUp"));
 	}
 }

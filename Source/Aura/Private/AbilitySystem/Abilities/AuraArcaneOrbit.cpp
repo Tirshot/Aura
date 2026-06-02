@@ -97,6 +97,13 @@ void UAuraArcaneOrbit::CheckAbilityUpgrades()
 		// 스택 수 만큼 증가
 		NumMissiles += Stacks;
 	}
+
+	// (3) 효력사 태그
+	FGameplayTag FFE = FGameplayTag::RequestGameplayTag("Upgrades.Arcane.ArcaneOrbit.FFE");
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), FFE))
+	{
+		InitialDelayDuration = 0.f;
+	}
 }
 
 TArray<AAuraArcaneMissile*> UAuraArcaneOrbit::SpawnArcaneMissiles()

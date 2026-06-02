@@ -220,7 +220,7 @@ void UAuraDamageGameplayAbility::ShowRangeIndicator(ERangeShape Shape, float Wid
 			AvatarActor->GetActorUpVector(),
 			AbilityRange,
 			Width,
-			AbilityRange,
+			AbilityRange/2,
 			FVector(3,3,3));
 	}
 }

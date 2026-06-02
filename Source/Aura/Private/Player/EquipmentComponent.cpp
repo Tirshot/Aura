@@ -160,32 +160,11 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlot* Slot)
 	float OldHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health);
 	float OldMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
 	float OldMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana);
-	float HPRatio = OldHP / OldMaxHP;
-	float MPRatio = OldMP / OldMaxMP;
+	float HPRatio = (OldMaxHP > 0.f) ? (OldHP / OldMaxHP) : 1.f;
+	float MPRatio = (OldMaxMP > 0.f) ? (OldMP / OldMaxMP) : 1.f;
 	
 	// 슬롯에 배치된 아이템에 의해 부여된 효과 해제
 	AuraASC->RemoveActiveGameplayEffectBySourceEffect(Slot->ItemData.ItemStatEffectClass, nullptr);
-	
-	// 비율에 따라 HP 감소시키기
-	float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
-	float TargetHP = HPRatio * NewMaxHP;
-	float HPDelta = TargetHP - OldHP;
-	
-	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
-	float TargetMP = MPRatio * NewMaxMP;
-	float MPDelta = TargetMP - OldMP;
-	
-	if (HPDelta != 0.f || MPDelta != 0.f)
-	{
-		// 클라이언트 RPC
-		Client_ApplyHPMPRatio(HPDelta, MPDelta);
-				
-		if (GetOwnerRole() == ROLE_Authority)
-		{
-			// 리슨 서버일 때 적용
-			ApplyHPMPRatio(HPDelta, MPDelta);
-		}
-	}
 	
 	// 게임플레이 이펙트 제거
 	for (const auto EffectAndStack : Slot->ItemData.EffectAndStacks)
@@ -215,6 +194,31 @@ void UEquipmentComponent::ClearSlot(FEquipmentSlot* Slot)
 					AuraPS->Server_RemoveAbilityUpgradeTag(Pair.AbilityTag);
 				}
 			}
+		}
+	}
+	
+	// 비율에 따라 HP 감소시키기
+	float CurrentHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Health);
+	float CurrentMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Vital_Mana);
+	
+	// 비율에 따라 HP/MP 목표치 계산 및 Delta 구하기
+	float NewMaxHP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxHealth);
+	float TargetHP = HPRatio * NewMaxHP;
+	float HPDelta = TargetHP - CurrentHP;
+	
+	float NewMaxMP = UAuraAbilitySystemLibrary::GetAttributeValue(AuraASC, FAuraGameplayTags::Get().Attributes_Secondary_MaxMana);
+	float TargetMP = MPRatio * NewMaxMP;
+	float MPDelta = TargetMP - CurrentMP;
+	
+	if (HPDelta != 0.f || MPDelta != 0.f)
+	{
+		// 클라이언트 RPC
+		// Client_ApplyHPMPRatio(HPDelta, MPDelta);
+				
+		if (GetOwnerRole() == ROLE_Authority)
+		{
+			// 리슨 서버일 때 적용
+			ApplyHPMPRatio(HPDelta, MPDelta);
 		}
 	}
 	
@@ -418,7 +422,7 @@ void UEquipmentComponent::ApplyItemStat(const FItemData& ItemData, FEquipmentSlo
 			if (DeltaHP != 0.f || DeltaMP != 0.f)
 			{
 				// 클라이언트 RPC
-				Client_ApplyHPMPRatio(DeltaHP, DeltaMP);
+				// Client_ApplyHPMPRatio(DeltaHP, DeltaMP);
 				
 				if (GetOwnerRole() == ROLE_Authority)
 				{

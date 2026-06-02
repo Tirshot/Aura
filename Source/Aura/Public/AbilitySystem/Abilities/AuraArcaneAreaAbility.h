@@ -33,6 +33,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	bool bTakeDamage = false;
 	
+	UPROPERTY()
+	bool bMindControl = false;
+	int MindControlStackCount = 0;
+	
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float LifeSpan = 5.f;
 	

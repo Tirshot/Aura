@@ -7,6 +7,13 @@
 #include "GameFramework/Actor.h"
 #include "AuraArcaneArea.generated.h"
 
+UENUM(BlueprintType, Blueprintable)
+enum EActorTag
+{
+	Player = 0,
+	Enemy = 1
+};
+
 UCLASS()
 class AURA_API AAuraArcaneArea : public AActor
 {
@@ -36,6 +43,9 @@ public:
 
 	UFUNCTION()
 	void DamageAndKnockback();
+	
+	UFUNCTION()
+	void ReleaseMindControl();
 
 public:
 	// 게터 or 세터
@@ -43,6 +53,8 @@ public:
 	void SetSlowRadius(float InSlowRadius) {SlowRadius = InSlowRadius;}
 	void SetApplyEffectPeriod(float InPeriod) {ApplyEffectPeriod = InPeriod;}
 	void SetTakeDamage(bool InBool) {bTakeDamage = InBool;}
+	void SetMindControl(bool bControl) {bMindControl = true;}
+	void SetMindControlDuration(float InDuration) {MindControlDuration = InDuration;}
 
 public:
 	// 슬로우 이펙트
@@ -51,6 +63,11 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	float LifeSpan = 5.f;
+	
+	UFUNCTION()
+	bool ChangeToActorTag(AActor* TargetActor, EActorTag ActorTag);
+	
+	void ReturnToOrignalTag();
 	
 protected:
 	UPROPERTY()
@@ -61,6 +78,9 @@ protected:
 	
 	UPROPERTY()
 	FTimerHandle ApplyDamageEffectTimer;
+	
+	UPROPERTY()
+	FTimerHandle MindControlTimer;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="ArcaneArea")
 	float SlowSpeedRatio = 0.25f;
@@ -73,6 +93,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="ArcaneArea")
 	bool bTakeDamage = false;
+
+	UPROPERTY()
+	bool bMindControl = false;
+	float MindControlDuration = 5.f;
+	int MindControlledUnitCount = 0;
+	
+	UPROPERTY()
+	AActor* MindControlledActor = nullptr;
 
 	FTimerHandle TimerHandle;
 protected:

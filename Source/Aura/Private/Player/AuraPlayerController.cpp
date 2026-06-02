@@ -7,7 +7,6 @@
 #include "Input/AuraInputComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemGlobals.h"
-#include "AIController.h"
 #include "Components/SplineComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
@@ -61,6 +60,8 @@ void AAuraPlayerController::BeginPlay()
     UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
     if (Subsystem)
     {
+        Subsystem->AddMappingContext(MoveContext, 0);
+        
         // IMC, 우선순위
         Subsystem->AddMappingContext(AuraContext, 0);
         
@@ -257,6 +258,8 @@ void AAuraPlayerController::AddAllMappingContexts()
     UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
     if (Subsystem)
     {
+        Subsystem->AddMappingContext(MoveContext, 0);
+        
         // IMC, 우선순위
         Subsystem->AddMappingContext(AuraContext, 0);
         
@@ -278,6 +281,7 @@ void AAuraPlayerController::RemoveAllMappingContexts()
         FModifyContextOptions Options;
         Options.bForceImmediately = true;
         Subsystem->RemoveMappingContext(AuraContext, Options);
+        Subsystem->RemoveMappingContext(MoveContext , Options);
         Subsystem->RemoveMappingContext(MenuContext, Options);
         Subsystem->RemoveMappingContext(PauseContext, Options);
     }
@@ -454,15 +458,7 @@ void AAuraPlayerController::Client_OnBossEventStart_Implementation(AActor* BossA
     SetPlayerInputEnable(false);
     
     // 입력 방지 태그 추가
-    if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
-    {
-        if (auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn()))
-        {
-            FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
-            FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AuraGI->InputBlockEffectClass, 1.f, ContextHandle);
-            ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-        }
-    }
+    Server_ApplyInputBlockTag();
     
     StopAutoRun();
     
@@ -1139,6 +1135,30 @@ void AAuraPlayerController::Server_StartSpectating_Implementation()
     }
 }
 
+void AAuraPlayerController::Server_ApplyInputBlockTag_Implementation()
+{
+    if (auto AuraGI = GetGameInstance<UAuraGameInstance>())
+    {
+        if (auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetPawn()))
+        {
+            FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+            FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(AuraGI->InputBlockEffectClass, 1.f, ContextHandle);
+            ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }
+    }
+}
+
+void AAuraPlayerController::Server_RemoveInputBlockTag_Implementation()
+{
+    // 입력 방지 태그 제거
+    if (auto ASC = GetASC())
+    {
+        FGameplayTagContainer BlockEffectTagContainer;
+        BlockEffectTagContainer.AddTag(FGameplayTag::RequestGameplayTag("Player.Block.InputBlocked"));
+        ASC->RemoveActiveEffectsWithTags(BlockEffectTagContainer);
+    }
+}
+
 void AAuraPlayerController::Server_ReviveFromPlayerStart_Implementation()
 {
     if (!HasAuthority())
@@ -1343,15 +1363,15 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
     }
     
     UAbilitySystemComponent* ASC = GetASC();
-    if (ASC && ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
-    {
-        if (APawn* ControlledPawn = GetPawn())
-        {
-            if (ACharacter* AuraCharacter = Cast<ACharacter>(ControlledPawn))
-                AuraCharacter->GetCharacterMovement()->StopMovementImmediately();
-        }
-        return;
-    }
+    // if (ASC && ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    // {
+    //     if (APawn* ControlledPawn = GetPawn())
+    //     {
+    //         if (ACharacter* AuraCharacter = Cast<ACharacter>(ControlledPawn))
+    //             AuraCharacter->GetCharacterMovement()->StopMovementImmediately();
+    //     }
+    //     return;
+    // }
     
     SetAutoRunning(false);
 }
@@ -1542,12 +1562,6 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
         if (ICombatInterface::Execute_IsDead(Aura))
             return;
     }
-    
-    if (ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
-    {
-        StopAutoRun();
-        return;
-    }
 
     if (InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
@@ -1595,6 +1609,11 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
         return;
     }
 
+    if (ASC->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+    {
+        return;
+    }
+    
     if (ASC)
         ASC->AbilityInputTagPressed(InputTag);
 }
@@ -1605,12 +1624,6 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     if (!ASC)
         return;
     
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
-    {
-        StopAutoRun();
-        return;
-    }
-    
     if (AAuraCharacterBase* Aura = Cast<AAuraCharacterBase>(GetPawn()))
     {
         if (ICombatInterface::Execute_IsDead(Aura))
@@ -1620,6 +1633,11 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
+        if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
+        {
+            return;
+        }
+        
         if (ASC)
             ASC->AbilityInputTagReleased(InputTag);
 
@@ -1639,7 +1657,7 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
                 {
                     IHighlightInterface::Execute_SetMoveToLocation(ThisActor, CachedDestination);    
                 }
-                else if (GetASC() && !GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputPressed))
+                else
                 {
                     UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
                 }
@@ -1666,8 +1684,15 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
         }
         else
         {
-            if (ASC)
-                ASC->AbilityInputTagReleased(InputTag);
+            if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
+            {
+                
+            }
+            else
+            {
+                if (ASC)
+                    ASC->AbilityInputTagReleased(InputTag);
+            }
         }
     }
     else
@@ -1703,8 +1728,15 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
         }
         else if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
         {  
-            if (ASC)
-                ASC->AbilityInputTagReleased(InputTag);
+            if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputReleased))
+            {
+                
+            }
+            else
+            {
+                if (ASC)
+                    ASC->AbilityInputTagReleased(InputTag);
+            }
         }
     }
     FollowTime = 0.f;
@@ -1723,16 +1755,15 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
         if (ICombatInterface::Execute_IsDead(Aura))
             return;
     }
-    
-    if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
-    {
-        StopAutoRun();
-        return;
-    }
 
     // 더 이상 왼쪽 클릭 태그가 아닐 경우
     if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
     {
+        if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
+        {
+            return;
+        }
+        
         if (ASC)
             ASC->AbilityInputTagHeld(InputTag);
 
@@ -1742,6 +1773,11 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
     // 타겟
     if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
     {
+        if (GetASC()->HasMatchingGameplayTag(FAuraGameplayTags::Get().Player_Block_InputHeld))
+        {
+            return;
+        }
+        
         if (ASC)
             ASC->AbilityInputTagHeld(InputTag);
     }

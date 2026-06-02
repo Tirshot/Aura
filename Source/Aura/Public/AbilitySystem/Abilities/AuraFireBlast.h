@@ -44,6 +44,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bShowBlastIndicator = false;
 	
+	UPROPERTY(BlueprintReadOnly)
+	bool bExplodeAtMaxRange = false;
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraFireBall> FireBallClass;

@@ -28,6 +28,7 @@ class USaveGame;
 class AAuraDropItem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllActorsInvincible, bool, bInvincible);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnApplyActorsBlockInputTags, bool, bBlockInput);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSetActorInvincible, AActor*, TargetActor, bool, bInvincible);
 
 UCLASS()
@@ -50,6 +51,9 @@ public:
 	
 	UPROPERTY(BlueprintCallable)
 	FOnAllActorsInvincible OnAllActorsInvincible;
+	
+	UPROPERTY(BlueprintCallable)
+	FOnApplyActorsBlockInputTags OnApplyActorsBlockInputTags;
 	
 public:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
@@ -154,6 +158,9 @@ public:
 	
 	UFUNCTION()
 	void SetActorInvincible(AActor* TargetActor, bool bInvincible);
+	
+	UFUNCTION()
+	void SetAllActorsBlockInput(bool bBlockInputTag);
 
 public:
 	// 몬스터에게 업그레이드 태그 부여

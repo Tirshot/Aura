@@ -42,7 +42,9 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 		GetOwningActorFromActorInfo(),
 		Cast<APawn>(GetOwningActorFromActorInfo()),
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-
+	
+	Projectile->SetOwner(GetAvatarActorFromActorInfo());
+	
 	// 타겟을 설정하지 않고 파라미터 생성
 	Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
 	Projectile->FinishSpawning(SpawnTransform);

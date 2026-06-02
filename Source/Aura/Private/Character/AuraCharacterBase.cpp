@@ -224,6 +224,10 @@ FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGamepl
 	{
 		return GetMesh()->GetSocketLocation(TailSocketName);
 	}
+	if (MontageTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CombatSocket.Spine")))
+	{
+		return GetMesh()->GetSocketLocation(SpineSocketName);
+	}
 	return FVector();
 }
 

@@ -6,13 +6,6 @@
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
 #include "AuraMindControl.generated.h"
 
-UENUM(BlueprintType, Blueprintable)
-enum EActorTag
-{
-	Player = 0,
-	Enemy = 1
-};
-
 UCLASS()
 class AURA_API UAuraMindControl : public UAuraGameplayAbility
 {
@@ -23,15 +16,7 @@ public:
 	virtual FString GetNextLevelDescription(int32 Level, const UObject* WorldContextObject) override;
 
 public:
-	UFUNCTION(BlueprintCallable)
-	void SetOriginalTag(AActor* TargetActor);
 	
-	UFUNCTION(BlueprintCallable)
-	bool ChangeActorTag(AActor* TargetActor, EActorTag ActorTag);
-
-	UFUNCTION(BlueprintCallable)
-	float GetScalableFloatToFloat(FScalableFloat ScalableFloat);
-
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Gameplay Ability")
 	FScalableFloat MindControlDuration;

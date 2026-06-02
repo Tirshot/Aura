@@ -68,6 +68,15 @@ void UAuraFirenado::CheckAbilityUpgrades()
 
 		DamageRadius = DamageRadius + 200.f * Stacks;
 	}
+	
+	// (2) 지속 시간 증가 태그
+	FGameplayTag IncreaseLifeSpan = FGameplayTag::RequestGameplayTag("Upgrades.Fire.FireNado.IncreaseLifeSpan");
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), IncreaseLifeSpan))
+	{
+		int Stacks = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), IncreaseLifeSpan);
+
+		SpawnTime += 2.0f * Stacks;
+	}
 }
 
 void UAuraFirenado::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

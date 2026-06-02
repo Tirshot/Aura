@@ -94,6 +94,11 @@ TArray<AAuraFireBall*> UAuraFireBlast::SpawnFireBalls()
 		FireBall->ExplosionDamageParams = MakeDamageEffectParamsFromClassDefaults();
 		FireBall->SetTravelDistance(AbilityRange);
 		FireBall->SetShowBlastIndicator(bShowBlastIndicator);
+		if (bExplodeAtMaxRange)
+		{
+			FireBall->SetExplodeAtMaxRange(true);
+			FireBall->SetExplodeDistance(AbilityRange);
+		}
 		
 		FireBalls.Add(FireBall);
 
@@ -118,5 +123,15 @@ void UAuraFireBlast::CheckAbilityUpgrades()
 
 		// 갯수 2개 씩 증가
 		NumFireBalls = BaseNumFireBalls + (StackCount * Magnification) + GetAbilityLevel();
+	}
+	
+	// (2) 원거리 폭발
+	FGameplayTag Explode = Tags.Upgrades_Fire_FireBlast_ExplodeAtMaxRange;
+	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), Explode))
+	{
+		// 투사체 갯수 증가
+		int32 StackCount = GetUpgradeStackCount(GetAvatarActorFromActorInfo(), Explode);
+		bExplodeAtMaxRange = true;
+		AbilityRange = 500 - (StackCount * 100.f);
 	}
 }
