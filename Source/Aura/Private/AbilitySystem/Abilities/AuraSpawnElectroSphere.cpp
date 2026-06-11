@@ -100,11 +100,14 @@ void UAuraSpawnElectroSphere::CheckAbilityUpgrades()
 		ElectroSphere->SetHomingTarget(true);
 	}
 
-	// (4) 가까운 대상 유도
+	// (4) 소환 자리 정지
 	FGameplayTag StopMovement = FGameplayTag::RequestGameplayTag("Upgrades.Lightning.SpawnElectroSphere.StopMovement");
 	if (HasUpgradeTag(GetAvatarActorFromActorInfo(), StopMovement))
 	{
 		ElectroSphere->SetMovementSpeed(0.f);
+		ElectroSphere->ProjectileMovement->Velocity = FVector::ZeroVector;
+		ElectroSphere->ProjectileMovement->StopSimulating(FHitResult()); 
+		ElectroSphere->ProjectileMovement->UpdateComponentVelocity();
 	}
 }
 

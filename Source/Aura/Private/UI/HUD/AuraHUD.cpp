@@ -6,7 +6,6 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityUpgradeInfo.h"
 #include "Character/AuraBossMonster.h"
-#include "Character/AuraCharacter.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "Player/EquipmentComponent.h"
@@ -228,6 +227,9 @@ void AAuraHUD::InitOverlay(APlayerController *PC, APlayerState *PS, UAbilitySyst
     MissionWidgetController = GetMissionWidgetController(WidgetControllerParams);
     if (MissionWidgetController && !MissionWidgetController->OnMissionWidgetRequired.IsAlreadyBound(this, &AAuraHUD::CreateMissionWidget))
         MissionWidgetController->OnMissionWidgetRequired.AddDynamic(this, &AAuraHUD::CreateMissionWidget);
+    
+    if (MissionWidgetController && !MissionWidgetController->OnMissionWidgetShow.IsAlreadyBound(this, &AAuraHUD::ShowMissionWidget))
+        MissionWidgetController->OnMissionWidgetShow.AddDynamic(this, &AAuraHUD::ShowMissionWidget);
 }
 
 void AAuraHUD::ResetWidgetControllerAndViewModels()
@@ -353,6 +355,11 @@ void AAuraHUD::CreateMissionWidget(const FMissionDataArray& CurrentMissions)
             MissionWidgetController->OnAddMissionToWidget.Broadcast(Mission);
         }
     }
+    
+    if (MissionStackWidget)
+    {
+        ShowMissionWidget(MissionWidgetController->bHideWidget);
+    }
 }
 
 void AAuraHUD::CreateMissionCinematicWidget(const FText& TitleText, const FText& DescriptionText)
@@ -428,19 +435,40 @@ void AAuraHUD::HandleRandomAbilityUpgradeInfos(TArray<FAuraAbilityUpgradeInfo>& 
 void AAuraHUD::ShowOverlay()
 {
     OverlayWidgetController->ShowOverlayWidget(true);
+    MissionWidgetController->OnMissionWidgetShow.Broadcast(true);
+    
     if (BossHealthBarWidget)
-        BossHealthBarWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+        BossHealthBarWidget->SetVisibility(ESlateVisibility::Visible);
     
     if (MissionStackWidget)
-        MissionStackWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+        MissionStackWidget->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AAuraHUD::HideOverlay()
 {
     OverlayWidgetController->ShowOverlayWidget(false);
+    MissionWidgetController->OnMissionWidgetShow.Broadcast(false);
+    
     if (BossHealthBarWidget)
         BossHealthBarWidget->SetVisibility(ESlateVisibility::Hidden);
     
     if (MissionStackWidget)
         MissionStackWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
+void AAuraHUD::ShowMissionWidget(bool bShow)
+{
+    if (!MissionStackWidget)
+        return;
+    
+    MissionWidgetController->bHideWidget = bShow;
+    
+    if (bShow)
+    {
+        MissionStackWidget->SetVisibility(ESlateVisibility::Visible);
+    }
+    else
+    {
+        MissionStackWidget->SetVisibility(ESlateVisibility::Hidden);
+    }
 }

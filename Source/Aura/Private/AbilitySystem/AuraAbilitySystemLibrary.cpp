@@ -606,6 +606,9 @@ void UAuraAbilitySystemLibrary::ApplyMessageTagEffectToSelf(const FGameplayTag& 
 
 void UAuraAbilitySystemLibrary::AddMessageToActor(AActor* TargetActor, const FGameplayTag& MessageTag, FText AppendText, UTexture2D* Icon)
 {
+	if (!TargetActor)
+		return;
+	
 	UAuraGameInstance* GI = TargetActor->GetGameInstance<UAuraGameInstance>();
 	if (!GI || !GI->MessageTable)
 		return;

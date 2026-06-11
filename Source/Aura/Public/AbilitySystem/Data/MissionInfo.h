@@ -97,6 +97,7 @@ struct FMissionData : public FFastArraySerializerItem
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Multiline = true))
 	FText MissionModifiers = FText::GetEmpty();
 	
+	// 요구량 고
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bSetValueFixed = false;
 

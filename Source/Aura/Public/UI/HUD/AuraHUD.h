@@ -87,6 +87,9 @@ public:
 	UFUNCTION()
 	UAuraUserWidget* GetSaveProgressWidget() {return SaveProgressWidget;}
 	
+	UFUNCTION()
+	void ShowMissionWidget(bool bShow);
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UAuraOverlayWidget> OverlayWidget;

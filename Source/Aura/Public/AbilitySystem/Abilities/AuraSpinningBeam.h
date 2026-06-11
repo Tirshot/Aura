@@ -32,9 +32,6 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AAuraSpinningBeamActor> BeamClass;
-
-	UPROPERTY(BlueprintReadOnly)
-	TArray<AAuraSpinningBeamActor*> LightningBeams;
 	
 	UPROPERTY(BlueprintReadWrite)
 	TArray<FRotator> SavedRotators;

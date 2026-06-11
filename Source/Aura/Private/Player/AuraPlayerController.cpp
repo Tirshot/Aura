@@ -1702,6 +1702,13 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
             // 아이템 또는 상호작용 액터를 클릭했을 때
             // 경계값보다 짧게 눌렀으면 목적지로 길 찾기 시작
             const APawn* ControlledPawn = GetPawn();
+            if (!ControlledPawn || ControlledPawn->IsPendingKillPending())
+            {
+                FollowTime = 0.f;
+                TargetingStatus = ETargetingStatus::None;
+                return;
+            }
+            
             if (FollowTime <= ShortPressThreshold && ControlledPawn)
             {
                 if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())

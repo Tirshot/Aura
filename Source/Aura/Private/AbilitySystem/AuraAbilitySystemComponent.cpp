@@ -6,7 +6,6 @@
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
 #include "Interaction/PlayerInterface.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "SNegativeActionButton.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
 #include "Character/AuraCharacter.h"
@@ -490,10 +489,8 @@ void UAuraAbilitySystemComponent::RemoveCharacterAbilityByTag(const FGameplayTag
     }
 
     MarkAbilitySpecDirty(*FoundSpec);
-    
     AbilitiesGivenDelegate.Broadcast();
     
-
     if (AbilityActorInfo.IsValid())
     {
         if (APlayerState* PS = AbilityActorInfo->PlayerController->PlayerState)
@@ -790,8 +787,8 @@ void UAuraAbilitySystemComponent::UpdateAbilityStatus(int32 Level)
             // 시작 어빌리티라면 잠금 로직 패스
             if (auto AuraAbility = Cast<UAuraGameplayAbility>(FoundSpec->Ability))
             {
-                if (AuraAbility->bIsStartupAbility)
-                    continue;
+                // if (AuraAbility->bIsStartupAbility)
+                //     continue;
             }
             else // AuraAbility가 아니어도 패스
             {

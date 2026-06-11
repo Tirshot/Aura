@@ -76,9 +76,6 @@ protected:
 	UPROPERTY()
 	FMissionData DynamicMissionData;
 	
-	UPROPERTY(EditInstanceOnly, Category = "Mission")
-	TObjectPtr<AActor> TargetBoss;
-	
 	UPROPERTY(EditAnywhere, Category = "Mission")
 	TObjectPtr<ULevelSequence> MissionSequenceAsset;
 

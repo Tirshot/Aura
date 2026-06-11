@@ -211,6 +211,7 @@ void AAuraBossMonster::OnRoarEnd(const FGameplayEventData* EventData)
 		if (AAuraGameModeBase* AuraGM = GetWorld()->GetAuthGameMode<AAuraGameModeBase>())
 		{
 			AuraGM->OnAllActorsInvincible.Broadcast(false);
+			AuraGM->SetAllActorsBlockInput(false);
 		}
 	}
 }

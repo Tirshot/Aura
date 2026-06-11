@@ -21,6 +21,8 @@ void USpellMenuWidgetController::BroadcastInitialValues()
 	// 창을 껐다 키면 지금의 장착 상태를 다시 가져옴
 	if (UAuraAbilitySystemComponent* AuraASC = GetAuraASC())
 	{
+		AuraASC->UpdateAbilityStatus(GetAuraPS()->GetCharacterLevel());
+		
 		// 현재 장착된 모든 어빌리티 슬롯 정보 재브로드캐스트
 		for (const FGameplayAbilitySpec& Spec : AuraASC->GetActivatableAbilities())
 		{

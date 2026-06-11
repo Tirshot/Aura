@@ -11,6 +11,7 @@ struct FMissionData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SevenParams(FOnObjectiveUpdate, FGameplayTag, MissionTag, FGameplayTag, ObjectiveTag, int32, ObjectiveIndex, FText, Description, float, CurrentValue, float, TargetValue, float, RemainingTime);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMissionWidgetRequiredSignature, const FMissionDataArray&, Missions);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMissionWidgetShow, bool, bShow);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAddMissionToWidgetSignature, const FMissionData&, Mission);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMissionFinishedToWidgetSignature, FGameplayTag, MissionTag, bool, bSuccess);
 
@@ -46,4 +47,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnMissionFinishedToWidgetSignature OnMissionFinishedToWidget;
 	
+	UPROPERTY()
+	FOnMissionWidgetShow OnMissionWidgetShow;
+	
+	UPROPERTY()
+	bool bHideWidget = false;
 };
